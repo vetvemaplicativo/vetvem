@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "184640610145",
+    "project_id": "vetvem-18bf4",
+    "storage_bucket": "vetvem-18bf4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184640610145:android:0564737e459f6d20caef20",
+        "android_client_info": {
+          "package_name": "com.vetvem.vetvem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAb64g-J6MWO5vPFYg8NEUc6GpFBFFWgA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
