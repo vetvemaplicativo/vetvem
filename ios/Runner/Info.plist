@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Usamos a câmera para você tirar fotos de perfil e dos seus pets.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Usamos a galeria para você escolher fotos de perfil e dos seus pets.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

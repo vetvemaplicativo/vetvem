@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../theme/app_theme.dart';
@@ -145,6 +146,31 @@ class LoginView extends GetView<LoginController> {
                     ],
                   ),
                 ),
+                if (Platform.isIOS) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: controller.loginWithApple,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      side: const BorderSide(color: Colors.black),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.apple, color: Colors.white, size: 20),
+                        SizedBox(width: 10),
+                        Text(
+                          'Continuar com Apple',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 40),
                 Center(
                   child: Row(

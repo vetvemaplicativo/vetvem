@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>184640610145-dgtqv87fr4sn7l9s6v4ahjkj391ddfrj.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.184640610145-dgtqv87fr4sn7l9s6v4ahjkj391ddfrj</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>184640610145-2rckblh53oqcfbpd3f7f2849e6s81c02.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyA-apJZ_mXLkyQjBsucn9vQF6DLfkQNURI</string>
+	<key>GCM_SENDER_ID</key>
+	<string>184640610145</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.vetvem.vetvem</string>
+	<key>PROJECT_ID</key>
+	<string>vetvem-18bf4</string>
+	<key>STORAGE_BUCKET</key>
+	<string>vetvem-18bf4.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:184640610145:ios:30b028de7bddeaa9caef20</string>
+</dict>
+</plist>

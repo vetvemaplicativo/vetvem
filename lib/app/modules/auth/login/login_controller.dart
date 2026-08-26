@@ -81,6 +81,24 @@ class LoginController extends GetxController {
     }
   }
 
+  Future<void> loginWithApple() async {
+    isLoading.value = true;
+    try {
+      await _auth.signInWithApple();
+      if (await _isBlocked()) return;
+      if (!await _termsOk()) return;
+      Get.offAllNamed(Routes.home);
+    } on AuthException catch (e) {
+      if (e.message != AuthExceptions.appleCancelled.message) {
+        _showError(e.message);
+      }
+    } catch (_) {
+      _showError('Ocorreu um erro. Tente novamente.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// Conta bloqueada pelo painel admin: desloga e avisa.
   Future<bool> _isBlocked() async {
     try {
