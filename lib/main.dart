@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app/routes/app_pages.dart';
+import 'app/services/analytics_service.dart';
 import 'app/services/auth_service.dart';
 import 'app/services/ibge_service.dart';
 import 'app/services/taxonomy_service.dart';
@@ -14,6 +15,7 @@ import 'app/widgets/offline_banner.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await Get.putAsync(() async => AnalyticsService());
   await Get.putAsync(() async => AuthService());
   await Get.putAsync(() => IbgeService().init());
   await Get.putAsync(() => TaxonomyService().init());
@@ -39,6 +41,7 @@ class VetVemApp extends StatelessWidget {
       theme: AppTheme.light,
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
+      navigatorObservers: [Get.find<AnalyticsService>().observer],
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 250),
       localizationsDelegates: const [

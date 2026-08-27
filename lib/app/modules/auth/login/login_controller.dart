@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_routes.dart';
+import '../../../services/analytics_service.dart';
 import '../../../services/auth_exceptions.dart';
 import '../../../services/auth_service.dart';
 import '../../../theme/app_theme.dart';
@@ -10,6 +11,7 @@ import '../../terms/terms_view.dart';
 
 class LoginController extends GetxController {
   final _auth = Get.find<AuthService>();
+  final _analytics = Get.find<AnalyticsService>();
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -43,6 +45,7 @@ class LoginController extends GetxController {
       );
       if (await _isBlocked()) return;
       if (!await _termsOk()) return;
+      _analytics.logLogin('email');
       Get.offAllNamed(Routes.home);
     } on AuthException catch (e) {
       _showError(e.message);
@@ -69,6 +72,7 @@ class LoginController extends GetxController {
       await _auth.signInWithGoogle();
       if (await _isBlocked()) return;
       if (!await _termsOk()) return;
+      _analytics.logLogin('google');
       Get.offAllNamed(Routes.home);
     } on AuthException catch (e) {
       if (e.message != AuthExceptions.googleCancelled.message) {
@@ -87,6 +91,7 @@ class LoginController extends GetxController {
       await _auth.signInWithApple();
       if (await _isBlocked()) return;
       if (!await _termsOk()) return;
+      _analytics.logLogin('apple');
       Get.offAllNamed(Routes.home);
     } on AuthException catch (e) {
       if (e.message != AuthExceptions.appleCancelled.message) {

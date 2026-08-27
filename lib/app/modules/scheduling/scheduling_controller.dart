@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
+import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
@@ -223,6 +224,11 @@ class SchedulingController extends GetxController {
         'status': 'pending_confirmation',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      Get.find<AnalyticsService>().logAppointmentCreated(
+        vetId: vet?.id ?? '',
+        serviceName: service.name,
+      );
 
       // Notifica o vet sobre novo agendamento
       if (vet?.id != null && vet!.id.isNotEmpty) {

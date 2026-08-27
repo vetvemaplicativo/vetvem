@@ -19,6 +19,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_core: ^3.13.1
   firebase_auth: ^5.5.1
+  firebase_analytics: ^11.5.2
   cloud_firestore: ^5.6.6
   pdf: ^3.10.8
   printing: ^5.12.0

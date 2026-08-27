@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_routes.dart';
+import '../../../services/analytics_service.dart';
 import '../../../services/auth_exceptions.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/cep_service.dart' as cep;
@@ -14,6 +15,7 @@ import '../../../theme/app_theme.dart';
 
 class RegisterController extends GetxController {
   final _auth = Get.find<AuthService>();
+  final _analytics = Get.find<AnalyticsService>();
 
   // ── Step management ──────────────────────────────────────────────
   final currentStep = 0.obs;
@@ -263,6 +265,7 @@ class RegisterController extends GetxController {
         },
       );
       await TermsView.recordAcceptance();
+      _analytics.logSignUp('email');
       Get.offAllNamed(Routes.home);
     } on AuthException catch (e) {
       _showError(e.message);
