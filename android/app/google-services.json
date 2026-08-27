@@ -12,7 +12,36 @@
           "package_name": "com.vetvem.vetvem"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "184640610145-bvovbq6ria8p4sbqs06c6rep5p1c09pv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem",
+            "certificate_hash": "df36b3f577bc6680f1cd3abe7b6d58432ead9465"
+          }
+        },
+        {
+          "client_id": "184640610145-pu7cqfcj027oaqejib0hf06kn8eum89m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem",
+            "certificate_hash": "a03d6407979a88180caa457df111bbbf21554759"
+          }
+        },
+        {
+          "client_id": "184640610145-sn1b1s1qhddg9bs269g5o1ctbg3eli38.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem",
+            "certificate_hash": "7182922d9723e1e4c9553135e52d9cff6ea5e708"
+          }
+        },
+        {
+          "client_id": "184640610145-dt3qvi9j58o26ousjuf6fe14cfmiam7d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAb64g-J6MWO5vPFYg8NEUc6GpFBFFWgA4"
@@ -20,7 +49,79 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184640610145-dt3qvi9j58o26ousjuf6fe14cfmiam7d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "184640610145-clbl4o6gcnk93a0ers7865sbbghualqb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vetvem.vetvemPro"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184640610145:android:17e3eb04e4f04c09caef20",
+        "android_client_info": {
+          "package_name": "com.vetvem.vetvem_pro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184640610145-2rckblh53oqcfbpd3f7f2849e6s81c02.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem_pro",
+            "certificate_hash": "54c503476372c67b9d846b7494dc736968cffb48"
+          }
+        },
+        {
+          "client_id": "184640610145-8ojkdi8mdsaa61tr588sb9a9ur9vq29v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem_pro",
+            "certificate_hash": "57353bb06fe493a877643b109bd0695b17f8db74"
+          }
+        },
+        {
+          "client_id": "184640610145-n83kunk3cm9mm81r4luk7ionkfmdu6um.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vetvem.vetvem_pro",
+            "certificate_hash": "7182922d9723e1e4c9553135e52d9cff6ea5e708"
+          }
+        },
+        {
+          "client_id": "184640610145-dt3qvi9j58o26ousjuf6fe14cfmiam7d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAb64g-J6MWO5vPFYg8NEUc6GpFBFFWgA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184640610145-dt3qvi9j58o26ousjuf6fe14cfmiam7d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "184640610145-clbl4o6gcnk93a0ers7865sbbghualqb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vetvem.vetvemPro"
+              }
+            }
+          ]
         }
       }
     }
