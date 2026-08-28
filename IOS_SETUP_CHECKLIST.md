@@ -16,9 +16,11 @@ Já feito (sem precisar de Mac):
 - [x] Chave APNs criada (Key ID `3T22X4M94W`, Team ID `X3K2T22232`, ambiente Sandbox & Production) e enviada ao Firebase Console → Cloud Messaging (dev + produção)
 
 - [x] Build assinado real gerado com sucesso no Codemagic (certificado "Apple Distribution" compartilhado com o Pro + perfil de provisionamento próprio, carregados manualmente nas Code Signing Identities)
-- [ ] Testar o `.ipa` num iPhone físico (via TestFlight) antes de submeter pra revisão
-- [ ] Preencher a ficha completa na App Store Connect
-- [ ] Enviar build para o TestFlight e depois para revisão da Apple
+- [x] Ícones iOS corrigidos (canal alpha removido — obrigatório pra App Store aceitar)
+- [x] Build enviado com sucesso ao App Store Connect / TestFlight (chave de equipe, não a individual — ver nota)
+- [ ] Aguardar processamento da Apple e testar no TestFlight
+- [ ] Preencher a ficha completa na App Store Connect (rascunhos em `docs/app_store/` no repo do Pro)
+- [ ] Enviar para revisão da Apple
 - [ ] Rodar `flutter build ipa` e testar num iPhone físico ou simulador
 - [ ] Preencher ficha do app na App Store Connect (descrição, screenshots, categoria)
 - [ ] Preencher formulário de App Privacy (dados coletados: nome, e-mail, telefone, CPF, endereço, foto — sem GPS, sem analytics)
