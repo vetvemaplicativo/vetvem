@@ -15,11 +15,10 @@ Já feito (sem precisar de Mac):
 - [x] App ID `com.vetvem.vetvem` registrado no developer.apple.com com **Push Notifications** e **Sign In with Apple** habilitados
 - [x] Chave APNs criada (Key ID `3T22X4M94W`, Team ID `X3K2T22232`, ambiente Sandbox & Production) e enviada ao Firebase Console → Cloud Messaging (dev + produção)
 
-Falta fazer (precisa de Mac + Xcode):
-- [ ] Abrir `ios/Runner.xcworkspace` no Xcode (não o `.xcodeproj`)
-- [ ] Rodar `flutter pub get` e `pod install`
-- [ ] Configurar assinatura (Signing & Capabilities → Team da Apple Developer)
-- [ ] Habilitar capabilities **Sign in with Apple** e **Push Notifications** no Xcode (usa o `Runner.entitlements` já pronto)
+- [x] Build assinado real gerado com sucesso no Codemagic (certificado "Apple Distribution" compartilhado com o Pro + perfil de provisionamento próprio, carregados manualmente nas Code Signing Identities)
+- [ ] Testar o `.ipa` num iPhone físico (via TestFlight) antes de submeter pra revisão
+- [ ] Preencher a ficha completa na App Store Connect
+- [ ] Enviar build para o TestFlight e depois para revisão da Apple
 - [ ] Rodar `flutter build ipa` e testar num iPhone físico ou simulador
 - [ ] Preencher ficha do app na App Store Connect (descrição, screenshots, categoria)
 - [ ] Preencher formulário de App Privacy (dados coletados: nome, e-mail, telefone, CPF, endereço, foto — sem GPS, sem analytics)
