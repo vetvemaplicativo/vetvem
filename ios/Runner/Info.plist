@@ -26,6 +26,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.184640610145-dgtqv87fr4sn7l9s6v4ahjkj391ddfrj</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Usamos a câmera para você tirar fotos de perfil e dos seus pets.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
