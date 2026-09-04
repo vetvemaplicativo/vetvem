@@ -118,14 +118,16 @@ class AuthService extends GetxService {
             'Esta conta é de um profissional. Use o app VetVem Pro.');
       }
 
-      // Cria documento no Firestore se for primeiro login
-      if (!doc.exists) {
+      // Cria o perfil se for primeiro login. Checa 'role' (não doc.exists)
+      // porque um doc parcial pode já existir sem perfil completo (ex.:
+      // gate de termos gravou algo antes de o login terminar).
+      if (doc.data()?['role'] == null) {
         await _firestore.collection('users').doc(user.uid).set({
           'name': user.displayName ?? '',
           'email': user.email ?? '',
           'role': 'tutor',
           'createdAt': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
       }
     } on AuthException {
       rethrow;
