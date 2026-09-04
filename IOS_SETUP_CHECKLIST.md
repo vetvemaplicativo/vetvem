@@ -18,12 +18,15 @@ Já feito (sem precisar de Mac):
 - [x] Build assinado real gerado com sucesso no Codemagic (certificado "Apple Distribution" compartilhado com o Pro + perfil de provisionamento próprio, carregados manualmente nas Code Signing Identities)
 - [x] Ícones iOS corrigidos (canal alpha removido — obrigatório pra App Store aceitar)
 - [x] Build enviado com sucesso ao App Store Connect / TestFlight (chave de equipe, não a individual — ver nota)
-- [ ] Aguardar processamento da Apple e testar no TestFlight
+- [x] `GoogleService-Info.plist` incluído de verdade no bundle do app (não estava referenciado no `project.pbxproj`)
+- [x] `CODE_SIGN_ENTITLEMENTS` linkado no `project.pbxproj`
+- [x] URL Scheme do Google Sign-In adicionado no `Info.plist`
+- [x] Provedor "Apple" habilitado no Firebase Console → Authentication → Sign-in method
+- [x] `OAuthProvider('apple.com').credential(...)` corrigido — faltava `accessToken: appleCredential.authorizationCode`
+- [x] **Sign in with Apple e Google testados com sucesso no iPhone via TestFlight** ✅ (2026-09-04)
+- [ ] Testar o restante do fluxo (agendamento, notificações push) em iPhone físico
 - [ ] Preencher a ficha completa na App Store Connect (rascunhos em `docs/app_store/` no repo do Pro)
+- [ ] Preencher "Beta App Information" e "Beta App Review Information" no TestFlight
 - [ ] Enviar para revisão da Apple
-- [ ] Rodar `flutter build ipa` e testar num iPhone físico ou simulador
-- [ ] Preencher ficha do app na App Store Connect (descrição, screenshots, categoria)
-- [ ] Preencher formulário de App Privacy (dados coletados: nome, e-mail, telefone, CPF, endereço, foto — sem GPS, sem analytics)
-- [ ] Submeter para revisão da Apple
 
 Alternativa sem Mac próprio: **Codemagic** (já configurado e testado com sucesso).
