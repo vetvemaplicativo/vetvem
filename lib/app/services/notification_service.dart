@@ -30,11 +30,20 @@ class NotificationService {
     await _fln.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
       ),
     );
 
-    // Pede permissão FCM (Android 13+)
+    // Pede permissão (Android 13+ e iOS)
     await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // Mostra o banner/som quando o app está em primeiro plano no iOS
+    // (por padrão o iOS silencia notificações com o app aberto).
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
