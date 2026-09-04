@@ -470,6 +470,14 @@ exports.sendPush = onDocumentCreated(
             defaultVibrateTimings: true,
           },
         },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
+          },
+        },
       });
       // Marca como entregue via push — o app não re-exibe ao abrir
       await event.data.ref.update({ pushed: true });
