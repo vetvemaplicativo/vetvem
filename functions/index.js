@@ -206,11 +206,11 @@ exports.mpWebhook = onRequest(
             const snap = await ref.get();
             const current = snap.data();
 
-            // Corrida: o PIX do portal pode cair depois do vet já ter
+            // Corrida: o PIX (portal ou app) pode cair depois do vet já ter
             // recusado (appointmentHistorian não reembolsou na hora porque
             // ainda não tinha sido pago). Confere o estado atual e reembolsa.
             if (current && current.status === "rejected") {
-              await onPortalNotConfirmed(
+              await handleRejectedPayment(
                 ref,
                 { ...current, paymentStatus: "approved", paymentId: String(payment.id) },
                 MP_ACCESS_TOKEN,
@@ -594,73 +594,13 @@ exports.grantAdmin = onRequest(
   }
 );
 
-// ─── Cancelamento automático por falta de pagamento ───────────────────────────
-// Roda a cada 30 min. Consulta confirmada e não paga é cancelada quando:
-// (a) passaram 12h desde a confirmação, ou (b) o horário da consulta chegou.
-// Ambos (tutor e vet) são notificados e o horário volta a ficar livre.
-
-const PAYMENT_DEADLINE_HOURS = 12;
-
-exports.cancelUnpaid = onSchedule(
-  { schedule: "*/30 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
-  async () => {
-    const db = admin.firestore();
-    const now = new Date();
-
-    const snap = await db.collection("appointments")
-      .where("status", "==", "confirmed").get();
-
-    let cancelled = 0;
-    for (const doc of snap.docs) {
-      const d = doc.data();
-      if (d.paymentStatus === "approved") continue; // pago: nada a fazer
-
-      // Prazo 1: 12h após a confirmação (fallback: criação)
-      const ref = d.confirmedAt?.toDate?.() || d.createdAt?.toDate?.();
-      const deadlineExpired = ref &&
-        (now - ref) > PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000;
-
-      // Prazo 2: horário da consulta chegou sem pagamento
-      let apptStarted = false;
-      const apptDate = parseApptDate(d.date);
-      if (apptDate) {
-        const [h, m] = (d.time || "23:59").split(":").map(Number);
-        apptDate.setHours(h || 23, m || 59, 0, 0);
-        apptStarted = apptDate <= now;
-      }
-
-      if (!deadlineExpired && !apptStarted) continue;
-
-      await doc.ref.update({
-        status: "cancelled",
-        cancelReason: "payment_timeout",
-        cancelledBy: "sistema",
-        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      cancelled++;
-
-      const pet = d.petName || "seu pet";
-      const when = `${d.date || ""} às ${d.time || ""}`;
-      const notify = (uid, title, body) => uid
-        ? db.collection("notifications").doc(uid).collection("pending").add({
-            title, body, read: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          })
-        : Promise.resolve();
-
-      await Promise.all([
-        notify(d.tutorId,
-          "⏰ Consulta cancelada",
-          `A consulta de ${pet} (${when}) foi cancelada porque o pagamento não foi realizado no prazo. Você pode agendar novamente quando quiser.`),
-        notify(d.vetId,
-          "⏰ Horário liberado",
-          `A consulta de ${pet} (${when}) foi cancelada por falta de pagamento do tutor. O horário voltou a ficar disponível na sua agenda.`),
-      ]);
-    }
-
-    console.log(`cancelUnpaid: ${cancelled} consulta(s) cancelada(s).`);
-  }
-);
+// ─── cancelUnpaid REMOVIDO (2026-09-08) ───────────────────────────────────────
+// Existia porque o pagamento acontecia só DEPOIS da confirmação do vet
+// ("bate e volta": tutor pede → vet confirma → tutor paga). Agora o tutor paga
+// já ao solicitar a consulta (createPayment/createPixPayment logo após criar o
+// documento) — não existe mais "confirmado e não pago" para cancelar. Se o vet
+// recusar ou não responder, quem cuida do estorno é o handleRejectedPayment
+// chamado por appointmentHistorian (ver abaixo).
 
 // ─── Verificação de cadastro (pré-registro, sem auth) ────────────────────────
 // O app do tutor checa CPF/e-mail duplicados ANTES de criar a conta — sem
@@ -786,9 +726,11 @@ async function onPortalConfirmed(after, resendKey) {
   }
 }
 
-async function onPortalNotConfirmed(ref, after, mpToken, resendKey) {
-  if (after.bookingOrigin !== "portal_web") return;
-
+// Recusa ou expiração de uma solicitação — cuida do estorno (agora vale para
+// QUALQUER origem: apps e portal_web, já que os apps também cobram na hora de
+// solicitar desde 2026-09-08) e do aviso ao cliente (push nos apps, e-mail no
+// portal_web, que não tem app instalado).
+async function handleRejectedPayment(ref, after, mpToken, resendKey) {
   let refunded = false;
   if (after.paymentStatus === "approved" && after.paymentId) {
     try {
@@ -800,7 +742,7 @@ async function onPortalNotConfirmed(ref, after, mpToken, resendKey) {
       refunded = true;
     } catch (e) {
       const refundError = e.response?.data || e.message;
-      console.error("onPortalNotConfirmed refund error:", refundError);
+      console.error("handleRejectedPayment refund error:", refundError);
       // Estorno automático falhou: avisa o admin por e-mail, dinheiro real
       // não pode ficar "preso" sem ninguém saber.
       try {
@@ -813,12 +755,34 @@ async function onPortalNotConfirmed(ref, after, mpToken, resendKey) {
            <p>Estornar manualmente no painel do Mercado Pago.</p>`
         );
       } catch (e2) {
-        console.error("onPortalNotConfirmed admin alert error:", e2.response?.data || e2.message);
+        console.error("handleRejectedPayment admin alert error:", e2.response?.data || e2.message);
       }
     }
   }
 
-  if (!after.email) return;
+  // Apps (tutorId presente): push avisando do estorno. A recusa em si já é
+  // avisada na hora pelo próprio app (rejectAppointment) ou pelo timeout
+  // (expireUnanswered) — este push cobre só a parte nova, o dinheiro de volta.
+  if (after.tutorId && refunded) {
+    try {
+      await admin.firestore()
+        .collection("notifications").doc(after.tutorId)
+        .collection("pending").add({
+          title: "💸 Valor estornado",
+          body: `O valor pago pela consulta de ${after.petName || "seu pet"} foi estornado. ` +
+            (after.paymentMethod === "pix"
+              ? "Já deve aparecer na sua conta em instantes."
+              : "Pode levar alguns dias para aparecer na fatura do cartão."),
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    } catch (e) {
+      console.error("handleRejectedPayment push error:", e.message);
+    }
+  }
+
+  // Portal web: não tem app instalado, avisa por e-mail.
+  if (after.bookingOrigin !== "portal_web" || !after.email) return;
   try {
     await sendEmail(
       resendKey,
@@ -832,7 +796,7 @@ async function onPortalNotConfirmed(ref, after, mpToken, resendKey) {
        <a href="https://play.google.com/store/apps/details?id=com.vetvem.vetvem">baixar o app</a>.</p>`
     );
   } catch (e) {
-    console.error("onPortalNotConfirmed email error:", e.response?.data || e.message);
+    console.error("handleRejectedPayment email error:", e.response?.data || e.message);
   }
 }
 
@@ -874,7 +838,7 @@ exports.appointmentHistorian = onDocumentWritten(
         const reason = after.rejectReason === "no_response" ? "ignorado_timeout" : "recusado";
         const origem = after.rejectReason === "no_response" ? "cloud_function" : "app_pro";
         await logEvent(ref, reason, origem, vetId, after.rejectedAt || null, after.rejectReason || null);
-        return onPortalNotConfirmed(ref, after, MP_SECRET.value(), RESEND_SECRET.value());
+        return handleRejectedPayment(ref, after, MP_SECRET.value(), RESEND_SECRET.value());
       }
 
       case "completed":
@@ -942,6 +906,13 @@ exports.expireUnanswered = onSchedule(
       });
       expired++;
 
+      // Se nunca foi pago, o vet nunca chegou a ser notificado (só avisamos
+      // o vet depois do pagamento aprovado) — não faz sentido dizer "não
+      // respondeu" pra quem nunca viu a solicitação, nem avisar o tutor de
+      // algo que ele mesmo deixou de fazer (não pagar). Silencioso: só libera
+      // o horário. O reembolso (quando pago) é tratado pelo appointmentHistorian.
+      if (d.paymentStatus !== "approved") continue;
+
       const pet = d.petName || "seu pet";
       const when = `${d.date || ""} às ${d.time || ""}`;
       const notify = (uid, title, body, extra = {}) => uid
@@ -954,7 +925,7 @@ exports.expireUnanswered = onSchedule(
 
       await Promise.all([
         notify(d.tutorId, "⏰ Solicitação sem resposta",
-          `${d.vetName || "O profissional"} não respondeu à solicitação para ${pet} (${when}) dentro do prazo. Você pode escolher outro profissional.`),
+          `${d.vetName || "O profissional"} não respondeu à solicitação para ${pet} (${when}) dentro do prazo. O valor pago será estornado.`),
         notify(d.vetId, "⏰ Solicitação expirada",
           `A solicitação de ${pet} (${when}) expirou por falta de resposta e foi recusada automaticamente.`),
       ]);

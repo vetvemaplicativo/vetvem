@@ -260,14 +260,10 @@ class ConsultaDetailView extends StatelessWidget {
                 'specialty': item.specialty,
               }),
             ),
-          if (item.status == 'pending_confirmation')
-            _BottomAction(
-              label: 'Aguardando confirmação do profissional...',
-              icon: Icons.hourglass_top_rounded,
-              color: const Color(0xFFF59E0B),
-              onTap: null,
-            ),
-          if (item.status == 'confirmed' && item.paymentStatus == 'pending_payment')
+          // Pagamento agora acontece já na solicitação — este botão só
+          // aparece se o tutor abandonou o pagamento no meio do caminho
+          // (ex.: saiu do PIX antes de pagar) e a solicitação ainda não expirou.
+          if (item.status == 'pending_confirmation' && item.paymentStatus == 'pending_payment')
             _BottomAction(
               label: 'Pagar agora e garantir seu horário',
               icon: Icons.account_balance_wallet_rounded,
@@ -290,6 +286,13 @@ class ConsultaDetailView extends StatelessWidget {
                 'price': double.tryParse(item.value.replaceAll(',', '.')) ?? 0.0,
                 'address': '',
               }),
+            ),
+          if (item.status == 'pending_confirmation' && item.paymentStatus != 'pending_payment')
+            _BottomAction(
+              label: 'Aguardando confirmação do profissional...',
+              icon: Icons.hourglass_top_rounded,
+              color: const Color(0xFFF59E0B),
+              onTap: null,
             ),
           if (item.status == 'confirmed' && item.paymentStatus != 'pending_payment')
             _BottomAction(
@@ -343,7 +346,7 @@ class _PaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final needsPayment = item.status == 'confirmed' && item.paymentStatus == 'pending_payment';
+    final needsPayment = item.status == 'pending_confirmation' && item.paymentStatus == 'pending_payment';
     final isPaid = item.paymentStatus == 'approved' || item.paymentStatus == 'paid' || item.status == 'completed';
     final isCancelled = item.status == 'cancelled' || item.status == 'rejected';
 

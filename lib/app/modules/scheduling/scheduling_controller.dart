@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
+import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
-import '../../services/notification_service.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
 
@@ -230,18 +230,30 @@ class SchedulingController extends GetxController {
         serviceName: service.name,
       );
 
-      // Notifica o vet sobre novo agendamento
-      if (vet?.id != null && vet!.id.isNotEmpty) {
-        await NotificationService.sendTo(
-          toUid: vet.id,
-          title: '🗓️ Novo agendamento!',
-          body: '${profile.userName.value} agendou ${service.name} para ${pet.name} em $formattedDate às ${selectedTime.value}.',
-          tipo: 'novo_agendamento',
-          appointmentId: ref.id,
-        );
-      }
-
-      isConfirmed.value = true;
+      // Fluxo atual: paga já ao solicitar (como Uber/iFood), em vez de
+      // esperar o profissional confirmar pra só então cobrar — elimina o
+      // "bate e volta" de notificações. O vet só é avisado depois do
+      // pagamento aprovado (ver PaymentController._notifyVet). Se ele
+      // recusar ou não responder, o valor é estornado automaticamente
+      // (handleRejectedPayment, na Cloud Function appointmentHistorian).
+      Get.toNamed(Routes.payment, arguments: {
+        'appointmentId': ref.id,
+        'vetId': vet?.id ?? '',
+        'vetName': vet?.name ?? 'Veterinário',
+        'tutorName': profile.userName.value,
+        'petName': pet.name,
+        'petSpecies': pet.species,
+        'petBreed': pet.breed,
+        'petSex': pet.sex,
+        'petAge': pet.ageLabel.isNotEmpty ? pet.ageLabel : pet.age,
+        'petCastrated': pet.castrated,
+        'petPhotoBase64': pet.photoBase64,
+        'serviceName': service.name,
+        'date': formattedDate,
+        'time': selectedTime.value ?? '',
+        'address': addr.fullLine,
+        'price': service.price,
+      });
     } catch (_) {
       Get.snackbar('Erro', 'Não foi possível realizar o agendamento. Tente novamente.',
           snackPosition: SnackPosition.TOP);

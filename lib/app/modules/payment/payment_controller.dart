@@ -474,10 +474,15 @@ class PaymentController extends GetxController {
         resolvedPetName = resolvedPetName.isNotEmpty ? resolvedPetName : (d['petName'] as String? ?? 'seu pet');
       }
       if (resolvedVetId.isNotEmpty) {
+        // Este é o PRIMEIRO aviso que o vet recebe sobre a solicitação — o
+        // tutor paga já ao agendar, então o pedido só chega até o profissional
+        // depois que o pagamento é aprovado (ver scheduling_controller.dart).
         await NotificationService.sendTo(
           toUid: resolvedVetId,
-          title: '💳 Pagamento confirmado!',
-          body: 'O tutor pagou a consulta de $resolvedPetName via ${method == 'pix' ? 'PIX' : 'cartão'}. O valor será repassado em D+2 após a consulta.',
+          title: '🗓️ Novo agendamento pago!',
+          body: '$tutorName agendou $serviceName para $resolvedPetName em $appointmentDate às $appointmentTime. Confirme em até 30 min ou a solicitação expira.',
+          tipo: 'novo_agendamento',
+          appointmentId: appointmentId,
         );
       }
     } catch (_) {}
