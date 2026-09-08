@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -63,9 +65,22 @@ class NotificationService {
   static Future<void> _saveToken() async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token == null) return;
-    await _firestore.collection('users').doc(uid).update({'fcmToken': token});
+    try {
+      // No iOS, o token do FCM só fica disponível depois que o dispositivo
+      // termina de se registrar na APNs (assíncrono) — sem esperar isso,
+      // getToken() pode retornar null ou lançar "apns-token-not-set".
+      if (!kIsWeb && Platform.isIOS) {
+        for (var i = 0; i < 10; i++) {
+          if (await FirebaseMessaging.instance.getAPNSToken() != null) break;
+          await Future.delayed(const Duration(seconds: 1));
+        }
+      }
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+      await _firestore.collection('users').doc(uid).update({'fcmToken': token});
+    } catch (e) {
+      debugPrint('NotificationService._saveToken falhou: $e');
+    }
   }
 
   static Future<void> _updateToken(String token) async {
