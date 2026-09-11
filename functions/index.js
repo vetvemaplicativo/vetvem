@@ -994,3 +994,128 @@ exports.seedTaxonomies = onRequest(
     return res.json({ result });
   }
 );
+
+// ─── Encerrar conta (LGPD + Apple Guideline 5.1.1(v)) ─────────────────────────
+// Exclusão self-service dentro do app (tutor e Pro). Não é hard delete puro:
+// agendamentos concluídos/pagos ficam no Firestore por causa de histórico
+// financeiro (repasses, fiscal, disputa de pagamento) — só a PII é apagada
+// (anonimização). O que É removido de fato: a conta no Firebase Auth (login
+// nunca mais funciona), o customer no cofre do Mercado Pago (cartões
+// salvos) e a subcoleção de documentos (RG/CNH/CRMV). Agendamentos futuros
+// ainda em aberto são cancelados e a outra parte é avisada + reembolsada
+// (mesma lógica do handleRejectedPayment).
+exports.deleteAccount = onRequest(
+  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+    const uid = await verifyToken(req, res);
+    if (!uid) return;
+
+    const db = admin.firestore();
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+    const user = userSnap.data();
+    const MP_ACCESS_TOKEN = MP_SECRET.value();
+
+    try {
+      // 1) Cancela agendamentos em aberto (como tutor OU como vet) e
+      // reembolsa/avisa a outra parte.
+      const openStatuses = ["pending_confirmation", "confirmed"];
+      const [asTutor, asVet] = await Promise.all([
+        db.collection("appointments")
+          .where("tutorId", "==", uid).where("status", "in", openStatuses).get(),
+        db.collection("appointments")
+          .where("vetId", "==", uid).where("status", "in", openStatuses).get(),
+      ]);
+
+      for (const doc of [...asTutor.docs, ...asVet.docs]) {
+        const d = doc.data();
+        const isTutor = d.tutorId === uid;
+
+        await doc.ref.update({
+          status: "cancelled",
+          cancelReason: "account_deleted",
+          cancelledBy: isTutor ? "tutor" : "profissional",
+          cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        let refunded = false;
+        if (d.paymentStatus === "approved" && d.paymentId) {
+          try {
+            await refundPayment(d.paymentId, MP_ACCESS_TOKEN);
+            await doc.ref.update({
+              paymentStatus: "refunded",
+              refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            refunded = true;
+          } catch (e) {
+            console.error("deleteAccount refund error:", e.response?.data || e.message);
+          }
+        }
+
+        const otherUid = isTutor ? d.vetId : d.tutorId;
+        if (otherUid) {
+          await db.collection("notifications").doc(otherUid).collection("pending").add({
+            title: "Consulta cancelada",
+            body: `A consulta de ${d.petName || "um pet"} foi cancelada porque ` +
+              `${isTutor ? "o tutor" : "o profissional"} encerrou a conta no VetVem.` +
+              (refunded ? " O valor pago foi estornado." : ""),
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // 2) Remove o customer do cofre do Mercado Pago (leva os cartões salvos).
+      if (user.mpCustomerId) {
+        try {
+          await axios.delete(
+            `https://api.mercadopago.com/v1/customers/${user.mpCustomerId}`,
+            { headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` } }
+          );
+        } catch (e) {
+          console.error("deleteAccount mpCustomer error:", e.response?.data || e.message);
+        }
+      }
+
+      // 3) Apaga a subcoleção de documentos (RG/CNH/CRMV) do profissional.
+      const docsSnap = await userRef.collection("documents").get();
+      if (!docsSnap.empty) {
+        const batch = db.batch();
+        docsSnap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      // 4) Anonimiza PII no doc (mantido por causa do histórico financeiro
+      // referenciado em appointments/payouts) e marca como excluído/bloqueado.
+      await userRef.update({
+        name: "Usuário removido",
+        email: admin.firestore.FieldValue.delete(),
+        phone: admin.firestore.FieldValue.delete(),
+        photoBase64: admin.firestore.FieldValue.delete(),
+        cpf: admin.firestore.FieldValue.delete(),
+        crmv: admin.firestore.FieldValue.delete(),
+        pixKeys: admin.firestore.FieldValue.delete(),
+        addresses: admin.firestore.FieldValue.delete(),
+        fcmToken: admin.firestore.FieldValue.delete(),
+        mpCustomerId: admin.firestore.FieldValue.delete(),
+        blocked: true,
+        accountStatus: "deleted",
+        isAvailable: false,
+        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 5) Remove a conta do Firebase Authentication — login nunca mais funciona.
+      await admin.auth().deleteUser(uid);
+
+      return res.json({ result: { ok: true } });
+    } catch (e) {
+      console.error("deleteAccount error:", e.message);
+      return res.status(500).json({ error: "Erro ao encerrar conta. Tente novamente." });
+    }
+  }
+);
