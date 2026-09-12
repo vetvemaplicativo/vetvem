@@ -10,6 +10,7 @@ import 'app/services/auth_service.dart';
 import 'app/services/ibge_service.dart';
 import 'app/services/taxonomy_service.dart';
 import 'app/theme/app_theme.dart';
+import 'app/widgets/force_update_gate.dart';
 import 'app/widgets/offline_banner.dart';
 
 void main() async {
@@ -51,7 +52,10 @@ class VetVemApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('pt', 'BR')],
       locale: const Locale('pt', 'BR'),
-      builder: (context, child) => OfflineBanner(child: child!),
+      builder: (context, child) => ForceUpdateGate(
+        configDocId: 'app_version_tutor',
+        child: OfflineBanner(child: child!),
+      ),
     );
   }
 }
