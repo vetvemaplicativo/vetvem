@@ -594,13 +594,75 @@ exports.grantAdmin = onRequest(
   }
 );
 
-// ─── cancelUnpaid REMOVIDO (2026-09-08) ───────────────────────────────────────
-// Existia porque o pagamento acontecia só DEPOIS da confirmação do vet
-// ("bate e volta": tutor pede → vet confirma → tutor paga). Agora o tutor paga
-// já ao solicitar a consulta (createPayment/createPixPayment logo após criar o
-// documento) — não existe mais "confirmado e não pago" para cancelar. Se o vet
-// recusar ou não responder, quem cuida do estorno é o handleRejectedPayment
-// chamado por appointmentHistorian (ver abaixo).
+// ─── Rede de segurança: confirmado e nunca pago ───────────────────────────────
+// Desde 2026-09-08 o tutor paga já ao solicitar (createPayment/createPixPayment
+// logo após criar o documento) — o vet só é notificado depois do pagamento
+// aprovado, então "confirmado sem pagar" não deveria mais existir no fluxo
+// normal. MAS: usuários com o app Android antigo (fluxo velho: vet confirma →
+// tutor paga depois) ainda podem gerar esse estado enquanto não atualizarem —
+// e sem isso o horário fica preso pro profissional pra sempre. Roda a cada 30
+// min, bem mais tolerante que a lógica antiga (24h em vez de 12h) já que hoje
+// é só rede de segurança, não o caminho esperado.
+const PAYMENT_DEADLINE_HOURS = 24;
+
+exports.cancelUnpaid = onSchedule(
+  { schedule: "*/30 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  async () => {
+    const db = admin.firestore();
+    const now = new Date();
+
+    const snap = await db.collection("appointments")
+      .where("status", "==", "confirmed").get();
+
+    let cancelled = 0;
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      if (d.paymentStatus === "approved") continue; // pago: nada a fazer
+
+      const ref = d.confirmedAt?.toDate?.() || d.createdAt?.toDate?.();
+      const deadlineExpired = ref &&
+        (now - ref) > PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000;
+
+      let apptStarted = false;
+      const apptDate = parseApptDate(d.date);
+      if (apptDate) {
+        const [h, m] = (d.time || "23:59").split(":").map(Number);
+        apptDate.setHours(h || 23, m || 59, 0, 0);
+        apptStarted = apptDate <= now;
+      }
+
+      if (!deadlineExpired && !apptStarted) continue;
+
+      await doc.ref.update({
+        status: "cancelled",
+        cancelReason: "payment_timeout",
+        cancelledBy: "sistema",
+        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      cancelled++;
+
+      const pet = d.petName || "seu pet";
+      const when = `${d.date || ""} às ${d.time || ""}`;
+      const notify = (uid, title, body) => uid
+        ? db.collection("notifications").doc(uid).collection("pending").add({
+            title, body, read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          })
+        : Promise.resolve();
+
+      await Promise.all([
+        notify(d.tutorId,
+          "⏰ Consulta cancelada",
+          `A consulta de ${pet} (${when}) foi cancelada porque o pagamento não foi realizado no prazo. Você pode agendar novamente quando quiser.`),
+        notify(d.vetId,
+          "⏰ Horário liberado",
+          `A consulta de ${pet} (${when}) foi cancelada por falta de pagamento do tutor. O horário voltou a ficar disponível na sua agenda.`),
+      ]);
+    }
+
+    console.log(`cancelUnpaid: ${cancelled} consulta(s) cancelada(s) (rede de segurança).`);
+  }
+);
 
 // ─── Verificação de cadastro (pré-registro, sem auth) ────────────────────────
 // O app do tutor checa CPF/e-mail duplicados ANTES de criar a conta — sem
