@@ -294,6 +294,25 @@ function parseApptDate(s) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// Data + hora do agendamento, já no fuso de Brasília (-03:00), sem usar
+// Date.setHours() — setHours() muda a hora no fuso do SERVIDOR (UTC nas
+// Cloud Functions), não no de Brasília, o que deslocava o horário real da
+// consulta em 3h e fazia o timeout automático (apptStarted) disparar cedo
+// demais (bug encontrado em 2026-09-14: agendamento pra 14:00 sendo
+// cancelado por "hora já chegada" pouco depois das 11h).
+function parseApptDateTime(dateStr, timeStr) {
+  const p = (dateStr || "").split("/");
+  if (p.length < 3) return null;
+  const [hh, mm] = (timeStr || "23:59").split(":").map((v) => parseInt(v, 10));
+  const h = Number.isFinite(hh) ? hh : 23;
+  const m = Number.isFinite(mm) ? mm : 59;
+  const d = new Date(
+    `${p[2]}-${p[1].padStart(2, "0")}-${p[0].padStart(2, "0")}` +
+    `T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00-03:00`
+  );
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function parseValue(v, fallbackStr) {
   if (typeof v === "number") return v;
   const cleaned = String(fallbackStr || "").replace("R$", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
@@ -623,13 +642,8 @@ exports.cancelUnpaid = onSchedule(
       const deadlineExpired = ref &&
         (now - ref) > PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000;
 
-      let apptStarted = false;
-      const apptDate = parseApptDate(d.date);
-      if (apptDate) {
-        const [h, m] = (d.time || "23:59").split(":").map(Number);
-        apptDate.setHours(h || 23, m || 59, 0, 0);
-        apptStarted = apptDate <= now;
-      }
+      const apptDateTime = parseApptDateTime(d.date, d.time);
+      const apptStarted = apptDateTime ? apptDateTime <= now : false;
 
       if (!deadlineExpired && !apptStarted) continue;
 
@@ -926,13 +940,14 @@ exports.appointmentHistorian = onDocumentWritten(
 
 // ─── Expiração de solicitação sem resposta do profissional ───────────────────
 // Roda a cada 5 min. Uma solicitação em pending_confirmation vira "rejected"
-// quando: (a) passaram 30 min desde a criação, ou (b) chegou a hora da
+// quando: (a) passou 1h desde a criação (tempo de sobra pro profissional
+// confirmar depois de já ter recebido o pagamento), ou (b) chegou a hora da
 // consulta sem resposta. Reaproveita o status "rejected" (os dois apps já
 // sabem exibir esse valor — nenhum filtro/UI existente quebra); o evento
 // distinto do funil (ignorado_timeout) fica só no historico_status, via
 // rejectReason.
 
-const RESPONSE_DEADLINE_MINUTES = 30;
+const RESPONSE_DEADLINE_MINUTES = 60;
 
 exports.expireUnanswered = onSchedule(
   { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
@@ -951,13 +966,8 @@ exports.expireUnanswered = onSchedule(
       const deadlineExpired = created &&
         (now - created) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
 
-      let apptStarted = false;
-      const apptDate = parseApptDate(d.date);
-      if (apptDate) {
-        const [h, m] = (d.time || "23:59").split(":").map(Number);
-        apptDate.setHours(h || 23, m || 59, 0, 0);
-        apptStarted = apptDate <= now;
-      }
+      const apptDateTime = parseApptDateTime(d.date, d.time);
+      const apptStarted = apptDateTime ? apptDateTime <= now : false;
 
       if (!deadlineExpired && !apptStarted) continue;
 

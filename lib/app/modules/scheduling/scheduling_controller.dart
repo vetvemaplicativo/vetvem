@@ -150,8 +150,10 @@ class SchedulingController extends GetxController {
     final h = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? 0;
     final m = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0;
     final slot = DateTime(date.year, date.month, date.day, h, m);
-    // Buffer de 30 min: tempo mínimo pro profissional ver e confirmar.
-    return slot.isBefore(now.add(const Duration(minutes: 30)));
+    // Buffer de 2h: tempo mínimo de antecedência pra dar folga real pro
+    // profissional confirmar (ele tem até 1h pra responder — ver
+    // RESPONSE_DEADLINE_MINUTES em functions/index.js) e se preparar/deslocar.
+    return slot.isBefore(now.add(const Duration(hours: 2)));
   }
 
   bool isTimeBooked(String time) => bookedTimes.contains(time) || _isPastOrTooSoon(time);
