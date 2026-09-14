@@ -134,13 +134,41 @@ class SchedulingController extends GetxController {
     }
   }
 
-  bool isTimeBooked(String time) => bookedTimes.contains(time);
+  // Evita marcar um horário que já passou (ou está a poucos minutos) no dia
+  // de hoje — sem essa checagem dava pra criar um agendamento cuja "hora da
+  // consulta" já tinha chegado antes até do profissional ver a solicitação,
+  // fazendo o timeout automático (expireUnanswered) cancelar em minutos.
+  bool _isPastOrTooSoon(String time) {
+    final date = selectedDate.value;
+    if (date == null) return false;
+    final now = DateTime.now();
+    final isToday = date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+    if (!isToday) return false;
+    final parts = time.split(':');
+    final h = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? 0;
+    final m = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0;
+    final slot = DateTime(date.year, date.month, date.day, h, m);
+    // Buffer de 30 min: tempo mínimo pro profissional ver e confirmar.
+    return slot.isBefore(now.add(const Duration(minutes: 30)));
+  }
+
+  bool isTimeBooked(String time) => bookedTimes.contains(time) || _isPastOrTooSoon(time);
 
   void selectTime(String time) {
-    if (isTimeBooked(time)) {
+    if (bookedTimes.contains(time)) {
       Get.snackbar(
         'Horário indisponível',
         'Este horário já está reservado. Escolha outro.',
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+    if (_isPastOrTooSoon(time)) {
+      Get.snackbar(
+        'Horário indisponível',
+        'Esse horário é muito próximo ou já passou. Escolha outro.',
         snackPosition: SnackPosition.TOP,
       );
       return;
