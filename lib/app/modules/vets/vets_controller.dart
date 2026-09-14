@@ -67,6 +67,12 @@ class VetsController extends GetxController {
       if (_tutorCity.isNotEmpty) {
         tutorAddressLabel.value =
             _tutorBairro.isNotEmpty ? '$_tutorBairro, $_tutorCity' : _tutorCity;
+        // Filtro por região ligado por padrão quando há endereço cadastrado —
+        // atendimento é a domicílio, não faz sentido listar por padrão
+        // profissionais de outro estado/cidade. O tutor ainda pode desligar
+        // manualmente (toggleAreaFilter) se quiser ver todo mundo.
+        filterByArea.value = true;
+        _filter();
       }
     } catch (_) {
       // Sem endereço: o filtro simplesmente fica indisponível.
