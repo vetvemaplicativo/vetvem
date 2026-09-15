@@ -30,6 +30,27 @@ async function verifyToken(req, res) {
   }
 }
 
+// ─── Helper: verifica token + custom claim admin (ver grantAdmin) ─────────────
+async function verifyAdmin(req, res) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  if (!token) {
+    res.status(401).json({ error: "Token não fornecido" });
+    return null;
+  }
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    if (decoded.admin !== true) {
+      res.status(403).json({ error: "Acesso restrito a administradores" });
+      return null;
+    }
+    return decoded.uid;
+  } catch (e) {
+    res.status(401).json({ error: "Token inválido" });
+    return null;
+  }
+}
+
 // ─── Criar pagamento com cartão ───────────────────────────────────────────────
 exports.createPayment = onRequest(
   { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
@@ -1004,6 +1025,80 @@ exports.expireUnanswered = onSchedule(
     }
 
     console.log(`expireUnanswered: ${expired} solicitação(ões) expirada(s).`);
+  }
+);
+
+// ─── Cancelamento manual pelo painel admin ────────────────────────────────────
+// Cobre casos que exigem intervenção humana (ex.: agendamento preso por bug,
+// pedido do usuário via suporte). Cancela, estorna se já pago e notifica as
+// duas partes — a mesma lógica que os cancelamentos automáticos já usam.
+exports.adminCancelAppointment = onRequest(
+  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+    const adminUid = await verifyAdmin(req, res);
+    if (!adminUid) return;
+
+    const { appointmentId } = req.body || {};
+    if (!appointmentId) {
+      return res.status(400).json({ error: "appointmentId é obrigatório" });
+    }
+
+    const db = admin.firestore();
+    const ref = db.collection("appointments").doc(appointmentId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: "Agendamento não encontrado" });
+    }
+    const d = snap.data();
+    if (["cancelled", "rejected", "completed"].includes(d.status)) {
+      return res.status(400).json({ error: `Agendamento já está com status "${d.status}"` });
+    }
+
+    try {
+      await ref.update({
+        status: "cancelled",
+        cancelReason: "admin_manual",
+        cancelledBy: "sistema",
+        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      let refunded = false;
+      if (d.paymentStatus === "approved" && d.paymentId) {
+        try {
+          await refundPayment(d.paymentId, MP_SECRET.value());
+          await ref.update({
+            paymentStatus: "refunded",
+            refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          refunded = true;
+        } catch (e) {
+          console.error("adminCancelAppointment refund error:", e.response?.data || e.message);
+        }
+      }
+
+      const pet = d.petName || "um pet";
+      const notify = (uid, title, body) => uid
+        ? db.collection("notifications").doc(uid).collection("pending").add({
+            title, body, read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          })
+        : Promise.resolve();
+
+      await Promise.all([
+        notify(d.tutorId, "Consulta cancelada",
+          `A consulta de ${pet} foi cancelada pela equipe VetVem.` +
+            (refunded ? " O valor pago foi estornado." : "")),
+        notify(d.vetId, "Consulta cancelada",
+          `A consulta de ${pet} foi cancelada pela equipe VetVem. O horário voltou a ficar disponível.`),
+      ]);
+
+      return res.json({ result: { ok: true, refunded } });
+    } catch (e) {
+      console.error("adminCancelAppointment error:", e.message);
+      return res.status(500).json({ error: "Erro ao cancelar agendamento" });
+    }
   }
 );
 
