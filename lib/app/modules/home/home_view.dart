@@ -400,29 +400,7 @@ class _HomeTab extends GetView<HomeController> {
   }
 
   Widget _buildCategories(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Categorias', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 14),
-        Obx(() => GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.0,
-              children: Get.find<TaxonomyService>()
-                  .specialties
-                  .map((cat) => _CategoryCard(
-                        icon: resolveSpecialtyIcon(cat.icon),
-                        label: cat.label,
-                        onTap: () => _showCategoryModal(context, cat),
-                      ))
-                  .toList(),
-            )),
-      ],
-    );
+    return _CategoriesSection(onTapCategory: (cat) => _showCategoryModal(context, cat));
   }
 
   // ── Próximo agendamento ──────────────────────────────────────────
@@ -460,6 +438,63 @@ class _HomeTab extends GetView<HomeController> {
 }
 
 // ─── Widgets ─────────────────────────────────────────────────────────────────
+
+// Mostra as categorias em blocos de 2 linhas (6 itens) por padrão — com 15
+// especialidades cadastradas hoje, o grid inteiro (5 linhas) empurrava todo o
+// resto da Home pra baixo antes mesmo de rolar. "Ver todas" expande sem
+// precisar de tela nova.
+class _CategoriesSection extends StatefulWidget {
+  final void Function(SpecialtyDef) onTapCategory;
+  const _CategoriesSection({required this.onTapCategory});
+
+  @override
+  State<_CategoriesSection> createState() => _CategoriesSectionState();
+}
+
+class _CategoriesSectionState extends State<_CategoriesSection> {
+  static const _collapsedCount = 6;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Categorias', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 14),
+        Obx(() {
+          final all = Get.find<TaxonomyService>().specialties;
+          final showAll = _expanded || all.length <= _collapsedCount;
+          final visible = showAll ? all : all.take(_collapsedCount).toList();
+          return Column(
+            children: [
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.0,
+                children: visible
+                    .map((cat) => _CategoryCard(
+                          icon: resolveSpecialtyIcon(cat.icon),
+                          label: cat.label,
+                          onTap: () => widget.onTapCategory(cat),
+                        ))
+                    .toList(),
+              ),
+              if (all.length > _collapsedCount)
+                TextButton(
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  child: Text(showAll ? 'Ver menos' : 'Ver todas (${all.length})'),
+                ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+}
 
 class _CategoryCard extends StatelessWidget {
   final IconData icon;

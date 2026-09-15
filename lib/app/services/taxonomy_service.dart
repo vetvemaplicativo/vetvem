@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -133,10 +135,26 @@ class TaxonomyService extends GetxService {
   List<String> get specialtyValues =>
       specialties.map((s) => s.specialty).toSet().toList();
 
+  StreamSubscription<User?>? _authSub;
+
   Future<TaxonomyService> init() async {
     // Não bloqueia a inicialização do app — atualiza assim que chegar.
     _load();
+    // As regras do Firestore exigem auth != null para ler config/specialties.
+    // Este init() roda no splash, antes do login terminar — a 1ª tentativa
+    // acima falha silenciosamente (fica no fallback de 6 categorias
+    // hardcoded) e, sem isso, nunca mais tenta de novo. Recarrega assim que
+    // o login completar (e de novo a cada troca de conta/logout+login).
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) _load();
+    });
     return this;
+  }
+
+  @override
+  void onClose() {
+    _authSub?.cancel();
+    super.onClose();
   }
 
   Future<void> _load() async {
