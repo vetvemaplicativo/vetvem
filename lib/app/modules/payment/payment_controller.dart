@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../../routes/app_routes.dart';
-import '../../services/notification_service.dart';
 import '../profile/profile_controller.dart';
 
 enum PaymentMethod { pix, card }
@@ -157,7 +156,6 @@ class PaymentController extends GetxController {
         _pixStatusSub?.cancel();
         _pixTimer?.cancel();
         status.value = PaymentStatus.approved;
-        _notifyVet('pix');
       }
     });
   }
@@ -267,7 +265,6 @@ class PaymentController extends GetxController {
           email: user?.email ?? '',
         );
         status.value = PaymentStatus.approved;
-        await _notifyVet('card');
       } else {
         status.value = PaymentStatus.rejected;
         Get.snackbar('Pagamento recusado', _rejectionMessage(statusDetail),
@@ -410,7 +407,6 @@ class PaymentController extends GetxController {
 
       if ((result['status'] as String? ?? '') == 'approved') {
         status.value = PaymentStatus.approved;
-        await _notifyVet('card');
       } else {
         status.value = PaymentStatus.rejected;
         Get.snackbar('Pagamento recusado',
@@ -458,35 +454,9 @@ class PaymentController extends GetxController {
 
   String _detectBrand(String digits) => ProfileController.detectBrand(digits);
 
-  // ── Notificação ao vet ────────────────────────────────────────────
-
-  Future<void> _notifyVet(String method) async {
-    try {
-      String resolvedVetId = vetId;
-      String resolvedPetName = petName;
-      if (appointmentId.isNotEmpty && (resolvedVetId.isEmpty || resolvedPetName.isEmpty)) {
-        final snap = await FirebaseFirestore.instance
-            .collection('appointments')
-            .doc(appointmentId)
-            .get();
-        final d = snap.data() ?? {};
-        resolvedVetId = resolvedVetId.isNotEmpty ? resolvedVetId : (d['vetId'] as String? ?? '');
-        resolvedPetName = resolvedPetName.isNotEmpty ? resolvedPetName : (d['petName'] as String? ?? 'seu pet');
-      }
-      if (resolvedVetId.isNotEmpty) {
-        // Este é o PRIMEIRO aviso que o vet recebe sobre a solicitação — o
-        // tutor paga já ao agendar, então o pedido só chega até o profissional
-        // depois que o pagamento é aprovado (ver scheduling_controller.dart).
-        await NotificationService.sendTo(
-          toUid: resolvedVetId,
-          title: '🗓️ Novo agendamento pago!',
-          body: '$tutorName agendou $serviceName para $resolvedPetName em $appointmentDate às $appointmentTime. Confirme em até 30 min ou a solicitação expira.',
-          tipo: 'novo_agendamento',
-          appointmentId: appointmentId,
-        );
-      }
-    } catch (_) {}
-  }
+  // O aviso ao profissional é enviado pelo webhook do Mercado Pago (mpWebhook),
+  // não aqui: quem paga o PIX pelo app do banco fecha o VetVem antes da
+  // aprovação e o aviso feito pelo app nunca sairia.
 
   // ── Navegação ─────────────────────────────────────────────────────
 

@@ -263,7 +263,7 @@ class ConsultaDetailView extends StatelessWidget {
           // Pagamento agora acontece já na solicitação — este botão só
           // aparece se o tutor abandonou o pagamento no meio do caminho
           // (ex.: saiu do PIX antes de pagar) e a solicitação ainda não expirou.
-          if (item.status == 'pending_confirmation' && item.paymentStatus == 'pending_payment')
+          if (item.awaitingPayment)
             _BottomAction(
               label: 'Pagar agora e garantir seu horário',
               icon: Icons.account_balance_wallet_rounded,
@@ -287,7 +287,14 @@ class ConsultaDetailView extends StatelessWidget {
                 'address': '',
               }),
             ),
-          if (item.status == 'pending_confirmation' && item.paymentStatus != 'pending_payment')
+          if (item.paymentInReview)
+            _BottomAction(
+              label: 'Pagamento em análise...',
+              icon: Icons.hourglass_top_rounded,
+              color: const Color(0xFFF59E0B),
+              onTap: null,
+            ),
+          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview)
             _BottomAction(
               label: 'Aguardando confirmação do profissional...',
               icon: Icons.hourglass_top_rounded,
@@ -346,7 +353,7 @@ class _PaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final needsPayment = item.status == 'pending_confirmation' && item.paymentStatus == 'pending_payment';
+    final needsPayment = item.awaitingPayment;
     final isPaid = item.paymentStatus == 'approved' || item.paymentStatus == 'paid' || item.status == 'completed';
     final isCancelled = item.status == 'cancelled' || item.status == 'rejected';
 
@@ -457,7 +464,9 @@ class _PaymentCard extends StatelessWidget {
         ? 'Estornado ao seu método de pagamento'
         : isPaid
             ? 'Pagamento confirmado — obrigado!'
-            : 'Será cobrado após confirmação do profissional';
+            : item.paymentInReview
+                ? 'Pagamento em análise pelo Mercado Pago'
+                : 'Aguardando confirmação do profissional';
 
     final methodIcon = item.paymentMethod == 'pix'
         ? Icons.pix_rounded

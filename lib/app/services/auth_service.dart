@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
@@ -71,11 +72,19 @@ class AuthService extends GetxService {
     Map<String, dynamic>? address,
     Map<String, dynamic>? pet,
   }) async {
+    UserCredential credential;
     try {
-      final credential = await _firebase.createUserWithEmailAndPassword(
+      credential = await _firebase.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+    } on FirebaseAuthException catch (e) {
+      throw _mapError(e);
+    } catch (_) {
+      throw AuthExceptions.networkError;
+    }
+
+    try {
       await credential.user?.updateDisplayName(name.trim());
       // Salva perfil do tutor no Firestore
       await _firestore.collection('users').doc(credential.user!.uid).set({
@@ -83,14 +92,20 @@ class AuthService extends GetxService {
         'email': email.trim().toLowerCase(),
         'role': 'tutor',
         'createdAt': FieldValue.serverTimestamp(),
+        'platform': Platform.isIOS ? 'ios' : 'android',
         if (cpf != null && cpf.isNotEmpty) 'cpf': cpf,
         if (phone != null && phone.isNotEmpty) 'phone': phone,
         if (address != null) 'addresses': [address],
         if (pet != null) 'pets': [pet],
       });
-    } on FirebaseAuthException catch (e) {
-      throw _mapError(e);
     } catch (_) {
+      // O login já foi criado, mas o perfil não foi salvo — sem isso a conta
+      // fica "zumbi" (a pessoa consegue logar de novo, mas com o perfil
+      // vazio, sem aviso). Desfaz o login pra poder tentar de novo do zero
+      // com o mesmo e-mail, em vez de ficar presa nesse estado quebrado.
+      try {
+        await credential.user?.delete();
+      } catch (_) {}
       throw AuthExceptions.networkError;
     }
   }
@@ -127,6 +142,7 @@ class AuthService extends GetxService {
           'email': user.email ?? '',
           'role': 'tutor',
           'createdAt': FieldValue.serverTimestamp(),
+          'platform': Platform.isIOS ? 'ios' : 'android',
         }, SetOptions(merge: true));
       }
     } on AuthException {
@@ -183,6 +199,7 @@ class AuthService extends GetxService {
           'email': user.email ?? '',
           'role': 'tutor',
           'createdAt': FieldValue.serverTimestamp(),
+          'platform': Platform.isIOS ? 'ios' : 'android',
         });
       }
     } on SignInWithAppleAuthorizationException catch (e) {

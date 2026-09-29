@@ -96,6 +96,16 @@ class ConsultationHistory {
     this.paymentStatus = '',
   });
 
+  // Gerar o PIX já muda paymentStatus para 'pending' (MP), então "não pago" é
+  // tudo que não for aprovado — 'in_process' fica de fora (cartão em análise:
+  // pagar de novo geraria cobrança duplicada).
+  bool get awaitingPayment =>
+      status == 'pending_confirmation' &&
+      paymentStatus != 'approved' &&
+      paymentStatus != 'paid' &&
+      paymentStatus != 'in_process';
+  bool get paymentInReview =>
+      status == 'pending_confirmation' && paymentStatus == 'in_process';
   bool get canRate => status == 'completed' && rating == null;
   bool get isActive => status == 'pending_confirmation' || status == 'confirmed';
 }

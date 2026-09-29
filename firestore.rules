@@ -8,9 +8,17 @@ service cloud.firestore {
     }
 
     // Campos que só o admin pode alterar — nunca o próprio usuário
+    // Exceção: o próprio usuário pode gravar accountStatus = 'pending' se o
+    // campo ainda não existe (ou já é 'pending'). Necessário no primeiro login
+    // social do Pro: o aceite dos termos cria um doc parcial e o perfil
+    // completo entra como update (set merge). Nunca permite aprovar-se, nem
+    // sair de 'approved'/'rejected' de volta para 'pending'.
     function touchesAdminFields() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['accountStatus', 'blocked', 'feeOverride']);
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasAny(['blocked', 'feeOverride'])
+          || (changed.hasAny(['accountStatus'])
+              && !(request.resource.data.get('accountStatus', null) == 'pending'
+                   && resource.data.get('accountStatus', 'pending') == 'pending'));
     }
 
     match /users/{userId} {

@@ -144,6 +144,29 @@ exports.createPixPayment = onRequest(
     const MP_ACCESS_TOKEN = MP_SECRET.value();
 
     try {
+      // Tutor voltou à tela de pagamento: se o PIX anterior ainda vale,
+      // devolve o mesmo código em vez de gerar outro (evita pagamento duplo).
+      const apptRef = admin.firestore().collection("appointments").doc(appointmentId);
+      const existing = (await apptRef.get()).data() || {};
+      if (
+        existing.tutorId === uid &&
+        existing.paymentStatus === "pending" &&
+        existing.pixCopyPaste &&
+        existing.pixExpiresAt &&
+        existing.pixExpiresAt > Date.now() + 60 * 1000
+      ) {
+        return res.json({
+          result: {
+            status: "pending",
+            paymentId: existing.paymentId,
+            pixCopyPaste: existing.pixCopyPaste,
+            pixQrCodeBase64: existing.pixQrCodeBase64,
+            pixExpiresAt: existing.pixExpiresAt,
+          },
+        });
+      }
+
+      const pixExpiresAt = Date.now() + 30 * 60 * 1000;
       const response = await axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
@@ -157,14 +180,16 @@ exports.createPixPayment = onRequest(
             identification: { type: "CPF", number: cpf || "00000000000" },
           },
           external_reference: appointmentId,
-          date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          date_of_expiration: new Date(pixExpiresAt).toISOString(),
           notification_url: `https://southamerica-east1-vetvem-18bf4.cloudfunctions.net/mpWebhook`,
         },
         {
           headers: {
             Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
             "Content-Type": "application/json",
-            "X-Idempotency-Key": `pix-${appointmentId}`,
+            // Chave única por geração: com chave fixa o MP devolveria sempre o
+            // PIX antigo (já expirado) quando o tutor volta para pagar.
+            "X-Idempotency-Key": `pix-${appointmentId}-${pixExpiresAt}`,
           },
         }
       );
@@ -172,12 +197,15 @@ exports.createPixPayment = onRequest(
       const payment = response.data;
       const pixData = payment.point_of_interaction?.transaction_data;
 
-      await admin.firestore().collection("appointments").doc(appointmentId).update({
+      await apptRef.update({
         paymentId: String(payment.id),
         paymentStatus: payment.status,
         paymentMethod: "pix",
         paymentAmount: amount,
         paymentDate: admin.firestore.FieldValue.serverTimestamp(),
+        pixCopyPaste: pixData?.qr_code || null,
+        pixQrCodeBase64: pixData?.qr_code_base64 || null,
+        pixExpiresAt,
       });
 
       return res.json({
@@ -186,6 +214,7 @@ exports.createPixPayment = onRequest(
           paymentId: payment.id,
           pixCopyPaste: pixData?.qr_code,
           pixQrCodeBase64: pixData?.qr_code_base64,
+          pixExpiresAt,
         },
       });
     } catch (error) {
@@ -239,22 +268,21 @@ exports.mpWebhook = onRequest(
               );
             } else if (
               current &&
-              current.bookingOrigin === "portal_web" &&
               current.status === "pending_confirmation" &&
               current.vetId &&
               !current.vetNotifiedAt
             ) {
-              // No portal o vet só é avisado depois do PIX confirmado — o app
-              // avisa na hora da criação (ver scheduling_controller.dart),
-              // mas ali o pedido não existe sem já estar pago.
+              // O vet só é avisado depois do pagamento aprovado (portal e app).
+              // Feito aqui e não no app do tutor: quem paga o PIX pelo app do
+              // banco fecha o VetVem e o aviso do cliente nunca sairia.
               await admin
                 .firestore()
                 .collection("notifications")
                 .doc(current.vetId)
                 .collection("pending")
                 .add({
-                  title: "🗓️ Novo agendamento!",
-                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${current.petName || "o pet"} em ${current.date} às ${current.time}.`,
+                  title: "🗓️ Novo agendamento pago!",
+                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${current.petName || "o pet"} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES} min ou a solicitação expira.`,
                   read: false,
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   tipo: "novo_agendamento",
@@ -983,9 +1011,15 @@ exports.expireUnanswered = onSchedule(
     for (const doc of snap.docs) {
       const d = doc.data();
 
+      // O prazo do profissional conta a partir do pagamento aprovado (o vet só
+      // é avisado nesse momento); sem pagamento, conta da criação.
       const created = d.createdAt?.toDate?.();
-      const deadlineExpired = created &&
-        (now - created) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
+      const paidAt = d.paymentStatus === "approved"
+        ? (d.paymentUpdatedAt?.toDate?.() || created)
+        : null;
+      const deadlineStart = paidAt || created;
+      const deadlineExpired = deadlineStart &&
+        (now - deadlineStart) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
 
       const apptDateTime = parseApptDateTime(d.date, d.time);
       const apptStarted = apptDateTime ? apptDateTime <= now : false;

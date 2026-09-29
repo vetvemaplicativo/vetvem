@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
-import '../../theme/app_theme.dart';
 import '../terms/terms_view.dart';
 
 class SplashView extends StatefulWidget {
@@ -32,7 +31,9 @@ class _SplashViewState extends State<SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      // Mesma cor do logo (o PNG tem cantos transparentes): com AppColors.primary
+      // o quadrado do logo aparecia como um bloco de tom diferente no fundo.
+      backgroundColor: const Color(0xFFFF590E),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
