@@ -257,15 +257,23 @@ class VetsController extends GetxController {
       final matchesSpecialty = specialty.isEmpty ||
           v.specialty == specialty ||
           v.specialtyTags.contains(specialty);
-      // Filtro por área: profissional sem área cadastrada fica de fora
-      // quando o filtro está ativo.
-      final matchesArea = !filterByArea.value ||
-          (v.areaAtuacao?.cobreEndereco(
+      // Filtro por área: com o toggle ligado, exige bater o bairro exato do
+      // tutor. Desligado, continua restrito à cidade do tutor (nunca mostra
+      // o Brasil inteiro) — só mostra todo mundo se o tutor não tiver
+      // nenhum endereço cadastrado, caso em que não há cidade pra restringir.
+      final matchesArea = filterByArea.value
+          ? (v.areaAtuacao?.cobreEndereco(
                 uf: _tutorUf,
                 cidade: _tutorCity,
                 bairro: _tutorBairro,
               ) ??
-              false);
+              false)
+          : (_tutorCity.isEmpty ||
+              (v.areaAtuacao?.cobreEndereco(
+                    uf: _tutorUf,
+                    cidade: _tutorCity,
+                  ) ??
+                  false));
       return matchesSearch && matchesSpecialty && matchesArea;
     }).toList();
 
