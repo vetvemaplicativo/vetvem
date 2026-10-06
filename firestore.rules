@@ -13,12 +13,18 @@ service cloud.firestore {
     // social do Pro: o aceite dos termos cria um doc parcial e o perfil
     // completo entra como update (set merge). Nunca permite aprovar-se, nem
     // sair de 'approved'/'rejected' de volta para 'pending'.
+    // Exceção 2: trocar um CRMV já cadastrado obriga voltar para 'pending'
+    // (revisão do admin) na mesma gravação.
     function touchesAdminFields() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let toPending = request.resource.data.get('accountStatus', null) == 'pending';
+      let wasPending = resource.data.get('accountStatus', 'pending') == 'pending';
+      let crmvChanged = changed.hasAny(['crmv'])
+          && resource.data.get('crmv', '') != '';
       return changed.hasAny(['blocked', 'feeOverride'])
           || (changed.hasAny(['accountStatus'])
-              && !(request.resource.data.get('accountStatus', null) == 'pending'
-                   && resource.data.get('accountStatus', 'pending') == 'pending'));
+              && !(toPending && (wasPending || crmvChanged)))
+          || (crmvChanged && !toPending);
     }
 
     match /users/{userId} {
@@ -111,6 +117,9 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId
           && request.resource.data.status == 'submitted';
       allow write: if isAdmin();
+      // Troca de CRMV: dono apaga o documento antigo para reenviar o novo
+      allow delete: if request.auth != null && request.auth.uid == userId
+          && docType == 'crmv';
     }
 
     // Configurações da plataforma (ex.: faixas de taxa)
