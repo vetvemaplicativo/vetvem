@@ -1,7 +1,7 @@
 const { setGlobalOptions } = require("firebase-functions");
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const axios = require("axios");
@@ -333,7 +333,8 @@ function feePercentFor(completedLastMonth, tiers) {
   return 15;
 }
 
-const ADMIN_EMAIL = "ronalddesouzabr@gmail.com"; // conta que recebe o resumo diário
+const PIX_HOLD_HOURS = 48; // carência dos repasses após trocar a chave PIX
+const ADMIN_EMAIL ="ronalddesouzabr@gmail.com"; // conta que recebe o resumo diário
 
 function parseApptDate(s) {
   // "23/06/2026" → Date
@@ -407,11 +408,14 @@ exports.dailyPayouts = onSchedule(
     const tiers = await loadFeeTiers(db);
     const vetIds = [...new Set(due.map((a) => a.vetId).filter(Boolean))];
     const pixByVet = {};
+    const heldVets = new Set(); // chave PIX trocada há pouco: segura o repasse
     const overrideByVet = {}; // isenção/taxa custom (com prazo opcional)
     for (const vetId of vetIds) {
       const vetDoc = await db.collection("users").doc(vetId).get();
       const d = vetDoc.data() || {};
       const keys = d.pixKeys || [];
+      const chg = d.pixChangedAt && d.pixChangedAt.toDate ? d.pixChangedAt.toDate() : null;
+      if (chg && Date.now() - chg.getTime() < PIX_HOLD_HOURS * 3600 * 1000) heldVets.add(vetId);
       pixByVet[vetId] = keys.length > 0 ? `${keys[0].key} (${keys[0].type})` : "sem chave PIX cadastrada";
       if (d.feeOverride != null) {
         const until = d.feeOverrideUntil;
@@ -419,6 +423,26 @@ exports.dailyPayouts = onSchedule(
         if (!expired) overrideByVet[vetId] = d.feeOverride;
       }
     }
+
+    // Carência de segurança: repasses de quem trocou a chave PIX há menos de
+    // PIX_HOLD_HOURS ficam sem payoutStatus e entram sozinhos num dia seguinte.
+    const heldCount = due.filter((a) => heldVets.has(a.vetId)).length;
+    for (let i = due.length - 1; i >= 0; i--) {
+      if (heldVets.has(due[i].vetId)) due.splice(i, 1);
+    }
+    if (heldCount > 0) {
+      console.log(`dailyPayouts: ${heldCount} repasse(s) retido(s) por troca recente de chave PIX.`);
+      try {
+        const adminUser = await admin.auth().getUserByEmail(ADMIN_EMAIL);
+        await db.collection("notifications").doc(adminUser.uid).collection("pending").add({
+          title: `🔒 ${heldCount} repasse(s) retido(s) por troca de chave PIX`,
+          body: `Carência de ${PIX_HOLD_HOURS}h após a troca. Entram automaticamente depois.`,
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
+    }
+    if (due.length === 0) return;
 
     // Grava payouts e marca appointments
     const lines = [];
@@ -1317,6 +1341,55 @@ exports.deleteAccount = onRequest(
     } catch (e) {
       console.error("deleteAccount error:", e.message);
       return res.status(500).json({ error: "Erro ao encerrar conta. Tente novamente." });
+    }
+  }
+);
+
+// ─── Segurança da chave PIX ───────────────────────────────────────────────────
+// Quando o profissional adiciona/troca/remove chave PIX: grava pixChangedAt
+// (campo protegido nas rules; só o servidor escreve), guarda histórico, avisa
+// por push (via notifications -> sendPush) e por e-mail. O dailyPayouts retém
+// os repasses por PIX_HOLD_HOURS depois dessa data.
+exports.pixKeyWatcher = onDocumentUpdated(
+  { document: "users/{uid}", region: "southamerica-east1", secrets: [RESEND_SECRET] },
+  async (event) => {
+    const before = event.data?.before?.data() || {};
+    const after = event.data?.after?.data() || {};
+    if (after.role !== "professional") return;
+    if (JSON.stringify(after.pixKeys || []) === JSON.stringify(before.pixKeys || [])) return;
+
+    const uid = event.params.uid;
+    const db = admin.firestore();
+    const mask = (list) => (list || []).map((k) => `${k.type}: ${String(k.key || "").slice(0, 3)}***`);
+
+    await db.doc(`users/${uid}`).update({ pixChangedAt: admin.firestore.FieldValue.serverTimestamp() });
+    await db.collection(`users/${uid}/pixHistory`).add({
+      at: admin.firestore.FieldValue.serverTimestamp(),
+      from: mask(before.pixKeys),
+      to: mask(after.pixKeys),
+    });
+    await db.collection("notifications").doc(uid).collection("pending").add({
+      title: "Sua chave PIX foi alterada",
+      body: "Não foi você? Fale com a gente agora. Por segurança, o próximo repasse pode levar até 48h a mais.",
+      tipo: "pix_alterada",
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    try {
+      const user = await admin.auth().getUser(uid);
+      if (user.email) {
+        await sendEmail(
+          RESEND_SECRET.value(),
+          user.email,
+          "Sua chave PIX no VetVem foi alterada",
+          `<p>Olá${after.name ? ", " + after.name : ""}!</p>
+           <p>A chave PIX da sua conta VetVem Pro foi alterada agora.</p>
+           <p><strong>Não foi você?</strong> Responda este e-mail imediatamente e troque sua senha.</p>
+           <p>Por segurança, o próximo repasse pode levar até ${PIX_HOLD_HOURS}h a mais.</p>`
+        );
+      }
+    } catch (e) {
+      console.error("pixKeyWatcher email error:", e.response?.data || e.message);
     }
   }
 );

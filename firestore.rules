@@ -21,7 +21,7 @@ service cloud.firestore {
       let wasPending = resource.data.get('accountStatus', 'pending') == 'pending';
       let crmvChanged = changed.hasAny(['crmv'])
           && resource.data.get('crmv', '') != '';
-      return changed.hasAny(['blocked', 'feeOverride'])
+      return changed.hasAny(['blocked', 'feeOverride', 'pixChangedAt'])
           || (changed.hasAny(['accountStatus'])
               && !(toPending && (wasPending || crmvChanged)))
           || (crmvChanged && !toPending);
