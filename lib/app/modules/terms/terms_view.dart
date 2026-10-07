@@ -44,7 +44,12 @@ class TermsView extends StatefulWidget {
           .collection('users')
           .doc(uid)
           .get();
-      if (doc.data()?['termos_aceitos'] == true) return true;
+      final d = doc.data();
+      // Só libera se aceitou a versão VIGENTE: ao publicar novos termos
+      // (termsVersion), contas antigas voltam a ver a tela uma única vez.
+      if (d?['termos_aceitos'] == true && d?['termos_versao'] == termsVersion) {
+        return true;
+      }
     } catch (_) {
       return true; // sem rede: não bloqueia; o gate roda de novo no próximo login
     }

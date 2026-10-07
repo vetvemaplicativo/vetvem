@@ -1,11 +1,11 @@
 /// Versão dos termos vigentes — incremente ao alterar o texto para que
 /// contas antigas sejam solicitadas a aceitar novamente se necessário.
-const termsVersion = '1.0';
+const termsVersion = '2.0';
 
 /// RASCUNHO — revisar com advogado antes do lançamento oficial.
 const termsText = '''
 TERMOS DE USO E POLÍTICA DE PRIVACIDADE — VETVEM (TUTOR)
-Versão 1.0 · Julho de 2026
+Versão 2.0 · Outubro de 2026
 
 1. SOBRE A PLATAFORMA
 
@@ -14,6 +14,8 @@ Versão 1.0 · Julho de 2026
 1.2. O VetVem NÃO presta serviços veterinários. Os atendimentos são realizados por profissionais independentes, devidamente registrados em seus conselhos de classe (CRMV), que são os únicos responsáveis técnicos pelos serviços prestados.
 
 1.3. Ao usar o aplicativo, você declara ter 18 anos ou mais e concorda integralmente com estes Termos.
+
+1.4. O VetVem é uma marca operada pela RBS TECH DIGITAL LTDA, inscrita no CNPJ sob o nº 25.189.702/0001-96, com sede no Município do Rio de Janeiro/RJ.
 
 2. CADASTRO E CONTA
 
@@ -25,15 +27,17 @@ Versão 1.0 · Julho de 2026
 
 3. AGENDAMENTO, PAGAMENTO E CANCELAMENTO
 
-3.1. O agendamento é uma solicitação ao profissional, que pode confirmá-la ou recusá-la conforme sua disponibilidade.
+3.1. O agendamento é uma solicitação ao profissional, que pode confirmá-la ou recusá-la conforme sua disponibilidade. A plataforma pode exigir uma antecedência mínima para o agendamento, informada no momento da escolha do horário.
 
-3.2. Após a confirmação pelo profissional, você tem o prazo de 12 (doze) horas para efetuar o pagamento pelo aplicativo. Não havendo pagamento no prazo — ou até o horário da consulta, o que ocorrer primeiro —, o agendamento é CANCELADO AUTOMATICAMENTE e o horário é liberado.
+3.2. O pagamento é ANTECIPADO: você paga no momento da solicitação, por Pix ou cartão de crédito. A solicitação só é enviada ao profissional depois da aprovação do pagamento. Solicitações sem pagamento aprovado não são enviadas e o horário é liberado.
 
-3.3. Os pagamentos são processados por instituição de pagamento parceira. O VetVem não armazena os dados completos do seu cartão — eles são guardados de forma segura pelo processador de pagamentos, conforme os padrões de segurança do setor (PCI-DSS).
+3.3. Depois de aprovado o pagamento, o profissional tem até 1 (uma) hora para confirmar ou recusar a solicitação e, em qualquer caso, deve responder antes do horário marcado. Se ele recusar ou não responder nesse prazo, a solicitação é encerrada e o valor pago é ESTORNADO AUTOMATICAMENTE.
 
-3.4. O valor exibido no momento do agendamento é o valor total a pagar. Sobre cada transação incide uma taxa de serviço da plataforma, já incluída no valor, destinada à manutenção e operação do VetVem.
+3.4. Os pagamentos são processados por instituição de pagamento parceira. O VetVem não armazena os dados completos do seu cartão — eles são guardados de forma segura pelo processador de pagamentos, conforme os padrões de segurança do setor (PCI-DSS).
 
-3.5. Cancelamentos e reembolsos: em caso de não comparecimento do profissional, você terá direito ao reembolso integral. Cancelamentos por sua iniciativa após o pagamento serão analisados caso a caso pelo suporte.
+3.5. O valor exibido no momento do agendamento é o valor total a pagar. Sobre cada transação incide uma taxa de serviço da plataforma, já incluída no valor, destinada à manutenção e operação do VetVem. O valor pago é repassado ao profissional após a conclusão do atendimento.
+
+3.6. Cancelamentos e reembolsos: (a) se o profissional recusar a solicitação ou não responder no prazo, o valor é estornado automaticamente, e o prazo para o crédito aparecer depende da forma de pagamento e da instituição financeira; (b) em caso de não comparecimento do profissional, você terá direito ao reembolso integral; (c) cancelamentos por sua iniciativa após o pagamento devem ser solicitados ao suporte e serão analisados caso a caso, observado o Código de Defesa do Consumidor.
 
 4. RESPONSABILIDADES
 
@@ -51,7 +55,7 @@ Versão 1.0 · Julho de 2026
 
 6. PRIVACIDADE E PROTEÇÃO DE DADOS (LGPD)
 
-6.1. O VetVem trata seus dados pessoais em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
+6.1. A RBS TECH DIGITAL LTDA, que opera o VetVem, é a controladora dos seus dados pessoais e os trata em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
 
 6.2. Dados coletados: nome, e-mail, telefone, endereços, dados dos seus pets e histórico de atendimentos. Finalidades: viabilizar os agendamentos, pagamentos, comunicação entre as partes e melhoria do serviço.
 
@@ -71,7 +75,7 @@ Versão 1.0 · Julho de 2026
 
 9. CONTATO E FORO
 
-9.1. Dúvidas e solicitações: canal "Ajuda e suporte" no aplicativo.
+9.1. Dúvidas e solicitações: canal "Ajuda e suporte" no aplicativo ou e-mail suporte@vetvem.com.br.
 
 9.2. Fica eleito o foro da comarca do domicílio do consumidor para dirimir controvérsias, nos termos do Código de Defesa do Consumidor.
 

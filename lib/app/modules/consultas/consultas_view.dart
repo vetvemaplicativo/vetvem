@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
@@ -127,6 +128,40 @@ class _FilterChips extends StatelessWidget {
 class _ConsultaCard extends StatelessWidget {
   final ConsultationHistory item;
   const _ConsultaCard({required this.item});
+
+  // O cancelamento pelo tutor é tratado pelo suporte (Termos 3.6): o botão
+  // explica a regra e abre o e-mail já preenchido com os dados da consulta.
+  void _showCancelInfo() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Cancelar consulta'),
+        content: const Text(
+          'Para cancelar, fale com o nosso suporte. Cancelamentos depois do '
+          'pagamento são analisados caso a caso. Se o profissional recusar, '
+          'não responder ou não comparecer, o valor é devolvido.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Voltar')),
+          TextButton(
+            onPressed: () async {
+              Get.back();
+              final quando = item.time.isNotEmpty ? '${item.date} às ${item.time}' : item.date;
+              final assunto = Uri.encodeComponent('Cancelamento de consulta');
+              final corpo = Uri.encodeComponent(
+                'Olá! Gostaria de cancelar a consulta com ${item.vetName}'
+                '${item.serviceName.isNotEmpty ? ' (${item.serviceName})' : ''} '
+                'marcada para $quando.\n\nCódigo da consulta: ${item.id}',
+              );
+              await launchUrl(
+                Uri.parse('mailto:suporte@vetvem.com.br?subject=$assunto&body=$corpo'),
+              );
+            },
+            child: const Text('Falar com o suporte'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildPetAvatar(String photo) {
     ImageProvider? img;
@@ -311,21 +346,11 @@ class _ConsultaCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextButton.icon(
-                    onPressed: () {},
+                    onPressed: _showCancelInfo,
                     icon: const Icon(Icons.close, size: 16),
                     label: const Text('Cancelar'),
                     style: TextButton.styleFrom(
                         foregroundColor: AppColors.error),
-                  ),
-                ),
-                Container(width: 1, height: 40, color: const Color(0xFFE5E7EB)),
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                    label: const Text('Contato'),
-                    style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary),
                   ),
                 ),
               ],

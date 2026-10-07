@@ -1886,16 +1886,6 @@ class _SettingsList extends StatelessWidget {
         child: Column(
           children: [
             _HelpTile(
-              icon: Icons.chat_bubble_outline,
-              title: 'Chat com suporte',
-              subtitle: 'Atendimento pelo WhatsApp',
-              onTap: () async {
-                final uri = Uri.parse('https://wa.me/5521999999999?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20o%20VetVem');
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              },
-            ),
-            const Divider(height: 1),
-            _HelpTile(
               icon: Icons.email_outlined,
               title: 'Enviar e-mail',
               subtitle: 'suporte@vetvem.com.br',
@@ -1929,13 +1919,13 @@ class _SettingsList extends StatelessWidget {
       ('Como agendar uma consulta?',
           'Na tela "Buscar", escolha um veterinário e toque em "Agendar consulta". Selecione seu pet, data e horário, e confirme o pagamento.'),
       ('Posso cancelar um agendamento?',
-          'Sim. Na aba "Consultas", toque em "Cancelar" na consulta desejada. Cancelamentos feitos com menos de 2 horas de antecedência podem ter taxa.'),
+          'Sim. Na aba "Consultas", toque em "Cancelar" e fale com o suporte por e-mail. Cancelamentos depois do pagamento são analisados caso a caso. Se o profissional recusar ou não responder, o valor é estornado automaticamente.'),
       ('Como cadastrar um pet?',
           'No seu Perfil, toque em "+ Adicionar pet" e preencha os dados do seu animal.'),
       ('O veterinário vai até minha casa?',
           'Sim! O VetVem é um serviço de atendimento domiciliar. O profissional vai até o endereço informado no agendamento.'),
       ('Como funciona o pagamento?',
-          'Aceitamos Pix e cartão de crédito. Você escolhe a forma de pagamento ao confirmar o agendamento.'),
+          'Aceitamos Pix e cartão de crédito. O pagamento é feito ao solicitar o agendamento. O profissional tem até 1 hora para confirmar e, se recusar ou não responder, o valor é estornado automaticamente.'),
       ('Posso avaliar o veterinário?',
           'Após a conclusão da consulta, você receberá uma notificação para avaliar o atendimento.'),
     ];
