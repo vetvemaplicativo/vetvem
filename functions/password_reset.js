@@ -14,6 +14,7 @@ const crypto = require("crypto");
 
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const LOGO_URL = "https://vetvem.com.br/wp-content/uploads/vetvem-email/logo-vetvem-email.png";
+const ICON_URL = "https://vetvem.com.br/wp-content/uploads/vetvem-email/icone-vetvem-email.png";
 const FROM = "VetVem <suporte@mail.vetvem.com.br>";
 const REPLY_TO = "suporte@vetvem.com.br";
 const COOLDOWN_MS = 60 * 1000;
@@ -25,7 +26,7 @@ function buildHtml(link) {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;">
         <tr><td align="center" style="padding:28px 24px 8px;">
-          <img src="${LOGO_URL}" alt="VetVem" width="220" style="display:block;border:0;max-width:220px;height:auto;border-radius:10px;">
+          <img src="${ICON_URL}" alt="VetVem" width="88" height="88" style="display:block;border:0;width:88px;height:88px;">
         </td></tr>
         <tr><td style="padding:16px 28px 8px;color:#1f2937;font-size:15px;line-height:1.6;">
           <h2 style="margin:8px 0 12px;font-size:20px;color:#111827;">Redefinir sua senha</h2>
@@ -35,12 +36,13 @@ function buildHtml(link) {
             <a href="${link}" style="display:inline-block;background:#FF6B2B;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 28px;border-radius:10px;">Criar nova senha</a>
           </p>
           <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">Se o botão não funcionar, copie e cole este endereço no navegador:</p>
-          <p style="margin:0 0 18px;font-size:12px;color:#6b7280;word-break:break-all;">${link}</p>
+          <p style="margin:0 0 18px;font-size:10px;line-height:1.4;color:#9ca3af;word-break:break-all;"><a href="${link}" style="color:#9ca3af;text-decoration:none;">${link}</a></p>
           <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Se você não pediu isso, ignore este e-mail: sua senha continua a mesma.</p>
         </td></tr>
         <tr><td style="padding:12px 28px 28px;color:#1f2937;font-size:14px;line-height:1.5;">
-          <p style="margin:0;">Abraços,<br><strong>Equipe VetVem</strong></p>
-          <p style="margin:6px 0 0;font-size:12px;color:#9ca3af;">Veterinário a domicílio · vetvem.com.br</p>
+          <p style="margin:0 0 10px;">Abraços,<br><strong>Equipe VetVem</strong></p>
+          <img src="${LOGO_URL}" alt="VetVem" width="110" style="display:block;border:0;width:110px;max-width:110px;height:auto;border-radius:6px;margin:0 0 12px;">
+          <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">Dúvidas? Responda este e-mail ou escreva para <a href="mailto:suporte@vetvem.com.br" style="color:#9ca3af;">suporte@vetvem.com.br</a>.</p>
         </td></tr>
       </table>
     </td></tr>
