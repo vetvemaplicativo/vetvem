@@ -1393,3 +1393,5 @@ exports.pixKeyWatcher = onDocumentUpdated(
     }
   }
 );
+
+Object.assign(exports, require("./password_reset"));
