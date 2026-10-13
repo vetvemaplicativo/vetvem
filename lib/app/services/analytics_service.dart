@@ -23,4 +23,17 @@ class AnalyticsService extends GetxService {
         'vet_id': vetId,
         'service_name': serviceName,
       });
+
+  // ── Funil do tutor: antes do pedido ───────────────────────────────
+  Future<void> logViewVetList() => analytics.logEvent(name: 'view_professional_list');
+
+  Future<void> logViewVetProfile(String vetId) => analytics.logEvent(
+      name: 'view_professional_profile', parameters: {'vet_id': vetId});
+
+  Future<void> logBookingStarted(String vetId) =>
+      analytics.logEvent(name: 'booking_started', parameters: {'vet_id': vetId});
+
+  /// Toque num passo do guia da primeira consulta (pet, address, vet, request).
+  Future<void> logGuideTap(String step) =>
+      analytics.logEvent(name: 'first_consult_guide_tap', parameters: {'step': step});
 }

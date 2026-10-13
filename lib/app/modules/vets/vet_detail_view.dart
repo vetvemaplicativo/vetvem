@@ -3,11 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 import '../../data/models/vet_model.dart';
+import '../../services/analytics_service.dart';
 import '../../services/taxonomy_service.dart';
 import 'vets_controller.dart';
 
-class VetDetailView extends GetView<VetsController> {
+class VetDetailView extends StatefulWidget {
   const VetDetailView({super.key});
+
+  @override
+  State<VetDetailView> createState() => _VetDetailViewState();
+}
+
+// Só registra o evento de "ver perfil" e delega a tela ao conteúdo de sempre.
+class _VetDetailViewState extends State<VetDetailView> {
+  @override
+  void initState() {
+    super.initState();
+    final id = Get.find<VetsController>().selectedVet.value?.id ?? '';
+    if (id.isNotEmpty) Get.find<AnalyticsService>().logViewVetProfile(id);
+  }
+
+  @override
+  Widget build(BuildContext context) => const _VetDetailBody();
+}
+
+class _VetDetailBody extends GetView<VetsController> {
+  const _VetDetailBody();
 
   @override
   Widget build(BuildContext context) {

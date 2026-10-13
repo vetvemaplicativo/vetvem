@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'analytics_service.dart';
 import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -144,6 +145,7 @@ class AuthService extends GetxService {
           'createdAt': FieldValue.serverTimestamp(),
           'platform': Platform.isIOS ? 'ios' : 'android',
         }, SetOptions(merge: true));
+        Get.find<AnalyticsService>().logSignUp('google');
       }
     } on AuthException {
       rethrow;
@@ -201,6 +203,7 @@ class AuthService extends GetxService {
           'createdAt': FieldValue.serverTimestamp(),
           'platform': Platform.isIOS ? 'ios' : 'android',
         });
+        Get.find<AnalyticsService>().logSignUp('apple');
       }
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {

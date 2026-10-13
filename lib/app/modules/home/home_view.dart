@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'first_consult_guide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -100,6 +101,7 @@ class _HomeTab extends GetView<HomeController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
+                const FirstConsultGuide(),
                 _buildCategories(context),
                 const SizedBox(height: 28),
                 _buildUpcomingAppointment(context),
@@ -145,7 +147,9 @@ class _HomeTab extends GetView<HomeController> {
                               color: Colors.white70, size: 14),
                           const SizedBox(width: 4),
                           Obx(() => Text(
-                                controller.userCity.value,
+                                controller.userCity.value.isEmpty
+                                    ? 'Informe seu endereço no Perfil'
+                                    : controller.userCity.value,
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,
@@ -158,7 +162,10 @@ class _HomeTab extends GetView<HomeController> {
                   ),
                   // Notification bell
                   GestureDetector(
-                    onTap: () => _showNotifications(context),
+                    onTap: () {
+                      controller.markNotificationsSeen();
+                      _showNotifications(context);
+                    },
                     child: Stack(
                       children: [
                         Container(
@@ -174,14 +181,16 @@ class _HomeTab extends GetView<HomeController> {
                         Positioned(
                           right: 8,
                           top: 8,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFBBC05),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
+                          child: Obx(() => controller.unreadNotifications.value > 0
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFBBC05),
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : const SizedBox.shrink()),
                         ),
                       ],
                     ),
@@ -238,14 +247,15 @@ class _HomeTab extends GetView<HomeController> {
   // ── Notificações ─────────────────────────────────────────────────
 
   void _showNotifications(BuildContext context) {
-    const items = [
-      (Icons.check_circle_outline, AppColors.success,
-          'Consulta confirmada', 'Dra. Ana Lima · amanhã · Manhã', '2 min atrás'),
-      (Icons.schedule, AppColors.warning,
-          'Lembrete', 'Consulta com Dr. Carlos Melo em 2 dias', '1h atrás'),
-      (Icons.star_outline, AppColors.primary,
-          'Avalie sua consulta', 'Como foi o atendimento da Dra. Marta?', 'Ontem'),
-    ];
+    String ago(DateTime? t) {
+      if (t == null) return '';
+      final d = DateTime.now().difference(t);
+      if (d.inMinutes < 1) return 'agora';
+      if (d.inMinutes < 60) return 'há ${d.inMinutes} min';
+      if (d.inHours < 24) return 'há ${d.inHours} h';
+      if (d.inDays == 1) return 'ontem';
+      return 'há ${d.inDays} dias';
+    }
 
     showModalBottomSheet(
       context: context,
@@ -271,50 +281,69 @@ class _HomeTab extends GetView<HomeController> {
                       color: AppColors.textDark)),
               const SizedBox(height: 12),
               Expanded(
-                child: ListView(
-                  controller: scroll,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: items.map((n) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: AppColors.cardShadow,
-                          blurRadius: 6, offset: const Offset(0, 2))],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 38, height: 38,
-                          decoration: BoxDecoration(
-                            color: n.$2.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(n.$1, color: n.$2, size: 20),
+                child: Obx(() {
+                  final items = controller.notifications;
+                  if (items.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text(
+                          'Você ainda não tem notificações.\nQuando um veterinário responder ao seu pedido, você vê aqui.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: AppColors.textMedium),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(n.$3, style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13,
-                                  color: AppColors.textDark)),
-                              const SizedBox(height: 3),
-                              Text(n.$4, style: const TextStyle(
-                                  fontSize: 12, color: AppColors.textMedium)),
-                              const SizedBox(height: 4),
-                              Text(n.$5, style: const TextStyle(
-                                  fontSize: 11, color: AppColors.textLight)),
-                            ],
+                      ),
+                    );
+                  }
+                  return ListView(
+                    controller: scroll,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: items.map((n) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: AppColors.cardShadow,
+                            blurRadius: 6, offset: const Offset(0, 2))],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 38, height: 38,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.notifications_outlined,
+                                color: AppColors.primary, size: 20),
                           ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${n['title']}', style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13,
+                                    color: AppColors.textDark)),
+                                if ('${n['body']}'.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text('${n['body']}', style: const TextStyle(
+                                      fontSize: 12, color: AppColors.textMedium)),
+                                ],
+                                const SizedBox(height: 4),
+                                Text(ago(n['createdAt'] as DateTime?),
+                                    style: const TextStyle(
+                                        fontSize: 11, color: AppColors.textLight)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )).toList(),
+                  );
+                }),
               ),
             ],
           ),

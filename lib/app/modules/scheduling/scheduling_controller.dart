@@ -42,6 +42,8 @@ class SchedulingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    Get.find<AnalyticsService>()
+        .logBookingStarted(Get.find<VetsController>().selectedVet.value?.id ?? '');
     // Pré-seleciona o primeiro endereço salvo se houver
     final profile = Get.find<ProfileController>();
     if (profile.addresses.isNotEmpty) {
