@@ -2068,7 +2068,8 @@ class _SettingsList extends StatelessWidget {
 
 class _AddAddressSheet extends StatefulWidget {
   final ProfileController controller;
-  const _AddAddressSheet({required this.controller});
+  final SavedAddress? existing; // != null: editando um endereço salvo
+  const _AddAddressSheet({required this.controller, this.existing});
   @override
   State<_AddAddressSheet> createState() => _AddAddressSheetState();
 }
@@ -2083,6 +2084,22 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
   final _state = TextEditingController();
   String _label = 'Casa';
   bool _loadingCep = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _label = e.label;
+      _cep.text = e.cep;
+      _street.text = e.street;
+      _number.text = e.number;
+      _complement.text = e.complement;
+      _neighborhood.text = e.neighborhood;
+      _city.text = e.city;
+      _state.text = e.state;
+    }
+  }
 
   Future<void> _lookupCep(String value) async {
     final digits = value.replaceAll(RegExp(r'\D'), '');
@@ -2205,7 +2222,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                       colorText: Colors.white);
                   return;
                 }
-                widget.controller.addAddress(SavedAddress(
+                final saved = SavedAddress(
                   label: _label,
                   cep: _cep.text.trim(),
                   street: _street.text.trim(),
@@ -2214,9 +2231,14 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                   neighborhood: _neighborhood.text.trim(),
                   city: _city.text.trim(),
                   state: _state.text.trim(),
-                ));
+                );
+                if (widget.existing != null) {
+                  widget.controller.updateAddress(widget.existing!, saved);
+                } else {
+                  widget.controller.addAddress(saved);
+                }
                 Get.back();
-                Get.snackbar('Endereço salvo', '$_label adicionado com sucesso',
+                Get.snackbar('Endereço salvo', widget.existing != null ? '$_label atualizado com sucesso' : '$_label adicionado com sucesso',
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: AppColors.success,
                     colorText: Colors.white);
@@ -2360,6 +2382,20 @@ class _AddressesSheet extends StatelessWidget {
                     label: a.label,
                     value: a.fullLine,
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined,
+                      color: AppColors.textMedium, size: 20),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) =>
+                          _AddAddressSheet(controller: controller, existing: a),
+                    );
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,

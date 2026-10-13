@@ -44,6 +44,22 @@ service cloud.firestore {
                        .hasOnly(['rating', 'reviewCount', 'completedCount']);
     }
 
+    // Lista de espera por região (portal e app do tutor): quem mora onde ainda
+    // não há profissional deixa estado/cidade/contato; o app também registra a
+    // busca vazia (origem app_tutor_busca_vazia, contato "uid:..."). Só cria,
+    // com campos e tamanhos validados; só o admin lê.
+    match /waitlist_regiao/{id} {
+      allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly(['uf', 'cidade', 'contato', 'origem', 'createdAt'])
+          && request.resource.data.uf is string && request.resource.data.uf.size() == 2
+          && request.resource.data.cidade is string
+          && request.resource.data.cidade.size() >= 2 && request.resource.data.cidade.size() <= 80
+          && request.resource.data.contato is string
+          && request.resource.data.contato.size() >= 5 && request.resource.data.contato.size() <= 120
+          && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+
     match /appointments/{appointmentId} {
       // Só o profissional do atendimento pode marcar como visualizado, e só
       // uma vez — depois de gravado, o campo nunca pode ser reescrito.

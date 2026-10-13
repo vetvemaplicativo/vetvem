@@ -36,4 +36,13 @@ class AnalyticsService extends GetxService {
   /// Toque num passo do guia da primeira consulta (pet, address, vet, request).
   Future<void> logGuideTap(String step) =>
       analytics.logEvent(name: 'first_consult_guide_tap', parameters: {'step': step});
+
+  /// Busca vazia para a região do tutor: mostra onde há demanda sem atendimento.
+  Future<void> logSearchNoResults(String uf, String city) => analytics.logEvent(
+      name: 'search_no_results', parameters: {'uf': uf, 'city': city});
+
+  Future<void> logRegionAction(String action, String uf, String city) =>
+      analytics.logEvent(
+          name: 'region_empty_action',
+          parameters: {'action': action, 'uf': uf, 'city': city});
 }

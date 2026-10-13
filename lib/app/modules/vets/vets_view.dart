@@ -1,4 +1,8 @@
 import 'dart:convert';
+import '../../services/analytics_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
@@ -477,30 +481,169 @@ class VetCard extends GetView<VetsController> {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends StatefulWidget {
   final bool filterActive;
   const _EmptyState({this.filterActive = false});
 
   @override
+  State<_EmptyState> createState() => _EmptyStateState();
+}
+
+class _EmptyStateState extends State<_EmptyState> {
+  static const _whatsapp = '5521982832163';
+  bool _joined = false;
+  bool _joining = false;
+
+  VetsController get _c => Get.find<VetsController>();
+  bool get _hasRegion => _c.tutorUf.length == 2 && _c.tutorCity.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    // Só registra quando a busca vazia é de região (não de texto digitado).
+    if (_hasRegion && widget.filterActive) {
+      Get.find<AnalyticsService>().logSearchNoResults(_c.tutorUf, _c.tutorCity);
+      _recordDemand();
+    }
+  }
+
+  // Registro automático (1 por pessoa e cidade) para mapear onde há demanda sem
+  // cobertura. Id fixo: a 2ª gravação é recusada pelas regras e ignorada aqui.
+  Future<void> _recordDemand() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final city = _c.tutorCity.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    try {
+      await FirebaseFirestore.instance
+          .collection('waitlist_regiao')
+          .doc('busca_${uid}_${_c.tutorUf}_$city')
+          .set({
+        'uf': _c.tutorUf,
+        'cidade': _c.tutorCity,
+        'contato': 'uid:$uid',
+        'origem': 'app_tutor_busca_vazia',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _join() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final contact = user?.email ?? '';
+    if (user == null || contact.length < 5 || !_hasRegion) return;
+    setState(() => _joining = true);
+    try {
+      await FirebaseFirestore.instance.collection('waitlist_regiao').add({
+        'uf': _c.tutorUf,
+        'cidade': _c.tutorCity,
+        'contato': contact,
+        'origem': 'app_tutor',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      Get.find<AnalyticsService>().logRegionAction('waitlist', _c.tutorUf, _c.tutorCity);
+      if (mounted) setState(() => _joined = true);
+    } catch (_) {
+      Get.snackbar('Não foi possível enviar', 'Tente novamente em instantes.',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
+  Future<void> _openWhatsapp() async {
+    final city = _hasRegion ? '${_c.tutorCity}/${_c.tutorUf}' : 'minha região';
+    final text = 'Olá! Sou do app VetVem e não encontrei veterinários em $city. '
+        'Preciso de: ';
+    Get.find<AnalyticsService>()
+        .logRegionAction('whatsapp', _c.tutorUf, _c.tutorCity);
+    await launchUrl(
+      Uri.parse('https://wa.me/$_whatsapp?text=${Uri.encodeComponent(text)}'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search_off, size: 64, color: AppColors.textLight),
-            const SizedBox(height: 16),
-            Text(
-              filterActive
-                  ? 'Nenhum profissional atende sua região ainda.\n'
-                      'Toque no filtro acima para ver todos.'
-                  : 'Nenhum profissional encontrado',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textMedium),
-            ),
-          ],
+    // Busca vazia por texto/especialidade: mensagem simples.
+    if (!widget.filterActive || !_hasRegion) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, size: 64, color: AppColors.textLight),
+              SizedBox(height: 16),
+              Text('Nenhum profissional encontrado',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMedium)),
+            ],
+          ),
         ),
+      );
+    }
+    final city = '${_c.tutorCity}/${_c.tutorUf}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          const Icon(Icons.location_off_outlined, size: 56, color: AppColors.textLight),
+          const SizedBox(height: 14),
+          Text(
+            'Ainda não encontramos veterinários em $city.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Estamos chegando em novas regiões. Conte para a gente o que você precisa e vamos ajudar.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: _joined
+                ? Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('Pronto! Avisaremos você quando chegarmos aí.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF166534), fontSize: 13)),
+                  )
+                : ElevatedButton(
+                    onPressed: _joining ? null : _join,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    child: Text(_joining ? 'Enviando…' : 'Avise-me quando chegar'),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _openWhatsapp,
+              icon: const Icon(Icons.chat_outlined, size: 18),
+              label: const Text('Falar com o VetVem no WhatsApp'),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () {
+              Get.find<AnalyticsService>().logRegionAction('see_other_cities', _c.tutorUf, _c.tutorCity);
+              _c.showAllCities();
+            },
+            child: const Text('Ver veterinários de outras cidades'),
+          ),
+        ],
       ),
     );
   }

@@ -331,6 +331,17 @@ class ProfileController extends GetxController {
     _saveAddresses();
   }
 
+  /// Troca um endereço salvo mantendo a posição (o 1º é o usado na busca).
+  void updateAddress(SavedAddress old, SavedAddress updated) {
+    final i = addresses.indexOf(old);
+    if (i < 0) {
+      addresses.add(updated);
+    } else {
+      addresses[i] = updated;
+    }
+    _saveAddresses();
+  }
+
   void removeAddress(SavedAddress address) {
     addresses.remove(address);
     _saveAddresses();

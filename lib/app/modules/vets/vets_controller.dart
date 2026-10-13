@@ -25,6 +25,10 @@ class VetsController extends GetxController {
 
   // ── Filtro por endereço do tutor ─────────────────────────────────
   final filterByArea = false.obs;
+  // "Ver veterinários de outras cidades": ignora a restrição de cidade.
+  final showOtherCities = false.obs;
+  String get tutorUf => _tutorUf;
+  String get tutorCity => _tutorCity;
   final tutorAddressLabel = ''.obs; // ex.: "Icaraí, Niterói"
   String _tutorUf = '';
   String _tutorCity = '';
@@ -91,6 +95,12 @@ class VetsController extends GetxController {
     return s.toUpperCase();
   }
 
+  void showAllCities() {
+    showOtherCities.value = true;
+    _filter();
+    update();
+  }
+
   void toggleAreaFilter() {
     if (tutorAddressLabel.value.isEmpty) {
       Get.snackbar(
@@ -103,6 +113,7 @@ class VetsController extends GetxController {
       );
       return;
     }
+    showOtherCities.value = false;
     filterByArea.toggle();
     _filter();
     update();
@@ -261,7 +272,8 @@ class VetsController extends GetxController {
       // tutor. Desligado, continua restrito à cidade do tutor (nunca mostra
       // o Brasil inteiro) — só mostra todo mundo se o tutor não tiver
       // nenhum endereço cadastrado, caso em que não há cidade pra restringir.
-      final matchesArea = filterByArea.value
+      final matchesArea = showOtherCities.value ||
+          (filterByArea.value
           ? (v.areaAtuacao?.cobreEndereco(
                 uf: _tutorUf,
                 cidade: _tutorCity,
@@ -273,7 +285,7 @@ class VetsController extends GetxController {
                     uf: _tutorUf,
                     cidade: _tutorCity,
                   ) ??
-                  false));
+                  false)));
       return matchesSearch && matchesSpecialty && matchesArea;
     }).toList();
 
