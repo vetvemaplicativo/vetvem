@@ -52,6 +52,47 @@ async function verifyAdmin(req, res) {
 }
 
 // ─── Criar pagamento com cartão ───────────────────────────────────────────────
+// ─── Valor do pedido calculado NO SERVIDOR ───────────────────────────────────
+// Antes o valor cobrado vinha do app (transaction_amount: amount) e ninguém
+// conferia com o preço do serviço. Agora o servidor calcula a partir do
+// catálogo do profissional (users/{vetId}.services) e do nº de animais do
+// pedido. Serviço "por animal" (perAnimal) cobra price no 1º animal e
+// additionalPrice (opcional; padrão = price) em cada adicional.
+// Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
+// não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
+function toNum(v) {
+  return parseFloat(String(v === undefined || v === null ? "0" : v).replace(",", ".")) || 0;
+}
+
+async function computeAppointmentAmount(appt, clientAmount) {
+  const fallback = { amount: Number(clientAmount), source: "client", count: 1 };
+  try {
+    const vetId = appt.vetId;
+    const name = String(appt.serviceName || "").trim();
+    if (!vetId || !name) return fallback;
+    const vet = (await admin.firestore().collection("users").doc(vetId).get()).data() || {};
+    const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
+    if (!svc) return { ...fallback, source: "client-sem-servico" };
+    const base = toNum(svc.price);
+    if (!(base > 0)) return { ...fallback, source: "client-preco-zero" };
+    let count = 1;
+    if (svc.perAnimal === true) {
+      const listed = Array.isArray(appt.pets) ? appt.pets.length : 0;
+      const declared = parseInt(appt.petCount, 10) || 0;
+      count = Math.min(Math.max(declared, listed, 1), 50);
+    }
+    const extraRaw = svc.additionalPrice;
+    const extra = extraRaw === undefined || extraRaw === null || String(extraRaw).trim() === ""
+      ? base
+      : toNum(extraRaw);
+    const total = Math.round((base + (count - 1) * extra) * 100) / 100;
+    return { amount: total, source: "server", count };
+  } catch (e) {
+    console.error("computeAppointmentAmount:", e.message);
+    return fallback;
+  }
+}
+
 exports.createPayment = onRequest(
   { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
   async (req, res) => {
@@ -69,10 +110,16 @@ exports.createPayment = onRequest(
     const MP_ACCESS_TOKEN = MP_SECRET.value();
 
     try {
+      const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
+      const priced = await computeAppointmentAmount(apptForAmount, amount);
+      const finalAmount = priced.amount > 0 ? priced.amount : Number(amount);
+      if (Math.abs(finalAmount - Number(amount)) > 0.009) {
+        console.warn(`valor do app (${amount}) difere do calculado (${finalAmount}, ${priced.source}) em ${appointmentId}`);
+      }
       const response = await axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
-          transaction_amount: amount,
+          transaction_amount: finalAmount,
           token,
           description,
           installments: installments || 1,
@@ -107,7 +154,7 @@ exports.createPayment = onRequest(
         paymentId: String(payment.id),
         paymentStatus: payment.status,
         paymentMethod: paymentMethodId,
-        paymentAmount: amount,
+        paymentAmount: finalAmount,
         paymentDate: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -144,6 +191,12 @@ exports.createPixPayment = onRequest(
     const MP_ACCESS_TOKEN = MP_SECRET.value();
 
     try {
+      const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
+      const priced = await computeAppointmentAmount(apptForAmount, amount);
+      const finalAmount = priced.amount > 0 ? priced.amount : Number(amount);
+      if (Math.abs(finalAmount - Number(amount)) > 0.009) {
+        console.warn(`valor do app (${amount}) difere do calculado (${finalAmount}, ${priced.source}) em ${appointmentId}`);
+      }
       // Tutor voltou à tela de pagamento: se o PIX anterior ainda vale,
       // devolve o mesmo código em vez de gerar outro (evita pagamento duplo).
       const apptRef = admin.firestore().collection("appointments").doc(appointmentId);
@@ -154,6 +207,7 @@ exports.createPixPayment = onRequest(
         existing.pixCopyPaste &&
         existing.pixExpiresAt &&
         existing.pixExpiresAt > Date.now() + 60 * 1000
+        && Math.abs(Number(existing.paymentAmount || 0) - finalAmount) < 0.01
       ) {
         return res.json({
           result: {
@@ -170,7 +224,7 @@ exports.createPixPayment = onRequest(
       const response = await axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
-          transaction_amount: amount,
+          transaction_amount: finalAmount,
           description,
           payment_method_id: "pix",
           payer: {
@@ -201,7 +255,7 @@ exports.createPixPayment = onRequest(
         paymentId: String(payment.id),
         paymentStatus: payment.status,
         paymentMethod: "pix",
-        paymentAmount: amount,
+        paymentAmount: finalAmount,
         paymentDate: admin.firestore.FieldValue.serverTimestamp(),
         pixCopyPaste: pixData?.qr_code || null,
         pixQrCodeBase64: pixData?.qr_code_base64 || null,
