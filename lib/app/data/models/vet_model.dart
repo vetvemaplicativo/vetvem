@@ -6,6 +6,9 @@ class VetService {
   final double price;
   final String unit; // 'consulta', 'sessão', 'hora', 'pacote', 'porte'
   final int? packageSessions; // para pacotes: quantas sessões inclui
+  // Serviço cobrado por animal (vacina...): o tutor escolhe vários animais.
+  final bool perAnimal;
+  final double? additionalPrice; // valor de cada animal adicional; null = mesmo preço
 
   const VetService({
     required this.name,
@@ -13,9 +16,19 @@ class VetService {
     required this.price,
     required this.unit,
     this.packageSessions,
+    this.perAnimal = false,
+    this.additionalPrice,
   });
 
   bool get isPackage => packageSessions != null;
+
+  /// Total para [count] animais: price no 1º + (count-1) x adicional.
+  /// Mesma regra do servidor (computeAppointmentAmount).
+  double totalFor(int count) {
+    if (!perAnimal || count <= 1) return price;
+    final extra = additionalPrice ?? price;
+    return ((price + (count - 1) * extra) * 100).round() / 100;
+  }
 
   // Preço por sessão avulsa (ignora pacotes para não distorcer o "a partir de")
   double get unitPrice {

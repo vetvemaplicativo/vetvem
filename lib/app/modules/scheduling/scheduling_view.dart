@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'multi_pet_picker.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
@@ -36,12 +37,16 @@ class _SchedulingForm extends GetView<SchedulingController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Pet ──────────────────────────────────────────────────
-            const _SectionTitle('Qual pet será atendido?'),
+            Obx(() => _SectionTitle(
+                Get.find<SchedulingController>().isMultiService
+                    ? 'Quais animais serão atendidos?'
+                    : 'Qual pet será atendido?')),
             const SizedBox(height: 12),
             Obx(() {
               final c = Get.find<SchedulingController>();
               final profile = Get.find<ProfileController>();
               final pets = profile.pets;
+              if (c.isMultiService) return const MultiPetPicker();
               if (pets.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(16),
@@ -117,6 +122,7 @@ class _SchedulingForm extends GetView<SchedulingController> {
             const _SectionTitle('Qual serviço?'),
             const SizedBox(height: 12),
             _ServiceSelector(),
+            const MultiPriceSummary(),
 
             const SizedBox(height: 24),
 
@@ -814,6 +820,17 @@ class _ServiceSelector extends GetView<SchedulingController> {
                             color: AppColors.primary,
                           ),
                         ),
+                        if (s.perAnimal)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(
+                              s.additionalPrice != null
+                                  ? 'Por animal · cada adicional R\$ ${s.additionalPrice!.toStringAsFixed(2).replaceAll('.', ',')}'
+                                  : 'Por animal · mesmo valor em cada um',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.textMedium),
+                            ),
+                          ),
                       ],
                     ),
                   ),

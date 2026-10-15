@@ -460,7 +460,9 @@ class ProfileController extends GetxController {
           time: d['time'] ?? '',
           period: '',
           status: d['status'] ?? 'pending_confirmation',
-          petName: d['petName'] ?? '',
+          petName: ((d['petCount'] as num?)?.toInt() ?? 1) > 1
+              ? '${d['petName'] ?? ''} +${(d['petCount'] as num).toInt() - 1}'
+              : (d['petName'] ?? ''),
           serviceName: d['serviceName'] ?? '',
           value: d['value'] ?? '',
           paymentMethod: d['paymentMethod'] ?? 'pix',

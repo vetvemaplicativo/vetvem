@@ -179,11 +179,14 @@ class VetsController extends GetxController {
         final services = srvData.map((s) {
           final price = double.tryParse(
               s['price']?.toString().replaceAll(',', '.') ?? '0') ?? 0;
+          final addRaw = s['additionalPrice']?.toString().replaceAll(',', '.') ?? '';
           return VetService(
             name: s['name'] ?? '',
             description: '',
             price: price,
             unit: s['unit'] ?? 'consulta',
+            perAnimal: s['perAnimal'] == true,
+            additionalPrice: addRaw.trim().isEmpty ? null : double.tryParse(addRaw),
           );
         }).toList();
 

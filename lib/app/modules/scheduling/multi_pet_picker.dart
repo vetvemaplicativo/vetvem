@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../theme/app_theme.dart';
+import '../profile/profile_controller.dart';
+import 'scheduling_controller.dart';
+
+const _vetvemWhatsapp = '5521982832163';
+
+String _money(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
+
+/// Seleção de vários animais para serviços "por animal" (vacina, vermífugo...):
+/// marcar um a um, "Selecionar todos" (respeitando o filtro de espécie) e uma
+/// quantidade para animais sem cadastro.
+class MultiPetPicker extends StatelessWidget {
+  const MultiPetPicker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<SchedulingController>();
+    final profile = Get.find<ProfileController>();
+    return Obx(() {
+      final pets = profile.pets;
+      final hasCats = pets.any((p) => p.species == 'cat');
+      final hasDogs = pets.any((p) => p.species == 'dog');
+      final filter = c.petFilter.value;
+      final shown = <int>[
+        for (var i = 0; i < pets.length; i++)
+          if (filter == 'all' || pets[i].species == filter) i
+      ];
+      final allShownSelected =
+          shown.isNotEmpty && shown.every(c.selectedPetIndexes.contains);
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (pets.isNotEmpty) ...[
+            Row(
+              children: [
+                if (hasCats && hasDogs) ...[
+                  _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
+                  const SizedBox(width: 6),
+                  _FilterChip('Gatos', filter == 'cat', () => c.petFilter.value = 'cat'),
+                  const SizedBox(width: 6),
+                  _FilterChip('Cães', filter == 'dog', () => c.petFilter.value = 'dog'),
+                ],
+                const Spacer(),
+                TextButton(
+                  onPressed: shown.isEmpty ? null : c.toggleAllFiltered,
+                  child: Text(allShownSelected ? 'Limpar' : 'Selecionar todos',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final i in shown)
+                  _PetChip(
+                    name: pets[i].name,
+                    species: pets[i].species,
+                    selected: c.selectedPetIndexes.contains(i),
+                    onTap: () => c.togglePet(i),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ] else
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: const Text(
+                'Você ainda não cadastrou animais. Informe abaixo quantos serão atendidos, ou cadastre-os no Perfil para o veterinário ver o nome de cada um.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMedium),
+              ),
+            ),
+          // Quantidade para quem não cadastrou os animais
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Outros animais sem cadastro',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 2),
+                      Text('Só a quantidade, sem precisar cadastrar cada um.',
+                          style: TextStyle(fontSize: 11, color: AppColors.textMedium)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: c.extraAnimals.value > 0
+                      ? () => c.setExtraAnimals(c.extraAnimals.value - 1)
+                      : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Text('${c.extraAnimals.value}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                IconButton(
+                  onPressed: () => c.setExtraAnimals(c.extraAnimals.value + 1),
+                  icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip(this.label, this.selected, this.onTap);
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: selected ? AppColors.primary : const Color(0xFFE5E7EB)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : AppColors.textMedium)),
+        ),
+      );
+}
+
+class _PetChip extends StatelessWidget {
+  final String name, species;
+  final bool selected;
+  final VoidCallback onTap;
+  const _PetChip(
+      {required this.name,
+      required this.species,
+      required this.selected,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final emoji = species == 'cat' ? '🐱' : species == 'dog' ? '🐶' : '🐾';
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
+              width: selected ? 2 : 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(name,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColors.primary : AppColors.textDark)),
+            if (selected) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.check_circle, size: 16, color: AppColors.primary),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Resumo do total do pedido por animal + aviso acima do limite.
+class MultiPriceSummary extends StatelessWidget {
+  const MultiPriceSummary({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<SchedulingController>();
+    return Obx(() {
+      final s = c.selectedService.value;
+      if (s == null || !s.perAnimal) return const SizedBox.shrink();
+      final n = c.animalCount;
+      final extra = s.additionalPrice ?? s.price;
+      final line = n <= 1
+          ? '1 animal: ${_money(s.price)}'
+          : '$n animais: ${_money(s.price)} + ${n - 1} × ${_money(extra)}';
+      final tooMany = n > SchedulingController.maxAnimalsBeforeQuote;
+      return Container(
+        margin: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(line, style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            const SizedBox(height: 2),
+            Text('Total: ${_money(c.totalPrice)}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
+            if (tooMany) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Para $n animais, vale pedir um orçamento: o tempo e a logística podem mudar o valor. Você pode seguir com o pedido normalmente ou falar com a gente.',
+                style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
+              ),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse(
+                      'https://wa.me/$_vetvemWhatsapp?text=${Uri.encodeComponent('Olá! Quero agendar "${s.name}" para $n animais e gostaria de um orçamento.')}'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.chat_outlined, size: 18),
+                label: const Text('Pedir orçamento no WhatsApp'),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+}
