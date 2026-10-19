@@ -242,8 +242,14 @@ class SchedulingController extends GetxController {
           snackPosition: SnackPosition.TOP);
       return;
     }
-    if (selectedPetIndexes.isEmpty && extraAnimals.value == 0) {
-      Get.snackbar('Atenção', 'Selecione ao menos um animal',
+    // Exige ao menos um animal CADASTRADO (o veterinário precisa de nome,
+    // espécie e idade). Animais sem cadastro só se somam aos marcados.
+    if (selectedPetIndexes.isEmpty) {
+      Get.snackbar(
+          'Atenção',
+          Get.find<ProfileController>().pets.isEmpty
+              ? 'Cadastre ao menos um animal no seu Perfil para agendar'
+              : 'Selecione ao menos um animal',
           snackPosition: SnackPosition.TOP);
       return;
     }
@@ -275,9 +281,7 @@ class SchedulingController extends GetxController {
     final count = animalCount;
     final multi = service.perAnimal || count > 1;
     final total = service.totalFor(count);
-    final pet = chosen.isNotEmpty
-        ? chosen.first
-        : PetProfile(name: 'Animais sem cadastro', species: 'other', breed: '', age: '', sex: '', castrated: false);
+    final pet = chosen.first; // validado acima: há ao menos um animal cadastrado
 
     isLoading.value = true;
     try {

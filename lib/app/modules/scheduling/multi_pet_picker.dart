@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import 'scheduling_controller.dart';
@@ -74,9 +75,20 @@ class MultiPetPicker extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              child: const Text(
-                'Você ainda não cadastrou animais. Informe abaixo quantos serão atendidos, ou cadastre-os no Perfil para o veterinário ver o nome de cada um.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Para agendar, cadastre pelo menos um animal no seu Perfil. Assim o veterinário já sabe quem vai atender (nome, espécie, raça e idade).',
+                    style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => Get.toNamed(Routes.profile),
+                    icon: const Icon(Icons.pets, size: 18),
+                    label: const Text('Cadastrar animal no Perfil'),
+                  ),
+                ],
               ),
             ),
           // Quantidade para quem não cadastrou os animais
@@ -93,10 +105,10 @@ class MultiPetPicker extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Outros animais sem cadastro',
+                      Text('Mais animais sem cadastro',
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       SizedBox(height: 2),
-                      Text('Só a quantidade, sem precisar cadastrar cada um.',
+                      Text('Além dos marcados acima: só a quantidade, sem cadastrar cada um.',
                           style: TextStyle(fontSize: 11, color: AppColors.textMedium)),
                     ],
                   ),
