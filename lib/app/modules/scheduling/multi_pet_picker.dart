@@ -9,8 +9,7 @@ const _vetvemWhatsapp = '5521982832163';
 
 String _money(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
 
-/// Seleção de vários animais para serviços "por animal" (vacina, vermífugo...):
-/// marcar um a um, "Selecionar todos" (respeitando o filtro de espécie) e uma
+/// Seleção de vários animais (qualquer serviço): marcar um a um, "Selecionar todos" (respeitando o filtro de espécie) e uma
 /// quantidade para animais sem cadastro.
 class MultiPetPicker extends StatelessWidget {
   const MultiPetPicker({super.key});
@@ -203,12 +202,15 @@ class MultiPriceSummary extends StatelessWidget {
     final c = Get.find<SchedulingController>();
     return Obx(() {
       final s = c.selectedService.value;
-      if (s == null || !s.perAnimal) return const SizedBox.shrink();
       final n = c.animalCount;
-      final extra = s.additionalPrice ?? s.price;
+      // Com 1 animal em serviço comum não há o que somar: o resumo some.
+      if (s == null || (!s.perAnimal && n <= 1)) return const SizedBox.shrink();
+      final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
       final line = n <= 1
           ? '1 animal: ${_money(s.price)}'
-          : '$n animais: ${_money(s.price)} + ${n - 1} × ${_money(extra)}';
+          : (extra == s.price
+              ? '$n animais: $n × ${_money(s.price)}'
+              : '$n animais: ${_money(s.price)} + ${n - 1} × ${_money(extra)}');
       final tooMany = n > SchedulingController.maxAnimalsBeforeQuote;
       return Container(
         margin: const EdgeInsets.only(top: 4),

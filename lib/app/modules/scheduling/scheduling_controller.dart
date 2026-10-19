@@ -30,19 +30,14 @@ class SchedulingController extends GetxController {
     return profile.pets.map((p) => PetOption(name: p.name, species: p.species)).toList();
   }
 
-  final selectedPetIndex = Rx<int?>(null);
-
-  // ── Serviço "por animal": vários animais no mesmo pedido ──────────
+  // ── Vários animais no mesmo pedido (qualquer serviço) ──────────────
   static const maxAnimalsBeforeQuote = 10; // acima disso só avisamos e oferecemos orçamento
   final selectedPetIndexes = RxSet<int>({}); // pets do perfil marcados
   final extraAnimals = 0.obs; // animais SEM cadastro (só quantidade)
   final petFilter = 'all'.obs; // all | cat | dog
 
-  bool get isMultiService => selectedService.value?.perAnimal == true;
-
-  /// Nº de animais do pedido (1 quando o serviço não é por animal).
+  /// Nº de animais do pedido (mínimo 1).
   int get animalCount {
-    if (!isMultiService) return 1;
     final n = selectedPetIndexes.length + extraAnimals.value;
     return n < 1 ? 1 : n;
   }
@@ -122,16 +117,6 @@ class SchedulingController extends GetxController {
 
   void selectService(VetService service) {
     selectedService.value = service;
-    if (service.perAnimal) {
-      // Traz o pet que já estava escolhido para a seleção múltipla.
-      final i = selectedPetIndex.value;
-      if (i != null && selectedPetIndexes.isEmpty) selectedPetIndexes.add(i);
-    } else {
-      // Volta ao modo de 1 animal: mantém o primeiro marcado, se houver.
-      if (selectedPetIndex.value == null && selectedPetIndexes.isNotEmpty) {
-        selectedPetIndex.value = selectedPetIndexes.reduce((a, b) => a < b ? a : b);
-      }
-    }
   }
 
   // Horários agrupados por período — vêm do vet selecionado
@@ -159,8 +144,6 @@ class SchedulingController extends GetxController {
   }
 
   final expandedPeriod = Rx<String?>('Manhã'); // abre o primeiro por padrão
-
-  void selectPet(int index) => selectedPetIndex.value = index;
 
   void selectDate(DateTime date) {
     selectedDate.value = date;
@@ -247,8 +230,9 @@ class SchedulingController extends GetxController {
   }
 
   String get selectedPetName {
-    final i = selectedPetIndex.value;
-    if (i == null || i >= pets.length) return '';
+    if (selectedPetIndexes.isEmpty) return '';
+    final i = (selectedPetIndexes.toList()..sort()).first;
+    if (i >= pets.length) return '';
     return pets[i].name;
   }
 
@@ -258,14 +242,8 @@ class SchedulingController extends GetxController {
           snackPosition: SnackPosition.TOP);
       return;
     }
-    if (isMultiService) {
-      if (selectedPetIndexes.isEmpty && extraAnimals.value == 0) {
-        Get.snackbar('Atenção', 'Selecione ao menos um animal',
-            snackPosition: SnackPosition.TOP);
-        return;
-      }
-    } else if (selectedPetIndex.value == null) {
-      Get.snackbar('Atenção', 'Selecione um pet',
+    if (selectedPetIndexes.isEmpty && extraAnimals.value == 0) {
+      Get.snackbar('Atenção', 'Selecione ao menos um animal',
           snackPosition: SnackPosition.TOP);
       return;
     }
@@ -289,12 +267,13 @@ class SchedulingController extends GetxController {
     final profile = Get.find<ProfileController>();
     final service = selectedService.value!;
     final addr = selectedAddress.value!;
-    // Pets do pedido: 1 (modo normal) ou vários (serviço por animal).
-    final chosen = isMultiService
-        ? (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList()
-        : [profile.pets[selectedPetIndex.value!]];
-    final multi = isMultiService;
+    // Pets do pedido: 1 ou vários. petCount/pets só vão no documento quando há
+    // mais de um animal (ou serviço "por animal") — com 1 animal em serviço
+    // comum o documento fica idêntico ao das versões anteriores.
+    final chosen =
+        (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList();
     final count = animalCount;
+    final multi = service.perAnimal || count > 1;
     final total = service.totalFor(count);
     final pet = chosen.isNotEmpty
         ? chosen.first

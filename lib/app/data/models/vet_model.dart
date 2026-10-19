@@ -23,10 +23,14 @@ class VetService {
   bool get isPackage => packageSessions != null;
 
   /// Total para [count] animais: price no 1º + (count-1) x adicional.
-  /// Mesma regra do servidor (computeAppointmentAmount).
+  /// - Serviço "por animal": o adicional é o configurado pelo profissional
+  ///   (additionalPrice) ou o preço cheio.
+  /// - Serviço comum (profissional sem o cadastro "por animal"): cada animal
+  ///   paga o preço cheio, sem desconto (2 x R$ 80 = R$ 160).
+  /// Mesma regra do servidor (appointment_amount.js, no pagamento).
   double totalFor(int count) {
-    if (!perAnimal || count <= 1) return price;
-    final extra = additionalPrice ?? price;
+    if (count <= 1) return price;
+    final extra = perAnimal ? (additionalPrice ?? price) : price;
     return ((price + (count - 1) * extra) * 100).round() / 100;
   }
 

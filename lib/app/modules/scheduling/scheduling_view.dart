@@ -37,84 +37,11 @@ class _SchedulingForm extends GetView<SchedulingController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Pet ──────────────────────────────────────────────────
-            Obx(() => _SectionTitle(
-                Get.find<SchedulingController>().isMultiService
-                    ? 'Quais animais serão atendidos?'
-                    : 'Qual pet será atendido?')),
+            // Qualquer serviço aceita vários animais (o valor é multiplicado
+            // para quem não tem o cadastro "por animal").
+            const _SectionTitle('Quais animais serão atendidos?'),
             const SizedBox(height: 12),
-            Obx(() {
-              final c = Get.find<SchedulingController>();
-              final profile = Get.find<ProfileController>();
-              final pets = profile.pets;
-              if (c.isMultiService) return const MultiPetPicker();
-              if (pets.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.pets, color: AppColors.textLight),
-                      SizedBox(width: 12),
-                      Text('Nenhum pet cadastrado.\nAdicione um pet no seu perfil.',
-                          style: TextStyle(fontSize: 13, color: AppColors.textMedium)),
-                    ],
-                  ),
-                );
-              }
-              return SizedBox(
-                height: 100,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(pets.length, (i) {
-                      final pet = pets[i];
-                      final selected = c.selectedPetIndex.value == i;
-                      final emoji = pet.species == 'cat' ? '🐱' : pet.species == 'dog' ? '🐶' : '🐾';
-                      final label = pet.species == 'cat' ? 'Gato' : pet.species == 'dog' ? 'Cão' : 'Outro';
-                      return Padding(
-                        padding: EdgeInsets.only(right: i < pets.length - 1 ? 10 : 0),
-                        child: GestureDetector(
-                          onTap: () => c.selectPet(i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 90,
-                            decoration: BoxDecoration(
-                              color: selected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-                                width: selected ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(emoji, style: const TextStyle(fontSize: 28)),
-                                const SizedBox(height: 4),
-                                Text(pet.name,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: selected ? AppColors.primary : AppColors.textDark,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                                Text(label,
-                                    style: const TextStyle(fontSize: 10, color: AppColors.textMedium)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              );
-            }),
+            const MultiPetPicker(),
 
             const SizedBox(height: 24),
 
