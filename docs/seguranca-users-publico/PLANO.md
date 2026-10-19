@@ -46,10 +46,13 @@ app tutor casa avaliações por `vetName` exato.
 - **2a. Portal** (deploy imediato, sem loja). Testar o fluxo de agendamento ponta a ponta.
 - **2b. App tutor**: release nas lojas (Android + iOS; iOS depende da Apple). Incluir na
   próxima versão (hoje 1.0.8+27 em `pubspec.yaml`; precisa de build maior).
-- **2c. (opcional, decisão do Ronald) paliativo sem release de app**: depois do 2a, trocar
-  a regra de leitura cruzada por `... && request.auth.token.firebase.sign_in_provider != 'anonymous'`.
-  Mata o cenário descrito (raspar com token anônimo, sem cadastro) sem quebrar nenhum tutor
-  logado; um atacante ainda poderia criar conta de tutor. Exige um deploy de regras antes da fase 3.
+- **2c. Paliativo sem release de app (regra PRONTA em `firestore.rules`, NÃO deployada):** a leitura
+  cruzada de `users` de profissional passa a exigir `request.auth.token.firebase.sign_in_provider in
+  ['password','google.com','apple.com']` — os logins dos apps e do painel. O login **anônimo** e o de
+  **telefone** (só o portal usa; ele já lê só a vitrine) ficam de fora. Mata o cenário descrito (raspar com
+  token anônimo, sem cadastro). Limite: quem criar uma conta de tutor por e-mail ainda lê `users` até a fase 3.
+  Testado no emulador (anônimo/telefone negados; e-mail/Google/Apple, dono, admin, vitrine e fluxo do portal
+  seguem). Verificação em produção: `verify_public_exposure.js --phase 2` → exit 0.
 
 ### Fase 3 — endurecer (só após adoção)
 **Pré-condição:** versões antigas do app tutor leem `users` e passam a receber

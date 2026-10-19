@@ -1,8 +1,10 @@
 // Verificação em PRODUÇÃO com token anônimo (o mesmo que o portal usa).
-//   FIREBASE_API_KEY=<chave pública do app web> node functions/test/verify_public_exposure.js --phase 1|3
+//   FIREBASE_API_KEY=<chave pública do app web> node functions/test/verify_public_exposure.js --phase 1|2|3
 //
 // --phase 1: espelho existe, é legível e NÃO contém campo privado (users ainda
 //            vaza — só informa).
+// --phase 2: regra provisória (bloqueio do login anônimo/telefone): users/{uid} e a
+//            query DEVEM falhar com 403 para o token anônimo.
 // --phase 3: além do acima, users/{uid} e a query de profissionais DEVEM falhar
 //            com 403 para o token anônimo. Sai com código 1 se algo falhar.
 // Nunca imprime VALORES de campos, só nomes de chaves e status HTTP.
@@ -40,7 +42,7 @@ const check = (ok, msg) => { console.log(`${ok ? "OK  " : "FAIL"} ${msg}`); if (
   if (uid) {
     const r = await fetch(`${DB}/users/${uid}`, { headers: H });
     const leaked = r.status === 200 ? Object.keys((await r.json()).fields || {}).filter((k) => PRIVATE.includes(k)) : [];
-    if (phase === "3") check(r.status === 403, `users/{uid} de profissional NEGADO (HTTP ${r.status})`);
+    if (phase === "2" || phase === "3") check(r.status === 403, `users/{uid} de profissional NEGADO (HTTP ${r.status})`);
     else console.log(`INFO users/{uid} HTTP ${r.status}${leaked.length ? ` — expõe: ${leaked.join(", ")}` : ""}`);
   }
   const q = await fetch(`${DB}:runQuery`, {
@@ -50,7 +52,7 @@ const check = (ok, msg) => { console.log(`${ok ? "OK  " : "FAIL"} ${msg}`); if (
   });
   const qBody = await q.json();
   const returned = Array.isArray(qBody) ? qBody.filter((x) => x.document).length : 0;
-  if (phase === "3") check(q.status === 403 && returned === 0, `query users role==professional NEGADA (HTTP ${q.status}, ${returned} docs)`);
+  if (phase === "2" || phase === "3") check(q.status === 403 && returned === 0, `query users role==professional NEGADA (HTTP ${q.status}, ${returned} docs)`);
   else console.log(`INFO query users role==professional HTTP ${q.status}, ${returned} docs`);
 
   // 3) Limpeza: remove o usuário anônimo criado pelo teste

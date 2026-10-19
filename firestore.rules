@@ -35,8 +35,15 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == userId
                     && !touchesAdminFields();
       allow delete: if request.auth != null && request.auth.uid == userId;
-      // Tutores leem perfis de profissionais (busca)
+      // Tutores leem perfis de profissionais (busca) — PROVISÓRIO, até a fase 3
+      // (a busca já usa professionals_public; versões antigas do app tutor ainda
+      // leem aqui). Só quem entrou com e-mail/senha, Google ou Apple — os logins
+      // dos apps e do painel. O login ANÔNIMO e o de TELEFONE (só o portal de
+      // agendamento os usa, e ele não lê mais users) ficam de fora: era por onde
+      // qualquer pessoa raspava telefone/e-mail/PIX dos profissionais sem cadastro.
       allow read: if request.auth != null
+                  && request.auth.token.firebase.sign_in_provider
+                     in ['password', 'google.com', 'apple.com']
                   && resource.data.role == 'professional';
       // Apps atualizam métricas de avaliação de qualquer vet
       allow update: if request.auth != null
