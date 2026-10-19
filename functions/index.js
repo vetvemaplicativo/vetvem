@@ -60,9 +60,7 @@ async function verifyAdmin(req, res) {
 // additionalPrice (opcional; padrão = price) em cada adicional.
 // Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
 // não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
-function toNum(v) {
-  return parseFloat(String(v === undefined || v === null ? "0" : v).replace(",", ".")) || 0;
-}
+const { priceForService, toNum } = require("./appointment_amount");
 
 async function computeAppointmentAmount(appt, clientAmount) {
   const fallback = { amount: Number(clientAmount), source: "client", count: 1 };
@@ -73,19 +71,9 @@ async function computeAppointmentAmount(appt, clientAmount) {
     const vet = (await admin.firestore().collection("users").doc(vetId).get()).data() || {};
     const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
     if (!svc) return { ...fallback, source: "client-sem-servico" };
-    const base = toNum(svc.price);
-    if (!(base > 0)) return { ...fallback, source: "client-preco-zero" };
-    let count = 1;
-    if (svc.perAnimal === true) {
-      const listed = Array.isArray(appt.pets) ? appt.pets.length : 0;
-      const declared = parseInt(appt.petCount, 10) || 0;
-      count = Math.min(Math.max(declared, listed, 1), 50);
-    }
-    const extraRaw = svc.additionalPrice;
-    const extra = extraRaw === undefined || extraRaw === null || String(extraRaw).trim() === ""
-      ? base
-      : toNum(extraRaw);
-    const total = Math.round((base + (count - 1) * extra) * 100) / 100;
+    const priced = priceForService(svc, appt);
+    if (!priced) return { ...fallback, source: "client-preco-zero" };
+    const { amount: total, count } = priced;
     return { amount: total, source: "server", count };
   } catch (e) {
     console.error("computeAppointmentAmount:", e.message);
