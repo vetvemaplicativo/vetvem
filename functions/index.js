@@ -60,7 +60,7 @@ async function verifyAdmin(req, res) {
 // additionalPrice (opcional; padrão = price) em cada adicional.
 // Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
 // não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
-const { priceForService, toNum } = require("./appointment_amount");
+const { priceForService, toNum, petLabel } = require("./appointment_amount");
 
 async function computeAppointmentAmount(appt, clientAmount) {
   const fallback = { amount: Number(clientAmount), source: "client", count: 1 };
@@ -324,7 +324,7 @@ exports.mpWebhook = onRequest(
                 .collection("pending")
                 .add({
                   title: "🗓️ Novo agendamento pago!",
-                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${current.petName || "o pet"} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES} min ou a solicitação expira.`,
+                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES} min ou a solicitação expira.`,
                   read: false,
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   tipo: "novo_agendamento",
@@ -502,7 +502,7 @@ exports.dailyPayouts = onSchedule(
         appointmentId: a.id,
         vetId: a.vetId || "",
         vetName: a.vetName || "",
-        petName: a.petName || "",
+        petName: petLabel(a, ""),
         appointmentDate: a.date || "",
         gross, fee, net,
         feePercent,
@@ -770,7 +770,7 @@ exports.cancelUnpaid = onSchedule(
       });
       cancelled++;
 
-      const pet = d.petName || "seu pet";
+      const pet = petLabel(d, "seu pet");
       const when = `${d.date || ""} às ${d.time || ""}`;
       const notify = (uid, title, body) => uid
         ? db.collection("notifications").doc(uid).collection("pending").add({
@@ -909,7 +909,7 @@ async function onPortalConfirmed(after, resendKey) {
       "Seu agendamento VetVem foi confirmado! 🐾",
       `<p>Olá${after.tutorName ? ", " + after.tutorName : ""}!</p>
        <p><strong>${after.vetName || "O profissional"}</strong> confirmou o atendimento ` +
-        `para <strong>${after.petName || "seu pet"}</strong> em ${after.date} às ${after.time}.</p>
+        `para <strong>${petLabel(after, "seu pet")}</strong> em ${after.date} às ${after.time}.</p>
        <p>Endereço: ${after.address || ""}</p>`
     );
   } catch (e) {
@@ -960,7 +960,7 @@ async function handleRejectedPayment(ref, after, mpToken, resendKey) {
         .collection("notifications").doc(after.tutorId)
         .collection("pending").add({
           title: "💸 Valor estornado",
-          body: `O valor pago pela consulta de ${after.petName || "seu pet"} foi estornado. ` +
+          body: `O valor pago pela consulta de ${petLabel(after, "seu pet")} foi estornado. ` +
             (after.paymentMethod === "pix"
               ? "Já deve aparecer na sua conta em instantes."
               : "Pode levar alguns dias para aparecer na fatura do cartão."),
@@ -1106,7 +1106,7 @@ exports.expireUnanswered = onSchedule(
       // o horário. O reembolso (quando pago) é tratado pelo appointmentHistorian.
       if (d.paymentStatus !== "approved") continue;
 
-      const pet = d.petName || "seu pet";
+      const pet = petLabel(d, "seu pet");
       const when = `${d.date || ""} às ${d.time || ""}`;
       const notify = (uid, title, body, extra = {}) => uid
         ? db.collection("notifications").doc(uid).collection("pending").add({
@@ -1178,7 +1178,7 @@ exports.adminCancelAppointment = onRequest(
         }
       }
 
-      const pet = d.petName || "um pet";
+      const pet = petLabel(d, "um pet");
       const notify = (uid, title, body) => uid
         ? db.collection("notifications").doc(uid).collection("pending").add({
             title, body, read: false,
@@ -1328,7 +1328,7 @@ exports.deleteAccount = onRequest(
         if (otherUid) {
           await db.collection("notifications").doc(otherUid).collection("pending").add({
             title: "Consulta cancelada",
-            body: `A consulta de ${d.petName || "um pet"} foi cancelada porque ` +
+            body: `A consulta de ${petLabel(d, "um pet")} foi cancelada porque ` +
               `${isTutor ? "o tutor" : "o profissional"} encerrou a conta no VetVem.` +
               (refunded ? " O valor pago foi estornado." : ""),
             read: false,

@@ -42,4 +42,13 @@ function priceForService(svc, appt) {
   return { amount, count };
 }
 
-module.exports = { priceForService, animalsOf, toNum, MAX_ANIMALS };
+// Nome do(s) animal(is) para usar em textos/notificações: "Mingau" quando é um
+// só; "Mingau +12" quando o pedido tem 13 animais; "13 animais" se faltar o nome.
+function petLabel(appt, fallback) {
+  const first = String((appt && appt.petName) || "").trim();
+  const n = animalsOf(appt || {});
+  if (n <= 1) return first || fallback;
+  return first ? `${first} +${n - 1}` : `${n} animais`;
+}
+
+module.exports = { priceForService, animalsOf, petLabel, toNum, MAX_ANIMALS };

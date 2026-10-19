@@ -42,3 +42,12 @@ test("arredondamento em centavos", () => {
   assert.equal(priceForService(comum("33.33"), { petCount: 3 }).amount, 99.99);
   assert.equal(priceForService(porAnimal("10", "0.333"), { petCount: 4 }).amount, 11);
 });
+
+test("petLabel: nome do pet com +N quando há vários animais", () => {
+  const { petLabel } = require("../appointment_amount");
+  assert.equal(petLabel({ petName: "Mingau" }, "seu pet"), "Mingau");
+  assert.equal(petLabel({ petName: "Mingau", petCount: 13 }, "seu pet"), "Mingau +12");
+  assert.equal(petLabel({ petName: "Mingau", pets: [1, 2, 3] }, "seu pet"), "Mingau +2");
+  assert.equal(petLabel({}, "seu pet"), "seu pet");
+  assert.equal(petLabel({ petCount: 4 }, "seu pet"), "4 animais");
+});
