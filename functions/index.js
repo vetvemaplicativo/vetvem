@@ -1441,3 +1441,9 @@ Object.assign(exports, require("./professionals_public"));
 
 // E-mail de redefinição de senha com a marca VetVem
 Object.assign(exports, require("./password_reset"));
+
+// Sincronização do diretório de profissionais do site (vetvem.com.br/profissionais/)
+Object.assign(exports, require("./site_sync"));
+
+// Blog automático do site (vetvem.com.br/blog/) — ver blog_auto.js
+Object.assign(exports, require("./blog_auto"));
