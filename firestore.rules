@@ -60,6 +60,15 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Vitrine pública dos profissionais aprovados (espelho sem dados privados).
+    // Mantida só pela Cloud Function mirrorProfessionalPublic (Admin SDK, que
+    // ignora regras) — cliente nunca escreve. Leitura para qualquer autenticado,
+    // inclusive o login anônimo do portal de agendamento.
+    match /professionals_public/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     match /appointments/{appointmentId} {
       // Só o profissional do atendimento pode marcar como visualizado, e só
       // uma vez — depois de gravado, o campo nunca pode ser reescrito.

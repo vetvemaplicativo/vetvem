@@ -534,10 +534,11 @@ class ProfileController extends GetxController {
 
     String? targetVetId = (vetId != null && vetId.isNotEmpty) ? vetId : null;
     if (targetVetId == null && vetName != null && vetName.isNotEmpty) {
-      final userSnap = await _firestore.collection('users')
-          .where('name', isEqualTo: vetName).get();
-      final match = userSnap.docs.where((d) => d.data()['role'] == 'professional');
-      if (match.isNotEmpty) targetVetId = match.first.id;
+      // Vitrine pública (users/{uid} de terceiros não é legível). O id do doc
+      // é o uid do profissional.
+      final userSnap = await _firestore.collection('professionals_public')
+          .where('name', isEqualTo: vetName).limit(1).get();
+      if (userSnap.docs.isNotEmpty) targetVetId = userSnap.docs.first.id;
     }
     if (targetVetId == null) return;
 

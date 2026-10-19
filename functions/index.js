@@ -1393,3 +1393,6 @@ exports.pixKeyWatcher = onDocumentUpdated(
     }
   }
 );
+
+// Espelho público dos profissionais (professionals_public) — vitrine sem dados privados
+Object.assign(exports, require("./professionals_public"));

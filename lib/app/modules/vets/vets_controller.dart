@@ -124,12 +124,16 @@ class VetsController extends GetxController {
   // Escuta ao vivo (não .get() único): mudanças como o profissional pausar
   // o recebimento de pedidos (isAvailable) precisam refletir na busca do
   // tutor sem exigir reabrir o app.
+  //
+  // Lê a vitrine pública (professionals_public), NÃO users/{uid}: o perfil
+  // completo tem telefone, e-mail, endereço e PIX e não é legível por terceiros.
+  // A vitrine é mantida pela Cloud Function mirrorProfessionalPublic e só
+  // contém profissionais aprovados e não bloqueados.
   void _loadVets() {
     isLoading.value = true;
     _vetsSub?.cancel();
     _vetsSub = FirebaseFirestore.instance
-        .collection('users')
-        .where('role', isEqualTo: 'professional')
+        .collection('professionals_public')
         .snapshots()
         .listen(_onVetsSnapshot, onError: (_) {
       allVets.assignAll([]);
@@ -163,16 +167,9 @@ class VetsController extends GetxController {
         }
       }
 
-      // Só profissionais aprovados no painel admin e não bloqueados
-      // ('active' = contas antigas, anteriores ao fluxo de aprovação)
-      final visibleDocs = snap.docs.where((doc) {
-        final d = doc.data();
-        final status = d['accountStatus'] ?? '';
-        return (status == 'approved' || status == 'active') &&
-            d['blocked'] != true;
-      }).toList();
-
-      final firestoreVets = visibleDocs.map((doc) {
+      // professionals_public só contém profissionais aprovados e não bloqueados
+      // (a function remove o doc quando deixam de ser) — não há o que filtrar.
+      final firestoreVets = snap.docs.map((doc) {
         final d = doc.data();
         final cats = List<String>.from(d['categories'] ?? []);
         final srvData = List<Map<String, dynamic>>.from(d['services'] ?? []);

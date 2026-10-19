@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin do painel web (claim concedida pela function grantAdmin)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Campos que só o admin pode alterar — nunca o próprio usuário
+    // Exceção: o próprio usuário pode gravar accountStatus = 'pending' se o
+    // campo ainda não existe (ou já é 'pending'). Necessário no primeiro login
+    // social do Pro: o aceite dos termos cria um doc parcial e o perfil
+    // completo entra como update (set merge). Nunca permite aprovar-se, nem
+    // sair de 'approved'/'rejected' de volta para 'pending'.
+    // Exceção 2: trocar um CRMV já cadastrado obriga voltar para 'pending'
+    // (revisão do admin) na mesma gravação.
+    function touchesAdminFields() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let toPending = request.resource.data.get('accountStatus', null) == 'pending';
+      let wasPending = resource.data.get('accountStatus', 'pending') == 'pending';
+      let crmvChanged = changed.hasAny(['crmv'])
+          && resource.data.get('crmv', '') != '';
+      return changed.hasAny(['blocked', 'feeOverride', 'pixChangedAt'])
+          || (changed.hasAny(['accountStatus'])
+              && !(toPending && (wasPending || crmvChanged)))
+          || (crmvChanged && !toPending);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Dono edita o próprio perfil, mas não os campos administrativos
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && !touchesAdminFields();
+      allow delete: if request.auth != null && request.auth.uid == userId;
+      // (Fase 3) Removida a leitura cruzada de perfis de profissionais: a busca
+      // dos tutores/portal agora usa professionals_public. Aqui só dono e admin.
+      // Apps atualizam métricas de avaliação de qualquer vet
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['rating', 'reviewCount', 'completedCount']);
+    }
+
+    // Lista de espera por região (portal e app do tutor): quem mora onde ainda
+    // não há profissional deixa estado/cidade/contato; o app também registra a
+    // busca vazia (origem app_tutor_busca_vazia, contato "uid:..."). Só cria,
+    // com campos e tamanhos validados; só o admin lê.
+    match /waitlist_regiao/{id} {
+      allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly(['uf', 'cidade', 'contato', 'origem', 'createdAt'])
+          && request.resource.data.uf is string && request.resource.data.uf.size() == 2
+          && request.resource.data.cidade is string
+          && request.resource.data.cidade.size() >= 2 && request.resource.data.cidade.size() <= 80
+          && request.resource.data.contato is string
+          && request.resource.data.contato.size() >= 5 && request.resource.data.contato.size() <= 120
+          && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Vitrine pública dos profissionais aprovados (espelho sem dados privados).
+    // Mantida só pela Cloud Function mirrorProfessionalPublic (Admin SDK, que
+    // ignora regras) — cliente nunca escreve. Leitura para qualquer autenticado,
+    // inclusive o login anônimo do portal de agendamento.
+    match /professionals_public/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /appointments/{appointmentId} {
+      // Só o profissional do atendimento pode marcar como visualizado, e só
+      // uma vez — depois de gravado, o campo nunca pode ser reescrito.
+      function canMarkViewed() {
+        return !('viewedAt' in resource.data)
+            && (resource.data.vetId == request.auth.uid
+                || !('vetId' in resource.data)
+                || resource.data.vetId == '');
+      }
+      // Ninguém pode mentir sobre quem cancelou (campo ainda não usado por
+      // nenhuma UI hoje, mas o contrato já fica protegido).
+      function cancelledByIsHonest() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+                  .hasAny(['cancelledBy'])
+            || (request.resource.data.cancelledBy == 'tutor'
+                && resource.data.tutorId == request.auth.uid)
+            || (request.resource.data.cancelledBy == 'profissional'
+                && resource.data.vetId == request.auth.uid);
+      }
+
+      allow read, write: if isAdmin();
+      // Leitura ampla é exigida pelas queries dos apps (horários ocupados
+      // por vetName, ratings agregados no cliente). Restringir = refatorar
+      // essas features para Cloud Functions (dívida pós-lançamento).
+      allow read: if request.auth != null;
+      // Tutor só cria consulta em nome próprio. historico_status e viewedAt
+      // nascem no servidor (Cloud Function), nunca no cliente.
+      allow create: if request.auth != null
+          && request.resource.data.tutorId == request.auth.uid
+          && !request.resource.data.keys().hasAny(['historico_status', 'viewedAt']);
+      // Só o tutor dono ou o vet vinculado atualizam — e nunca os campos
+      // de pagamento/repasse/histórico (exclusivos das functions via Admin SDK)
+      allow update: if request.auth != null
+          && (resource.data.tutorId == request.auth.uid
+              || resource.data.vetId == request.auth.uid
+              || !('vetId' in resource.data)) // legado sem vetId
+          && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['paymentStatus', 'paymentAmount', 'paymentId',
+                       'paymentMethod', 'paymentDate', 'payoutStatus',
+                       'payoutNet', 'payoutFee', 'tutorId', 'vetId',
+                       'historico_status'])
+          && (!request.resource.data.diff(resource.data).affectedKeys()
+                  .hasAny(['viewedAt']) || canMarkViewed())
+          && cancelledByIsHonest();
+    }
+
+    match /notifications/{userId}/pending/{notifId} {
+      allow read, write: if isAdmin();
+      // Dono lê e marca como lida as suas
+      allow read, update: if request.auth != null
+          && request.auth.uid == userId;
+      // Qualquer autenticado notifica outro (tutor→vet e vice-versa),
+      // mas só com os campos esperados e sempre não-lida
+      allow create: if request.auth != null
+          && request.resource.data.keys()
+              .hasOnly(['title', 'body', 'read', 'createdAt',
+                        'tipo', 'appointmentId'])
+          && request.resource.data.read == false;
+    }
+
+    // Repasses: exclusivo do painel admin (a function dailyPayouts usa o
+    // Admin SDK, que não passa pelas regras)
+    match /payouts/{payoutId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Documentos do profissional (RG/CNH, CRMV): dono envia, admin verifica
+    match /users/{userId}/documents/{docType} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      // Dono envia/reenvia, mas não pode se autoaprovar
+      allow create, update: if request.auth != null && request.auth.uid == userId
+          && request.resource.data.status == 'submitted';
+      allow write: if isAdmin();
+      // Troca de CRMV: dono apaga o documento antigo para reenviar o novo
+      allow delete: if request.auth != null && request.auth.uid == userId
+          && docType == 'crmv';
+    }
+
+    // Configurações da plataforma (ex.: faixas de taxa)
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+  }
+}
