@@ -1393,3 +1393,9 @@ exports.pixKeyWatcher = onDocumentUpdated(
     }
   }
 );
+
+// Sincronização do diretório de profissionais do site (vetvem.com.br/profissionais/)
+Object.assign(exports, require("./site_sync"));
+
+// Blog automático do site (vetvem.com.br/blog/) — ver blog_auto.js
+Object.assign(exports, require("./blog_auto"));
