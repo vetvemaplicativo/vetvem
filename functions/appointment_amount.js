@@ -39,8 +39,10 @@ function priceForService(svc, appt) {
       ? toNum(extraRaw)
       : base;
   // Taxa de deslocamento: valor FIXO por visita (não por animal), opcional por serviço.
+  // SÓ cobra se o app/portal declarou que MOSTROU a taxa ao tutor (feesDisclosed):
+  // clientes antigos exibem o preço sem a taxa e o tutor seria cobrado a mais.
   const travelRaw = toNum(svc.travelFee);
-  const travel = travelRaw > 0 ? travelRaw : 0;
+  const travel = travelRaw > 0 && appt && appt.feesDisclosed === true ? travelRaw : 0;
   const amount = Math.round((base + (count - 1) * extra + travel) * 100) / 100;
   return { amount, count, travel };
 }

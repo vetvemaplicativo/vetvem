@@ -54,13 +54,19 @@ test("petLabel: nome do pet com +N quando há vários animais", () => {
 
 test("taxa de deslocamento: fixa por visita, soma uma vez só, independe do nº de animais", () => {
   // serviço comum: 200 + deslocamento 80 = 280
-  assert.equal(priceForService({ price: "200", travelFee: "80" }, {}).amount, 280);
+  assert.equal(priceForService({ price: "200", travelFee: "80" }, { feesDisclosed: true }).amount, 280);
   // 13 gatos, serviço comum (preço cheio x n) + 1x deslocamento
-  assert.equal(priceForService({ price: "80", travelFee: 80 }, { petCount: 13 }).amount, 80 * 13 + 80);
+  assert.equal(priceForService({ price: "80", travelFee: 80 }, { petCount: 13, feesDisclosed: true }).amount, 80 * 13 + 80);
   // por animal com adicional: 80 + 2x60 + 50
-  assert.equal(priceForService({ price: "80", perAnimal: true, additionalPrice: "60", travelFee: "50" }, { petCount: 3 }).amount, 80 + 120 + 50);
+  assert.equal(priceForService({ price: "80", perAnimal: true, additionalPrice: "60", travelFee: "50" }, { petCount: 3, feesDisclosed: true }).amount, 80 + 120 + 50);
   // sem taxa / taxa inválida ou zero não altera o valor
   assert.equal(priceForService({ price: "200" }, {}).amount, 200);
-  assert.equal(priceForService({ price: "200", travelFee: "abc" }, {}).amount, 200);
-  assert.equal(priceForService({ price: "200", travelFee: 0 }, {}).amount, 200);
+  assert.equal(priceForService({ price: "200", travelFee: "abc" }, { feesDisclosed: true }).amount, 200);
+  assert.equal(priceForService({ price: "200", travelFee: 0 }, { feesDisclosed: true }).amount, 200);
+});
+
+test("taxa de deslocamento NAO é cobrada de cliente antigo (sem feesDisclosed)", () => {
+  assert.equal(priceForService({ price: "200", travelFee: "80" }, {}).amount, 200);
+  assert.equal(priceForService({ price: "200", travelFee: "80" }, { feesDisclosed: false }).amount, 200);
+  assert.equal(priceForService({ price: "200", travelFee: "80" }, { petCount: 2 }).amount, 400);
 });

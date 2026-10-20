@@ -121,7 +121,7 @@ service cloud.firestore {
                        'proposalStatus', 'proposals', 'proposalSentAt',
                        'proposalDeadline', 'originalDate', 'originalTime',
                        'chosenIndex', 'instructionsText', 'instructionsSentAt',
-                       'canChooseTimes'])
+                       'canChooseTimes', 'feesDisclosed'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())
           && cancelledByIsHonest();
