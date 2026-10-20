@@ -50,6 +50,7 @@ class _SchedulingForm extends GetView<SchedulingController> {
             const SizedBox(height: 12),
             _ServiceSelector(),
             const MultiPriceSummary(),
+            const ServiceInstructionsNotice(),
 
             const SizedBox(height: 24),
 
@@ -747,6 +748,24 @@ class _ServiceSelector extends GetView<SchedulingController> {
                             color: AppColors.primary,
                           ),
                         ),
+                        if (s.travel > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(
+                              '+ Deslocamento R\$ ${s.travel.toStringAsFixed(2).replaceAll('.', ',')} (taxa fixa por visita)',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.textMedium),
+                            ),
+                          ),
+                        if (s.instructions.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(
+                              '⚠️ Tem orientação do veterinário (veja abaixo)',
+                              style: const TextStyle(
+                                  fontSize: 11, color: Color(0xFFB45309)),
+                            ),
+                          ),
                         if (s.perAnimal)
                           Padding(
                             padding: const EdgeInsets.only(top: 3),

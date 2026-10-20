@@ -216,7 +216,7 @@ class MultiPriceSummary extends StatelessWidget {
       final s = c.selectedService.value;
       final n = c.animalCount;
       // Com 1 animal em serviço comum não há o que somar: o resumo some.
-      if (s == null || (!s.perAnimal && n <= 1)) return const SizedBox.shrink();
+      if (s == null || (!s.perAnimal && n <= 1 && s.travel <= 0)) return const SizedBox.shrink();
       final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
       final line = n <= 1
           ? '1 animal: ${_money(s.price)}'
@@ -235,6 +235,9 @@ class MultiPriceSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(line, style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            if (s.travel > 0)
+              Text('Deslocamento (taxa fixa por visita): ${_money(s.travel)}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
             const SizedBox(height: 2),
             Text('Total: ${_money(c.totalPrice)}',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
@@ -255,6 +258,40 @@ class MultiPriceSummary extends StatelessWidget {
                 label: const Text('Pedir orçamento no WhatsApp'),
               ),
             ],
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// Orientações do profissional para o serviço escolhido, mostradas ANTES de pagar
+/// (ex.: "jejum de 6 horas"), para o tutor saber como se preparar.
+class ServiceInstructionsNotice extends StatelessWidget {
+  const ServiceInstructionsNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<SchedulingController>();
+    return Obx(() {
+      final s = c.selectedService.value;
+      if (s == null || s.instructions.isEmpty) return const SizedBox.shrink();
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('⚠️ Orientação do veterinário para este serviço',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFB45309))),
+            const SizedBox(height: 4),
+            Text(s.instructions,
+                style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFB45309))),
           ],
         ),
       );

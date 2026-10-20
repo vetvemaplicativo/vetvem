@@ -46,7 +46,7 @@ class SchedulingController extends GetxController {
   double get totalPrice {
     final s = selectedService.value;
     if (s == null) return 0;
-    return s.totalFor(animalCount);
+    return s.grandTotalFor(animalCount);
   }
 
   void togglePet(int i) {
@@ -280,7 +280,7 @@ class SchedulingController extends GetxController {
         (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList();
     final count = animalCount;
     final multi = service.perAnimal || count > 1;
-    final total = service.totalFor(count);
+    final total = service.grandTotalFor(count);
     final pet = chosen.first; // validado acima: há ao menos um animal cadastrado
 
     isLoading.value = true;
@@ -306,6 +306,11 @@ class SchedulingController extends GetxController {
         'time': selectedTime.value ?? '',
         'address': addr.fullLine,
         'value': total.toStringAsFixed(2).replaceAll('.', ','),
+        // Marcas lidas pelo servidor: este app sabe escolher novos horários e MOSTRA a
+        // taxa de deslocamento ao tutor (sem isso o servidor não soma a taxa).
+        'canChooseTimes': true,
+        'feesDisclosed': true,
+        if (service.travel > 0) 'travelFee': service.travel,
         if (multi) ...{
           'petCount': count,
           'pets': [

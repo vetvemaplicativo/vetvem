@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import 'proposal_card.dart';
 
 class ConsultaDetailView extends StatelessWidget {
   const ConsultaDetailView({super.key});
@@ -294,7 +295,10 @@ class ConsultaDetailView extends StatelessWidget {
               color: const Color(0xFFF59E0B),
               onTap: null,
             ),
-          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview)
+          if (item.awaitingProposal) ProposalCard(item: item),
+          if (item.instructionsText.isNotEmpty && item.status == 'confirmed')
+            InstructionsCard(text: item.instructionsText),
+          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview && !item.awaitingProposal)
             _BottomAction(
               label: 'Aguardando confirmação do profissional...',
               icon: Icons.hourglass_top_rounded,

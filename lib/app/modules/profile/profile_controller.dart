@@ -73,6 +73,11 @@ class ConsultationHistory {
   final String vetCrmv;
   final String petPhotoBase64;
   final String paymentStatus;
+  // Sugestão de novos horários do profissional (proposalStatus = awaiting_tutor)
+  final String proposalStatus;
+  final List<Map<String, String>> proposals;
+  final int? proposalDeadline; // ms
+  final String instructionsText; // orientações do serviço, enviadas ao confirmar
 
   const ConsultationHistory({
     required this.id,
@@ -94,6 +99,10 @@ class ConsultationHistory {
     this.vetCrmv = '',
     this.petPhotoBase64 = '',
     this.paymentStatus = '',
+    this.proposalStatus = '',
+    this.proposals = const [],
+    this.proposalDeadline,
+    this.instructionsText = '',
   });
 
   // Gerar o PIX já muda paymentStatus para 'pending' (MP), então "não pago" é
@@ -106,6 +115,12 @@ class ConsultationHistory {
       paymentStatus != 'in_process';
   bool get paymentInReview =>
       status == 'pending_confirmation' && paymentStatus == 'in_process';
+  bool get awaitingProposal =>
+      status == 'pending_confirmation' &&
+      proposalStatus == 'awaiting_tutor' &&
+      proposals.isNotEmpty &&
+      (proposalDeadline == null ||
+          proposalDeadline! > DateTime.now().millisecondsSinceEpoch);
   bool get canRate => status == 'completed' && rating == null;
   bool get isActive => status == 'pending_confirmation' || status == 'confirmed';
 }
@@ -467,6 +482,14 @@ class ProfileController extends GetxController {
           value: d['value'] ?? '',
           paymentMethod: d['paymentMethod'] ?? 'pix',
           paymentStatus: d['paymentStatus'] ?? '',
+          proposalStatus: (d['proposalStatus'] ?? '').toString(),
+          proposals: [
+            for (final p in (d['proposals'] as List? ?? const []))
+              if (p is Map)
+                {'date': '${p['date'] ?? ''}', 'time': '${p['time'] ?? ''}'}
+          ],
+          proposalDeadline: (d['proposalDeadline'] as num?)?.toInt(),
+          instructionsText: (d['instructionsText'] ?? '').toString(),
           rating: d['rating'] as int?,
           comment: d['comment'] as String?,
           sentToClient: d['sentToClient'] == true,

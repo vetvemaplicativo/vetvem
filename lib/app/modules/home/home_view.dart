@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../consultas/proposal_card.dart';
 import 'first_consult_guide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -101,6 +102,7 @@ class _HomeTab extends GetView<HomeController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
+                const ProposalsBanner(),
                 const FirstConsultGuide(),
                 _buildCategories(context),
                 const SizedBox(height: 28),

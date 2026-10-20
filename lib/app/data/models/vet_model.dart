@@ -9,6 +9,9 @@ class VetService {
   // Serviço cobrado por animal (vacina...): o tutor escolhe vários animais.
   final bool perAnimal;
   final double? additionalPrice; // valor de cada animal adicional; null = mesmo preço
+  // Taxa de deslocamento FIXA por visita (opcional) e orientações ao tutor.
+  final double? travelFee;
+  final String instructions;
 
   const VetService({
     required this.name,
@@ -18,6 +21,8 @@ class VetService {
     this.packageSessions,
     this.perAnimal = false,
     this.additionalPrice,
+    this.travelFee,
+    this.instructions = '',
   });
 
   bool get isPackage => packageSessions != null;
@@ -33,6 +38,11 @@ class VetService {
     final extra = perAnimal ? (additionalPrice ?? price) : price;
     return ((price + (count - 1) * extra) * 100).round() / 100;
   }
+
+  double get travel => (travelFee ?? 0) > 0 ? travelFee! : 0;
+
+  /// Total a pagar: serviço (por animal) + taxa de deslocamento (uma vez só).
+  double grandTotalFor(int count) => ((totalFor(count) + travel) * 100).round() / 100;
 
   // Preço por sessão avulsa (ignora pacotes para não distorcer o "a partir de")
   double get unitPrice {

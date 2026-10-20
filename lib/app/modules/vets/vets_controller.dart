@@ -184,6 +184,9 @@ class VetsController extends GetxController {
             unit: s['unit'] ?? 'consulta',
             perAnimal: s['perAnimal'] == true,
             additionalPrice: addRaw.trim().isEmpty ? null : double.tryParse(addRaw),
+            travelFee: double.tryParse(
+                (s['travelFee']?.toString() ?? '').replaceAll(',', '.')),
+            instructions: (s['instructions']?.toString() ?? '').trim(),
           );
         }).toList();
 
