@@ -38,8 +38,11 @@ function priceForService(svc, appt) {
     svc.perAnimal === true && extraRaw !== undefined && extraRaw !== null && String(extraRaw).trim() !== ""
       ? toNum(extraRaw)
       : base;
-  const amount = Math.round((base + (count - 1) * extra) * 100) / 100;
-  return { amount, count };
+  // Taxa de deslocamento: valor FIXO por visita (não por animal), opcional por serviço.
+  const travelRaw = toNum(svc.travelFee);
+  const travel = travelRaw > 0 ? travelRaw : 0;
+  const amount = Math.round((base + (count - 1) * extra + travel) * 100) / 100;
+  return { amount, count, travel };
 }
 
 // Nome do(s) animal(is) para usar em textos/notificações: "Mingau" quando é um

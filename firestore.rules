@@ -116,7 +116,12 @@ service cloud.firestore {
               .hasAny(['paymentStatus', 'paymentAmount', 'paymentId',
                        'paymentMethod', 'paymentDate', 'payoutStatus',
                        'payoutNet', 'payoutFee', 'tutorId', 'vetId',
-                       'historico_status'])
+                       'historico_status',
+                       // sugestão de horários e orientações: só as Cloud Functions escrevem
+                       'proposalStatus', 'proposals', 'proposalSentAt',
+                       'proposalDeadline', 'originalDate', 'originalTime',
+                       'chosenIndex', 'instructionsText', 'instructionsSentAt',
+                       'canChooseTimes'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())
           && cancelledByIsHonest();

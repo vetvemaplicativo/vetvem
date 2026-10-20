@@ -900,7 +900,44 @@ async function sendEmail(resendApiKey, to, subject, html) {
   );
 }
 
-async function onPortalConfirmed(after, resendKey) {
+// Orientações do profissional (ex.: jejum) cadastradas no serviço: ao CONFIRMAR,
+// vão numa notificação separada ao tutor e ficam guardadas no pedido (detalhe da
+// consulta). Retorna o texto (para o e-mail do portal) ou "".
+async function sendInstructions(ref, appt) {
+  if (appt.instructionsSentAt) return appt.instructionsText || "";
+  try {
+    if (!appt.vetId || !appt.serviceName) return "";
+    const vet = (await admin.firestore().collection("users").doc(appt.vetId).get()).data() || {};
+    const name = String(appt.serviceName).trim();
+    const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
+    const text = String((svc && svc.instructions) || "").trim().slice(0, 240);
+    if (!text) return "";
+    await ref.update({
+      instructionsText: text,
+      instructionsSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    if (appt.tutorId) {
+      await admin.firestore().collection("notifications").doc(appt.tutorId).collection("pending").add({
+        title: "📋 Orientações para a consulta",
+        body: text,
+        tipo: "orientacoes",
+        appointmentId: ref.id,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    return text;
+  } catch (e) {
+    console.error("sendInstructions:", e.message);
+    return "";
+  }
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function onPortalConfirmed(after, resendKey, instructions) {
   if (after.bookingOrigin !== "portal_web" || !after.email) return;
   try {
     await sendEmail(
@@ -910,7 +947,10 @@ async function onPortalConfirmed(after, resendKey) {
       `<p>Olá${after.tutorName ? ", " + after.tutorName : ""}!</p>
        <p><strong>${after.vetName || "O profissional"}</strong> confirmou o atendimento ` +
         `para <strong>${petLabel(after, "seu pet")}</strong> em ${after.date} às ${after.time}.</p>
-       <p>Endereço: ${after.address || ""}</p>`
+       <p>Endereço: ${after.address || ""}</p>` +
+        (instructions
+          ? `<p><strong>Orientações do profissional:</strong><br>${escapeHtml(instructions)}</p>`
+          : "")
     );
   } catch (e) {
     console.error("onPortalConfirmed email error:", e.response?.data || e.message);
@@ -1021,13 +1061,20 @@ exports.appointmentHistorian = onDocumentWritten(
     if (!statusChanged) return;
 
     switch (after.status) {
-      case "confirmed":
+      case "confirmed": {
         await logEvent(ref, "confirmado", "app_pro", vetId, after.confirmedAt || null);
-        return onPortalConfirmed(after, RESEND_SECRET.value());
+        const instructions = await sendInstructions(ref, after);
+        return onPortalConfirmed(after, RESEND_SECRET.value(), instructions);
+      }
 
       case "rejected": {
-        const reason = after.rejectReason === "no_response" ? "ignorado_timeout" : "recusado";
-        const origem = after.rejectReason === "no_response" ? "cloud_function" : "app_pro";
+        const rr = after.rejectReason;
+        const reason = rr === "no_response" ? "ignorado_timeout"
+          : rr === "tutor_no_option" ? "proposta_recusada_tutor"
+          : rr === "proposal_expired" ? "proposta_expirada"
+          : "recusado";
+        const origem = rr === "no_response" || rr === "proposal_expired" ? "cloud_function"
+          : rr === "tutor_no_option" ? "app_tutor" : "app_pro";
         await logEvent(ref, reason, origem, vetId, after.rejectedAt || null, after.rejectReason || null);
         return handleRejectedPayment(ref, after, MP_SECRET.value(), RESEND_SECRET.value());
       }
@@ -1076,6 +1123,10 @@ exports.expireUnanswered = onSchedule(
     let expired = 0;
     for (const doc of snap.docs) {
       const d = doc.data();
+
+      // Profissional já sugeriu outros horários: o prazo agora é do TUTOR
+      // (expireProposals, em horarios.js) — não expirar por "sem resposta".
+      if (d.proposalStatus === "awaiting_tutor") continue;
 
       // O prazo do profissional conta a partir do pagamento aprovado (o vet só
       // é avisado nesse momento); sem pagamento, conta da criação.
@@ -1447,3 +1498,6 @@ Object.assign(exports, require("./site_sync"));
 
 // Blog automático do site (vetvem.com.br/blog/) — ver blog_auto.js
 Object.assign(exports, require("./blog_auto"));
+
+// Sugestão de novos horários (profissional -> tutor): proposeNewTimes, respondToProposal, expireProposals
+Object.assign(exports, require("./horarios"));
