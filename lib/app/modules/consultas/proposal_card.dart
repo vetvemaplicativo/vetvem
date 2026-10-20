@@ -57,14 +57,27 @@ class _ProposalCardState extends State<ProposalCard> {
     return '${two(d.day)}/${two(d.month)} às ${two(d.hour)}:${two(d.minute)}';
   }
 
-  Future<void> _answer(Object choice, String confirmText, String okTitle, String okMsg) async {
-    final ok = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text(confirmText),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Voltar')),
-          TextButton(onPressed: () => Get.back(result: true), child: const Text('Confirmar')),
-        ],
+  Future<void> _answer(
+    Object choice, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String highlight,
+    required String message,
+    required String confirmLabel,
+    required String okTitle,
+    required String okMsg,
+  }) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ConfirmSheet(
+        icon: icon,
+        color: color,
+        title: title,
+        highlight: highlight,
+        message: message,
+        confirmLabel: confirmLabel,
       ),
     );
     if (ok != true) return;
@@ -117,9 +130,17 @@ class _ProposalCardState extends State<ProposalCard> {
                     ? null
                     : () => _answer(
                           i,
-                          'Confirmar a consulta em ${item.proposals[i]['date']} às ${item.proposals[i]['time']}?',
-                          'Consulta confirmada!',
-                          'Horário confirmado: ${item.proposals[i]['date']} às ${item.proposals[i]['time']}.',
+                          icon: Icons.event_available_rounded,
+                          color: const Color(0xFF22C55E),
+                          title: 'Confirmar este horário?',
+                          highlight:
+                              '${item.proposals[i]['date']} às ${item.proposals[i]['time']}',
+                          message:
+                              'Consulta com ${item.vetName}. Ao confirmar, o horário fica reservado para você.',
+                          confirmLabel: 'Confirmar consulta',
+                          okTitle: 'Consulta confirmada!',
+                          okMsg:
+                              'Horário confirmado: ${item.proposals[i]['date']} às ${item.proposals[i]['time']}.',
                         ),
                 icon: const Icon(Icons.event_available_rounded, size: 20),
                 label: Text(
@@ -140,9 +161,15 @@ class _ProposalCardState extends State<ProposalCard> {
                 ? null
                 : () => _answer(
                       'none',
-                      'Nenhum horário serve? O valor pago será devolvido.',
-                      'Pedido encerrado',
-                      'O valor será estornado automaticamente.',
+                      icon: Icons.undo_rounded,
+                      color: AppColors.error,
+                      title: 'Nenhum horário serve?',
+                      highlight: 'Pedir estorno',
+                      message:
+                          'O pedido será encerrado e o valor pago será devolvido automaticamente.',
+                      confirmLabel: 'Pedir estorno',
+                      okTitle: 'Pedido encerrado',
+                      okMsg: 'O valor será estornado automaticamente.',
                     ),
             child: const Text('Nenhum serve, quero o estorno',
                 style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
@@ -190,6 +217,87 @@ class InstructionsCard extends StatelessWidget {
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _amberDark)),
           const SizedBox(height: 4),
           Text(text, style: const TextStyle(fontSize: 13, height: 1.4, color: _amberDark)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Folha de confirmação que sobe de baixo (ícone, destaque e botões grandes).
+class _ConfirmSheet extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title, highlight, message, confirmLabel;
+  const _ConfirmSheet({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.highlight,
+    required this.message,
+    required this.confirmLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 14, 24, 24 + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 32, color: color),
+          ),
+          const SizedBox(height: 16),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Text(highlight,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(height: 10),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textMedium)),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(confirmLabel,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Voltar',
+                style: TextStyle(fontSize: 15, color: AppColors.textMedium)),
+          ),
         ],
       ),
     );
