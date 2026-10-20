@@ -45,7 +45,7 @@ const arr = (v) => (Array.isArray(v) ? v : []);
 const str = (v) => (typeof v === "string" ? v : "");
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
-// Serviços: nome/preço/unidade (+ perAnimal/additionalPrice). Preço pode estar salvo como string.
+// Serviços: nome/preço/unidade (+ perAnimal/additionalPrice/travelFee/instructions). Preço pode estar salvo como string.
 function servicesOf(d) {
   return arr(d.services)
     .filter((s) => s && typeof s === "object")
@@ -62,6 +62,12 @@ function servicesOf(d) {
           String(s.additionalPrice).trim() !== "") {
         out.additionalPrice = String(s.additionalPrice);
       }
+      // Taxa de deslocamento fixa e orientações ao tutor: o tutor precisa ver ANTES de pagar.
+      if (s.travelFee !== undefined && s.travelFee !== null && String(s.travelFee).trim() !== "") {
+        out.travelFee = String(s.travelFee);
+      }
+      const instr = str(s.instructions).trim().slice(0, 240);
+      if (instr) out.instructions = instr;
       return out;
     });
 }

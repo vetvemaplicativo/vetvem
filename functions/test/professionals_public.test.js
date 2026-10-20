@@ -68,3 +68,17 @@ test("index.js não expõe __test como função", () => {
   assert.deepEqual(Object.keys(exported).sort(),
     ["mirrorProfessionalPublic", "reconcileProfessionalsPublic", "reconcileProfessionalsPublicNow"]);
 });
+
+test("vitrine: serviço leva taxa de deslocamento e orientações (e corta orientação > 240)", () => {
+  const longo = "x".repeat(300);
+  const pub = buildPublicDoc({ name: "A", services: [
+    { name: "US", price: "200", unit: "consulta", travelFee: "80", instructions: "  Jejum de 6 horas  " },
+    { name: "Longo", price: "10", unit: "consulta", instructions: longo },
+    { name: "Sem", price: "10", unit: "consulta", travelFee: "", instructions: "" },
+  ] });
+  assert.equal(pub.services[0].travelFee, "80");
+  assert.equal(pub.services[0].instructions, "Jejum de 6 horas");
+  assert.equal(pub.services[1].instructions.length, 240);
+  assert.equal(pub.services[2].travelFee, undefined);
+  assert.equal(pub.services[2].instructions, undefined);
+});
