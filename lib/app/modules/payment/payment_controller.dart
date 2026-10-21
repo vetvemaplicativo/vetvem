@@ -9,6 +9,14 @@ import '../../routes/app_routes.dart';
 import '../profile/profile_controller.dart';
 
 enum PaymentMethod { pix, card }
+
+/// Uma opção de parcelamento do Mercado Pago (os juros, quando houver, são do tutor).
+class InstallmentOption {
+  final int count;
+  final double each; // valor de cada parcela
+  final double total; // total pago pelo tutor (inclui juros)
+  const InstallmentOption(this.count, this.each, this.total);
+}
 enum PaymentStatus { selecting, pixWaiting, cardForm, processing, approved, rejected }
 
 class PaymentController extends GetxController {
@@ -56,6 +64,54 @@ class PaymentController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final isCardFlipped = false.obs;
 
+  // ── Parcelamento (até 12x; juros por conta do tutor) ────────────────
+  static const maxInstallments = 12;
+  final installmentOptions = <InstallmentOption>[].obs;
+  final selectedInstallments = 1.obs;
+  String _installmentsKey = '';
+
+  /// Busca no Mercado Pago as parcelas possíveis para o cartão (pelo BIN de 6
+  /// dígitos ou pela bandeira do cartão salvo). Sem resposta, fica só 1x.
+  Future<void> loadInstallments({String? bin, String? paymentMethodId}) async {
+    final key = '${bin ?? ''}|${paymentMethodId ?? ''}';
+    if (key == _installmentsKey) return;
+    _installmentsKey = key;
+    selectedInstallments.value = 1;
+    installmentOptions.clear();
+    if (price <= 0) return;
+    try {
+      final q = bin != null ? 'bin=$bin' : 'payment_method_id=$paymentMethodId';
+      final res = await http
+          .get(Uri.parse('https://api.mercadopago.com/v1/payment_methods/installments'
+              '?public_key=$_mpPublicKey&$q&amount=${price.toStringAsFixed(2)}'))
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200 || key != _installmentsKey) return;
+      final data = jsonDecode(res.body) as List<dynamic>;
+      if (data.isEmpty) return;
+      final costs = (data.first['payer_costs'] as List<dynamic>? ?? const []);
+      final opts = <InstallmentOption>[];
+      for (final c in costs) {
+        final n = (c['installments'] as num?)?.toInt() ?? 0;
+        final each = (c['installment_amount'] as num?)?.toDouble() ?? 0;
+        final total = (c['total_amount'] as num?)?.toDouble() ?? 0;
+        if (n >= 1 && n <= maxInstallments && each > 0 && total > 0) {
+          opts.add(InstallmentOption(n, each, total));
+        }
+      }
+      opts.sort((a, b) => a.count.compareTo(b.count));
+      if (opts.length > 1) installmentOptions.assignAll(opts);
+    } catch (_) {
+      // sem parcelas: segue à vista
+    }
+  }
+
+  InstallmentOption? get chosenInstallment {
+    for (final o in installmentOptions) {
+      if (o.count == selectedInstallments.value) return o;
+    }
+    return null;
+  }
+
   // Chama uma Cloud Function callable via HTTP direto (evita bug do SDK cloud_functions)
   Future<Map<String, dynamic>> _callFunction(String name, Map<String, dynamic> data) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -96,6 +152,16 @@ class PaymentController extends GetxController {
     appointmentTime  = args['time'] ?? '';
     appointmentAddress = args['address'] ?? '';
     price = (args['price'] as num?)?.toDouble() ?? 0.0;
+    cardNumberController.addListener(() {
+      final d = cardNumberController.text.replaceAll(RegExp(r'\D'), '');
+      if (d.length >= 6) {
+        loadInstallments(bin: d.substring(0, 6));
+      } else if (_installmentsKey.isNotEmpty) {
+        _installmentsKey = '';
+        selectedInstallments.value = 1;
+        installmentOptions.clear();
+      }
+    });
   }
 
   // ── Pix ───────────────────────────────────────────────────────────
@@ -244,7 +310,7 @@ class PaymentController extends GetxController {
         'email': user?.email ?? 'cliente@vetvem.com.br',
         'token': token,
         'paymentMethodId': paymentMethodId,
-        'installments': 1,
+        'installments': selectedInstallments.value,
         if (cpf.isNotEmpty) 'cpf': cpf,
         if (nameParts.isNotEmpty && nameParts.first.isNotEmpty)
           'firstName': nameParts.first,
@@ -401,7 +467,7 @@ class PaymentController extends GetxController {
         'email': user?.email ?? 'cliente@vetvem.com.br',
         'token': token,
         'paymentMethodId': card.paymentMethodId,
-        'installments': 1,
+        'installments': selectedInstallments.value,
         'customerId': customerId,
       });
 

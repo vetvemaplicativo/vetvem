@@ -180,6 +180,7 @@ class _MethodSelectView extends GetView<PaymentController> {
 class _SavedCardsSection extends GetView<PaymentController> {
   void _showCvvSheet(BuildContext context, SavedCard card) {
     final cvvCtrl = TextEditingController();
+    controller.loadInstallments(paymentMethodId: card.paymentMethodId);
     Get.bottomSheet(
       Container(
         padding: EdgeInsets.fromLTRB(
@@ -224,6 +225,7 @@ class _SavedCardsSection extends GetView<PaymentController> {
               ),
             ),
             const SizedBox(height: 16),
+            const _InstallmentPicker(),
             ElevatedButton(
               onPressed: () {
                 final cvv = cvvCtrl.text.trim();
@@ -807,13 +809,18 @@ class _CardFormView extends GetView<PaymentController> {
                   prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textLight, size: 20),
                 ),
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: controller.submitCard,
-                child: Text(
-                  'Pagar R\$ ${controller.price.toStringAsFixed(2).replaceAll('.', ',')}',
-                ),
-              ),
+              const SizedBox(height: 20),
+              const _InstallmentPicker(),
+              const SizedBox(height: 24),
+              Obx(() {
+                final o = controller.chosenInstallment;
+                return ElevatedButton(
+                  onPressed: controller.submitCard,
+                  child: Text(o == null || o.count == 1
+                      ? 'Pagar ${_brl(o?.total ?? controller.price)}'
+                      : 'Pagar ${o.count}x de ${_brl(o.each)}'),
+                );
+              }),
               const SizedBox(height: 16),
               const Center(
                 child: Row(
@@ -1238,5 +1245,72 @@ class _CpfFormatter extends TextInputFormatter {
       text: str,
       selection: TextSelection.collapsed(offset: str.length),
     );
+  }
+}
+
+
+String _brl(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
+
+/// Escolha de parcelas (aparece só quando o Mercado Pago oferece mais de 1x).
+/// Os juros, quando houver, são do tutor e aparecem no total antes de pagar.
+class _InstallmentPicker extends GetView<PaymentController> {
+  const _InstallmentPicker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final opts = controller.installmentOptions;
+      if (opts.length < 2) return const SizedBox.shrink();
+      final sel = controller.selectedInstallments.value;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Parcelas',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark)),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: opts.any((o) => o.count == sel) ? sel : 1,
+                  isExpanded: true,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                      fontFamily: 'Poppins'),
+                  items: [
+                    for (final o in opts)
+                      DropdownMenuItem(
+                        value: o.count,
+                        child: Text(o.count == 1
+                            ? 'À vista · ${_brl(o.total)}'
+                            : '${o.count}x de ${_brl(o.each)}'
+                                '${(o.total - controller.price) > 0.01 ? ' · total ${_brl(o.total)}' : ' sem juros'}'),
+                      ),
+                  ],
+                  onChanged: (v) =>
+                      controller.selectedInstallments.value = v ?? 1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Os juros do parcelamento são cobrados pelo cartão e aparecem no total.',
+              style: TextStyle(fontSize: 11, color: AppColors.textMedium),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

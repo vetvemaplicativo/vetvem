@@ -104,13 +104,15 @@ exports.createPayment = onRequest(
       if (Math.abs(finalAmount - Number(amount)) > 0.009) {
         console.warn(`valor do app (${amount}) difere do calculado (${finalAmount}, ${priced.source}) em ${appointmentId}`);
       }
+      // De 1 a 12 parcelas; os juros ficam por conta do tutor (o MP soma ao total pago).
+      const safeInstallments = Math.min(12, Math.max(1, Math.floor(Number(installments)) || 1));
       const response = await axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
           transaction_amount: finalAmount,
           token,
           description,
-          installments: installments || 1,
+          installments: safeInstallments,
           payment_method_id: paymentMethodId,
           // Cartão salvo no cofre MP: paga como customer (dados já estão no
           // cofre); senão, guest com dados completos — CPF e nome reduzem
@@ -143,6 +145,10 @@ exports.createPayment = onRequest(
         paymentStatus: payment.status,
         paymentMethod: paymentMethodId,
         paymentAmount: finalAmount,
+        paymentInstallments: safeInstallments,
+        ...(payment.transaction_details && Number(payment.transaction_details.total_paid_amount) > 0
+          ? { paymentTotalPaid: Number(payment.transaction_details.total_paid_amount) }
+          : {}),
         paymentDate: admin.firestore.FieldValue.serverTimestamp(),
       });
 

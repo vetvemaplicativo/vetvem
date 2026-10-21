@@ -115,6 +115,7 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys()
               .hasAny(['paymentStatus', 'paymentAmount', 'paymentId',
                        'paymentMethod', 'paymentDate', 'payoutStatus',
+                       'paymentInstallments', 'paymentTotalPaid',
                        'payoutNet', 'payoutFee', 'tutorId', 'vetId',
                        'historico_status',
                        // sugestão de horários e orientações: só as Cloud Functions escrevem
