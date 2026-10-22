@@ -13,8 +13,18 @@ class ConsultaDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final item = Get.arguments as ConsultationHistory;
+    final arg = Get.arguments as ConsultationHistory;
+    final profile = Get.find<ProfileController>();
 
+    // Tela ao vivo: acompanha o pedido na lista (que o Firestore atualiza), para que
+    // os cartões de escolha apareçam/sumam sozinhos quando o servidor muda o estado.
+    return Obx(() {
+      final item = profile.recentConsultations.firstWhereOrNull((c) => c.id == arg.id) ?? arg;
+      return _buildDetail(context, item);
+    });
+  }
+
+  Widget _buildDetail(BuildContext context, ConsultationHistory item) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(

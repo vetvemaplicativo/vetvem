@@ -166,7 +166,7 @@ class _ProposalCardState extends State<ProposalCard> {
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 4),
-          // Prefiro ver outros profissionais (mesmo dia e horário)
+          // Quero ver outros profissionais (mesmo dia e horário)
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -177,7 +177,7 @@ class _ProposalCardState extends State<ProposalCard> {
                         'none',
                         icon: Icons.groups_rounded,
                         color: AppColors.primary,
-                        title: 'Prefere ver outros profissionais?',
+                        title: 'Quer ver outros profissionais?',
                         highlight: 'Mesmo dia e horário',
                         message:
                             'Vamos procurar outros profissionais para o mesmo dia e horário que você pediu. Se não houver nenhum, o pedido é encerrado e o valor devolvido.',
@@ -186,7 +186,7 @@ class _ProposalCardState extends State<ProposalCard> {
                         okMsg: 'O valor será estornado automaticamente.',
                       ),
               icon: const Icon(Icons.groups_rounded, size: 22),
-              label: const Text('Prefiro ver outros profissionais',
+              label: const Text('Quero ver outros profissionais',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
