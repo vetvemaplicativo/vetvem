@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,6 +7,7 @@ import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import 'proposal_card.dart';
+import 'vet_photo.dart';
 
 const _cfBase = 'https://southamerica-east1-vetvem-18bf4.cloudfunctions.net';
 
@@ -43,44 +43,6 @@ String _hhmm(int ms) {
   final d = DateTime.fromMillisecondsSinceEpoch(ms);
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(d.hour)}:${two(d.minute)}';
-}
-
-/// Foto do profissional (vitrine pública), com cache simples.
-final Map<String, Future<ImageProvider?>> _photoCache = {};
-Future<ImageProvider?> _photoOf(String vetId) => _photoCache.putIfAbsent(vetId, () async {
-      try {
-        final d = (await FirebaseFirestore.instance.collection('professionals_public').doc(vetId).get()).data();
-        final b64 = (d?['photoBase64'] ?? '').toString();
-        final url = (d?['photoUrl'] ?? '').toString();
-        if (b64.isNotEmpty) return MemoryImage(base64Decode(b64.split(',').last));
-        if (url.isNotEmpty) return NetworkImage(url);
-      } catch (_) {}
-      return null;
-    });
-
-class _Avatar extends StatelessWidget {
-  final String vetId;
-  const _Avatar({required this.vetId});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ImageProvider?>(
-      future: _photoOf(vetId),
-      builder: (_, snap) {
-        final image = snap.data;
-        return Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-            image: image != null ? DecorationImage(image: image, fit: BoxFit.cover) : null,
-          ),
-          child: image == null ? const Icon(Icons.person, color: AppColors.primary, size: 28) : null,
-        );
-      },
-    );
-  }
 }
 
 /// "O profissional não pôde atender": o tutor escolhe um dos profissionais que atendem
@@ -287,7 +249,7 @@ class _OptionTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              _Avatar(vetId: '${option['vetId']}'),
+              VetPhotoAvatar(vetId: '${option['vetId']}', size: 56),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

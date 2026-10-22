@@ -71,6 +71,7 @@ class ConsultationHistory {
   final bool sentToClient;
   final Map<String, dynamic>? prontuario;
   final String vetCrmv;
+  final String vetId;
   final String petPhotoBase64;
   final String paymentStatus;
   // Sugestão de novos horários do profissional (proposalStatus = awaiting_tutor)
@@ -103,6 +104,7 @@ class ConsultationHistory {
     this.sentToClient = false,
     this.prontuario,
     this.vetCrmv = '',
+    this.vetId = '',
     this.petPhotoBase64 = '',
     this.paymentStatus = '',
     this.proposalStatus = '',
@@ -518,6 +520,7 @@ class ProfileController extends GetxController {
           comment: d['comment'] as String?,
           sentToClient: d['sentToClient'] == true,
           vetCrmv: d['vetCrmv'] ?? '',
+          vetId: (d['vetId'] ?? '').toString(),
           petPhotoBase64: photo,
           prontuario: d['prontuario'] != null
               ? {

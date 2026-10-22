@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
@@ -5,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import 'proposal_card.dart';
 import 'relocation_card.dart';
+import 'vet_photo.dart';
 
 class ConsultaDetailView extends StatelessWidget {
   const ConsultaDetailView({super.key});
@@ -63,44 +65,48 @@ class ConsultaDetailView extends StatelessWidget {
                   _StatusTimeline(status: item.status),
                   const SizedBox(height: 24),
 
-                  // Veterinário
-                  _Card(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.person_outline,
-                              color: AppColors.primary, size: 26),
+                  // Veterinário: foto, nome e CRMV
+                  FutureBuilder<VetPublic>(
+                    future: vetPublicOf(item.vetId),
+                    builder: (_, snap) {
+                      final crmv = item.vetCrmv.isNotEmpty ? item.vetCrmv : (snap.data?.crmv ?? '');
+                      final showSpecialty = item.specialty.isNotEmpty && item.specialty != item.serviceName;
+                      return _Card(
+                        child: Row(
+                          children: [
+                            VetPhotoAvatar(vetId: item.vetId, size: 56),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.vetName,
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textDark)),
+                                  if (crmv.isNotEmpty)
+                                    Text('CRMV $crmv',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMedium)),
+                                  if (showSpecialty)
+                                    Text(item.specialty,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMedium)),
+                                  if (item.vetPhone != null)
+                                    Text(item.vetPhone!,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.primary)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.vetName,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textDark)),
-                              Text(item.specialty,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textMedium)),
-                              if (item.vetPhone != null)
-                                Text(item.vetPhone!,
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.primary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 
@@ -149,15 +155,17 @@ class ConsultaDetailView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Pet + data/hora
-                  Row(
+                  // Pet + data/hora (cartões com a mesma altura)
+                  IntrinsicHeight(
+                    child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: _Card(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _Icon(Icons.pets, const Color(0xFFFF6B2B)),
+                              _PetPhoto(base64Photo: item.petPhotoBase64),
                               const SizedBox(height: 8),
                               const Text('Pet',
                                   style: TextStyle(
@@ -203,6 +211,7 @@ class ConsultaDetailView extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
                   ),
                   const SizedBox(height: 12),
 
@@ -690,6 +699,38 @@ class _Card extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: child,
+    );
+  }
+}
+
+/// Foto do pet no cartão do detalhe (ícone de patinha se não houver foto).
+class _PetPhoto extends StatelessWidget {
+  final String base64Photo;
+  const _PetPhoto({required this.base64Photo});
+
+  @override
+  Widget build(BuildContext context) {
+    if (base64Photo.isNotEmpty) {
+      try {
+        final bytes = base64Decode(base64Photo.split(',').last);
+        return Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            image: DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
+          ),
+        );
+      } catch (_) {}
+    }
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF6B2B).withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.pets, color: Color(0xFFFF6B2B), size: 26),
     );
   }
 }
