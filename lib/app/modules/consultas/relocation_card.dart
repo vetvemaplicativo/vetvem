@@ -122,7 +122,7 @@ class _RelocationCardState extends State<RelocationCard> {
         message:
             '${o['serviceName']} · ${_brl(price)}\n${item.date} às ${item.time}\n\nSe o valor da consulta for menor que o que você pagou, a diferença será devolvida. O profissional ainda precisa confirmar o atendimento.',
         confirmLabel: 'Confirmar profissional',
-        extraLabel: 'Cancelar consulta e pedir estorno',
+        extraLabel: 'Cancelar consulta e devolver meu pagamento',
       ),
     );
     if (r == 'extra') return _cancel();
@@ -147,10 +147,10 @@ class _RelocationCardState extends State<RelocationCard> {
       builder: (_) => ConfirmSheet(
         icon: Icons.undo_rounded,
         color: AppColors.error,
-        title: 'Cancelar e pedir estorno?',
+        title: 'Cancelar e devolver o pagamento?',
         highlight: item.value.isNotEmpty ? 'Estorno de R\$ ${item.value}' : 'Estorno total',
         message: 'A consulta será cancelada e o valor pago devolvido automaticamente.',
-        confirmLabel: 'Cancelar e pedir estorno',
+        confirmLabel: 'Cancelar e devolver o pagamento',
       ),
     );
     if (r != true) return;
@@ -231,20 +231,27 @@ class _RelocationCardState extends State<RelocationCard> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
           ),
+          const SizedBox(height: 18),
+          const Divider(height: 1),
           const SizedBox(height: 14),
+          const Text('Nenhum profissional serve?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            height: 50,
-            child: OutlinedButton.icon(
+            height: 54,
+            child: ElevatedButton.icon(
               onPressed: _busy ? null : _cancel,
-              icon: const Icon(Icons.undo_rounded, size: 18),
-              label: const Text('Cancelar consulta e pedir estorno',
+              icon: const Icon(Icons.undo_rounded, size: 20),
+              label: const Text('Cancelar consulta e devolver meu pagamento',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                foregroundColor: AppColors.error,
-                backgroundColor: Colors.white,
-                side: const BorderSide(color: AppColors.error, width: 1.5),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
