@@ -393,7 +393,6 @@ class _PayNextStepSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF22C55E);
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -410,15 +409,7 @@ class _PayNextStepSheet extends StatelessWidget {
                 color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 20),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: green.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.payments_rounded, size: 32, color: green),
-          ),
+          Image.asset('assets/images/pagamento_celular.png', width: 96, height: 96),
           const SizedBox(height: 16),
           const Text('Falta só o pagamento',
               textAlign: TextAlign.center,
@@ -442,7 +433,7 @@ class _PayNextStepSheet extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: green,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
