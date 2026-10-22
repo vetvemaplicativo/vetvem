@@ -321,6 +321,12 @@ class SchedulingController extends GetxController {
         // Marcas lidas pelo servidor: este app sabe escolher novos horários e MOSTRA a
         // taxa de deslocamento ao tutor (sem isso o servidor não soma a taxa).
         'canChooseTimes': true,
+        // Este app sabe oferecer outros profissionais (realocação) quando o escolhido
+        // recusa/não responde; o servidor usa o endereço estruturado para achar quem atende.
+        'canRelocate': true,
+        'addrUf': addr.state,
+        'addrCity': addr.city,
+        'addrNeighborhood': addr.neighborhood,
         'feesDisclosed': true,
         if (service.travel > 0) 'travelFee': service.travel,
         if (multi) ...{

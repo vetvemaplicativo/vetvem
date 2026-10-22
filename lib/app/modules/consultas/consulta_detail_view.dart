@@ -4,6 +4,7 @@ import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import 'proposal_card.dart';
+import 'relocation_card.dart';
 
 class ConsultaDetailView extends StatelessWidget {
   const ConsultaDetailView({super.key});
@@ -296,9 +297,11 @@ class ConsultaDetailView extends StatelessWidget {
               onTap: null,
             ),
           if (item.awaitingProposal) ProposalCard(item: item),
+          if (item.awaitingRelocation)
+            RelocationCard(item: item, onDone: () => Get.back()),
           if (item.instructionsText.isNotEmpty && item.status == 'confirmed')
             InstructionsCard(text: item.instructionsText),
-          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview && !item.awaitingProposal)
+          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview && !item.awaitingProposal && !item.awaitingRelocation)
             _BottomAction(
               label: 'Aguardando confirmação do profissional...',
               icon: Icons.hourglass_top_rounded,

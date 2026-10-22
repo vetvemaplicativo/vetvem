@@ -9,6 +9,11 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { validateOptions, computeDeadline, formatDeadline, parseDateTimeMs } = require("./horarios_lib");
 const { petLabel } = require("./appointment_amount");
+const { startRelocation } = require("./realocacao_core");
+const { defineSecret } = require("firebase-functions/params");
+
+const RESEND_SECRET = defineSecret("RESEND_API_KEY");
+const resendKeyOrNull = () => { try { return RESEND_SECRET.value() || null; } catch (_) { return null; } };
 
 const HIST_FIELD = "historico_status";
 
@@ -111,7 +116,7 @@ exports.proposeNewTimes = onRequest({ region: "southamerica-east1", cors: false 
 });
 
 // ── Tutor escolhe um horário (choice = 0..2) ou recusa todos (choice = "none") ─
-exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: false }, async (req, res) => {
+exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET] }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const uid = await authUid(req, res);
   if (!uid) return;
@@ -130,6 +135,15 @@ exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: fals
   }
 
   if (choice === "none") {
+    // Nenhum horário serve: antes de estornar, oferece outros profissionais para o
+    // mesmo dia e horário (se o app do tutor suporta e houver quem atenda).
+    const relocated = await startRelocation(ref, appt, { resendKey: resendKeyOrNull() });
+    if (relocated) {
+      await notify(appt.vetId, "Tutor não pôde nos horários sugeridos",
+        `O tutor de ${petLabel(appt, "um pet")} não pôde em nenhum dos horários sugeridos. O pedido foi oferecido a outros profissionais.`,
+        { tipo: "proposta_recusada", appointmentId: ref.id });
+      return res.json({ ok: true, declined: false, relocation: true });
+    }
     await ref.update({
       status: "rejected",
       rejectReason: "tutor_no_option",

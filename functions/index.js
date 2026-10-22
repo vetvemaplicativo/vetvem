@@ -12,6 +12,7 @@ admin.initializeApp();
 
 const MP_SECRET = defineSecret("MP_ACCESS_TOKEN");
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
+const { startRelocation, settleRelocation } = require("./realocacao_core");
 
 // ─── Helper: verifica token Firebase e retorna UID ────────────────────────────
 async function verifyToken(req, res) {
@@ -1069,6 +1070,10 @@ exports.appointmentHistorian = onDocumentWritten(
     switch (after.status) {
       case "confirmed": {
         await logEvent(ref, "confirmado", "app_pro", vetId, after.confirmedAt || null);
+        // Pedido realocado: o novo profissional aceitou — devolve a diferença de preço.
+        if (after.relocationStatus === "awaiting_vet") {
+          await settleRelocation(ref, after, { mpToken: MP_SECRET.value(), resendKey: RESEND_SECRET.value() });
+        }
         const instructions = await sendInstructions(ref, after);
         return onPortalConfirmed(after, RESEND_SECRET.value(), instructions);
       }
@@ -1078,10 +1083,18 @@ exports.appointmentHistorian = onDocumentWritten(
         const reason = rr === "no_response" ? "ignorado_timeout"
           : rr === "tutor_no_option" ? "proposta_recusada_tutor"
           : rr === "proposal_expired" ? "proposta_expirada"
+          : rr === "relocation_declined" ? "realocacao_recusada_tutor"
+          : rr === "relocation_expired" ? "realocacao_expirada"
           : "recusado";
-        const origem = rr === "no_response" || rr === "proposal_expired" ? "cloud_function"
-          : rr === "tutor_no_option" ? "app_tutor" : "app_pro";
+        const origem = rr === "no_response" || rr === "proposal_expired" || rr === "relocation_expired" ? "cloud_function"
+          : rr === "tutor_no_option" || rr === "relocation_declined" ? "app_tutor" : "app_pro";
         await logEvent(ref, reason, origem, vetId, after.rejectedAt || null, after.rejectReason || null);
+        // Recusa na mão pelo profissional (ou sem resposta ainda não tratada): antes de
+        // estornar, oferece outros profissionais ao tutor (se o app dele suporta).
+        if ((!rr || rr === "no_response") && !after.relocationAttempted) {
+          const started = await startRelocation(ref, after, { resendKey: RESEND_SECRET.value() });
+          if (started) return;
+        }
         return handleRejectedPayment(ref, after, MP_SECRET.value(), RESEND_SECRET.value());
       }
 
@@ -1118,7 +1131,7 @@ exports.appointmentHistorian = onDocumentWritten(
 const RESPONSE_DEADLINE_MINUTES = 120;
 
 exports.expireUnanswered = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = new Date();
@@ -1133,6 +1146,8 @@ exports.expireUnanswered = onSchedule(
       // Profissional já sugeriu outros horários: o prazo agora é do TUTOR
       // (expireProposals, em horarios.js) — não expirar por "sem resposta".
       if (d.proposalStatus === "awaiting_tutor") continue;
+      // Tutor escolhendo outro profissional (realocação): o prazo é dele (expireRelocations).
+      if (d.relocationStatus === "awaiting_tutor") continue;
 
       // O prazo do profissional conta a partir do pagamento aprovado (o vet só
       // é avisado nesse momento); sem pagamento, conta da criação.
@@ -1141,18 +1156,26 @@ exports.expireUnanswered = onSchedule(
         ? (d.paymentUpdatedAt?.toDate?.() || created)
         : null;
       const deadlineStart = paidAt || created;
-      const deadlineExpired = deadlineStart &&
-        (now - deadlineStart) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
+      // Pedido realocado: o novo profissional tem prazo próprio (responseDeadline, em ms).
+      const deadlineExpired = d.responseDeadline
+        ? Number(d.responseDeadline) <= now.getTime()
+        : deadlineStart && (now - deadlineStart) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
 
       const apptDateTime = parseApptDateTime(d.date, d.time);
       const apptStarted = apptDateTime ? apptDateTime <= now : false;
 
       if (!deadlineExpired && !apptStarted) continue;
 
+      // Antes de encerrar, oferece outros profissionais ao tutor (se possível).
+      const relocated = await startRelocation(doc.ref, { ...d, rejectReason: "no_response" },
+        { resendKey: RESEND_SECRET.value() });
+      if (relocated) continue;
+
       await doc.ref.update({
         status: "rejected",
         rejectReason: "no_response",
         rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+        relocationAttempted: true,
       });
       expired++;
 
@@ -1507,3 +1530,6 @@ Object.assign(exports, require("./blog_auto"));
 
 // Sugestão de novos horários (profissional -> tutor): proposeNewTimes, respondToProposal, expireProposals
 Object.assign(exports, require("./horarios"));
+
+// Realocação de profissional (tutor escolhe outro quando o veterinário recusa/não responde).
+Object.assign(exports, require("./realocacao"));

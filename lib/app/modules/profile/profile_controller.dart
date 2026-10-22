@@ -78,6 +78,12 @@ class ConsultationHistory {
   final List<Map<String, String>> proposals;
   final int? proposalDeadline; // ms
   final String instructionsText; // orientações do serviço, enviadas ao confirmar
+  // Realocação: o profissional recusou/não respondeu e o tutor escolhe outro
+  // (relocationStatus = awaiting_tutor). Cada opção: vetId, vetName, crmv, serviceName, price.
+  final String relocationStatus;
+  final List<Map<String, dynamic>> relocationOptions;
+  final int? relocationDeadline; // ms
+  final String originalVetName;
 
   const ConsultationHistory({
     required this.id,
@@ -103,6 +109,10 @@ class ConsultationHistory {
     this.proposals = const [],
     this.proposalDeadline,
     this.instructionsText = '',
+    this.relocationStatus = '',
+    this.relocationOptions = const [],
+    this.relocationDeadline,
+    this.originalVetName = '',
   });
 
   // Gerar o PIX já muda paymentStatus para 'pending' (MP), então "não pago" é
@@ -115,6 +125,13 @@ class ConsultationHistory {
       paymentStatus != 'in_process';
   bool get paymentInReview =>
       status == 'pending_confirmation' && paymentStatus == 'in_process';
+  bool get awaitingRelocation =>
+      status == 'pending_confirmation' &&
+      relocationStatus == 'awaiting_tutor' &&
+      relocationOptions.isNotEmpty &&
+      (relocationDeadline == null ||
+          relocationDeadline! > DateTime.now().millisecondsSinceEpoch);
+
   bool get awaitingProposal =>
       status == 'pending_confirmation' &&
       proposalStatus == 'awaiting_tutor' &&
@@ -490,6 +507,13 @@ class ProfileController extends GetxController {
           ],
           proposalDeadline: (d['proposalDeadline'] as num?)?.toInt(),
           instructionsText: (d['instructionsText'] ?? '').toString(),
+          relocationStatus: (d['relocationStatus'] ?? '').toString(),
+          relocationOptions: [
+            for (final o in (d['relocationOptions'] as List? ?? const []))
+              if (o is Map) Map<String, dynamic>.from(o)
+          ],
+          relocationDeadline: (d['relocationDeadline'] as num?)?.toInt(),
+          originalVetName: (d['originalVetName'] ?? '').toString(),
           rating: d['rating'] as int?,
           comment: d['comment'] as String?,
           sentToClient: d['sentToClient'] == true,

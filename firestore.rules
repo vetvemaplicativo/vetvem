@@ -122,7 +122,14 @@ service cloud.firestore {
                        'proposalStatus', 'proposals', 'proposalSentAt',
                        'proposalDeadline', 'originalDate', 'originalTime',
                        'chosenIndex', 'instructionsText', 'instructionsSentAt',
-                       'canChooseTimes', 'feesDisclosed'])
+                       'canChooseTimes', 'feesDisclosed',
+                       // realocação de profissional: só as Cloud Functions escrevem
+                       'canRelocate', 'addrUf', 'addrCity', 'addrNeighborhood',
+                       'relocationStatus', 'relocationOptions', 'relocationDeadline',
+                       'relocationRound', 'relocationTried', 'relocationAttempted',
+                       'originalVetId', 'originalVetName', 'originalServiceName',
+                       'originalValue', 'responseDeadline', 'relocationChosenAt',
+                       'relocationRefund', 'relocationRefundedAt', 'relocationRefundPending'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())
           && cancelledByIsHonest();

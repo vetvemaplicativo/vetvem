@@ -14,7 +14,11 @@ const _respondUrl =
 /// Responde às sugestões de horário do profissional (função respondToProposal).
 /// choice: 0..2 = horário escolhido, 'none' = nenhum serve (estorno automático).
 /// Retorna null se deu certo, ou a mensagem de erro.
+/// true quando o último "nenhum serve" abriu a escolha de outros profissionais.
+bool proposalRelocated = false;
+
 Future<String?> respondToProposal(String appointmentId, Object choice) async {
+  proposalRelocated = false;
   try {
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null) return 'Faça login novamente.';
@@ -29,7 +33,10 @@ Future<String?> respondToProposal(String appointmentId, Object choice) async {
         )
         .timeout(const Duration(seconds: 25));
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    if (res.statusCode == 200 && body['ok'] == true) return null;
+    if (res.statusCode == 200 && body['ok'] == true) {
+      proposalRelocated = body['relocation'] == true;
+      return null;
+    }
     return (body['error'] ?? 'Não foi possível responder. Tente novamente.').toString();
   } catch (_) {
     return 'Sem conexão. Verifique a internet e tente novamente.';
@@ -68,10 +75,10 @@ class _ProposalCardState extends State<ProposalCard> {
     required String okTitle,
     required String okMsg,
   }) async {
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ConfirmSheet(
+      builder: (_) => ConfirmSheet(
         icon: icon,
         color: color,
         title: title,
@@ -85,9 +92,10 @@ class _ProposalCardState extends State<ProposalCard> {
     final err = await respondToProposal(widget.item.id, choice);
     if (!mounted) return;
     setState(() => _busy = false);
+    final relocated = err == null && choice == 'none' && proposalRelocated;
     Get.snackbar(
-      err == null ? okTitle : 'Não foi possível',
-      err ?? okMsg,
+      err == null ? (relocated ? 'Escolha outro profissional' : okTitle) : 'Não foi possível',
+      err ?? (relocated ? 'Veja quem atende no mesmo dia e horário.' : okMsg),
       snackPosition: SnackPosition.TOP,
       backgroundColor: err == null ? const Color(0xFF22C55E) : AppColors.error,
       colorText: Colors.white,
@@ -161,18 +169,18 @@ class _ProposalCardState extends State<ProposalCard> {
                 ? null
                 : () => _answer(
                       'none',
-                      icon: Icons.undo_rounded,
-                      color: AppColors.error,
+                      icon: Icons.groups_rounded,
+                      color: AppColors.primary,
                       title: 'Nenhum horário serve?',
-                      highlight: 'Pedir estorno',
+                      highlight: 'Ver outros profissionais',
                       message:
-                          'O pedido será encerrado e o valor pago será devolvido automaticamente.',
-                      confirmLabel: 'Pedir estorno',
+                          'Vamos procurar outros profissionais para o mesmo dia e horário. Se não houver nenhum, o pedido é encerrado e o valor devolvido.',
+                      confirmLabel: 'Ver outros profissionais',
                       okTitle: 'Pedido encerrado',
                       okMsg: 'O valor será estornado automaticamente.',
                     ),
-            child: const Text('Nenhum serve, quero o estorno',
-                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+            child: const Text('Nenhum serve, ver outros profissionais',
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -224,17 +232,23 @@ class InstructionsCard extends StatelessWidget {
 }
 
 /// Folha de confirmação que sobe de baixo (ícone, destaque e botões grandes).
-class _ConfirmSheet extends StatelessWidget {
+class ConfirmSheet extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String title, highlight, message, confirmLabel;
-  const _ConfirmSheet({
+  // Ação secundária opcional (ex.: "Cancelar e pedir estorno"): fecha a folha com 'extra'.
+  final String? extraLabel;
+  final Color? extraColor;
+  const ConfirmSheet({
+    super.key,
     required this.icon,
     required this.color,
     required this.title,
     required this.highlight,
     required this.message,
     required this.confirmLabel,
+    this.extraLabel,
+    this.extraColor,
   });
 
   @override
@@ -298,6 +312,15 @@ class _ConfirmSheet extends StatelessWidget {
             child: const Text('Voltar',
                 style: TextStyle(fontSize: 15, color: AppColors.textMedium)),
           ),
+          if (extraLabel != null)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop('extra'),
+              child: Text(extraLabel!,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: extraColor ?? AppColors.error)),
+            ),
         ],
       ),
     );
