@@ -54,6 +54,11 @@ class ConsultaDetailView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Escolhas pendentes do tutor: dentro da área rolável (antes ficavam na
+                  // barra fixa de baixo e a lista de profissionais/botões ficava cortada).
+                  if (item.awaitingProposal) ProposalCard(item: item),
+                  if (item.awaitingRelocation)
+                    RelocationCard(item: item, onDone: () => Get.back()),
                   // Timeline de status
                   _StatusTimeline(status: item.status),
                   const SizedBox(height: 24),
@@ -296,9 +301,6 @@ class ConsultaDetailView extends StatelessWidget {
               color: const Color(0xFFF59E0B),
               onTap: null,
             ),
-          if (item.awaitingProposal) ProposalCard(item: item),
-          if (item.awaitingRelocation)
-            RelocationCard(item: item, onDone: () => Get.back()),
           if (item.instructionsText.isNotEmpty && item.status == 'confirmed')
             InstructionsCard(text: item.instructionsText),
           if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview && !item.awaitingProposal && !item.awaitingRelocation)

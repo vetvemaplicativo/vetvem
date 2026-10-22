@@ -303,3 +303,13 @@ test("respondToProposal 'nenhum serve': com realocação oferece profissionais; 
   assert.equal(appt().status, "rejected");
   assert.equal(appt().rejectReason, "tutor_no_option");
 });
+
+test("respondToProposal 'cancel': encerra direto com estorno, sem oferecer outros profissionais", async () => {
+  seed({ proposalStatus: "awaiting_tutor", proposals: [{ date: inDays(3), time: "09:00" }], proposalDeadline: Date.now() + 3600e3 });
+  const r = await call(respondToProposal, "tut1", { appointmentId: "a1", choice: "cancel" });
+  assert.equal(r.code, 200);
+  assert.equal(r.body.declined, true);
+  assert.equal(appt().status, "rejected");
+  assert.equal(appt().rejectReason, "tutor_no_option");
+  assert.equal(appt().relocationStatus, undefined);
+});

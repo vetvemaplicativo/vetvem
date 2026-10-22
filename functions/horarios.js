@@ -134,10 +134,13 @@ exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: fals
     return res.status(410).json({ error: "O prazo para escolher terminou." });
   }
 
-  if (choice === "none") {
+  if (choice === "none" || choice === "cancel") {
     // Nenhum horário serve: antes de estornar, oferece outros profissionais para o
     // mesmo dia e horário (se o app do tutor suporta e houver quem atenda).
-    const relocated = await startRelocation(ref, appt, { resendKey: resendKeyOrNull() });
+    // "cancel" = o tutor prefere cancelar: estorno total, sem oferecer outros profissionais.
+    const relocated = choice === "none"
+      ? await startRelocation(ref, appt, { resendKey: resendKeyOrNull() })
+      : false;
     if (relocated) {
       await notify(appt.vetId, "Tutor não pôde nos horários sugeridos",
         `O tutor de ${petLabel(appt, "um pet")} não pôde em nenhum dos horários sugeridos. O pedido foi oferecido a outros profissionais.`,

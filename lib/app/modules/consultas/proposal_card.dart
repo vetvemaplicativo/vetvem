@@ -12,7 +12,8 @@ const _respondUrl =
     'https://southamerica-east1-vetvem-18bf4.cloudfunctions.net/respondToProposal';
 
 /// Responde às sugestões de horário do profissional (função respondToProposal).
-/// choice: 0..2 = horário escolhido, 'none' = nenhum serve (estorno automático).
+/// choice: 0..2 = horário escolhido, 'none' = prefere ver outros profissionais (se não houver, estorno),
+/// 'cancel' = cancelar a consulta (estorno total).
 /// Retorna null se deu certo, ou a mensagem de erro.
 /// true quando o último "nenhum serve" abriu a escolha de outros profissionais.
 bool proposalRelocated = false;
@@ -164,23 +165,74 @@ class _ProposalCardState extends State<ProposalCard> {
             ),
             const SizedBox(height: 8),
           ],
-          TextButton(
-            onPressed: _busy
-                ? null
-                : () => _answer(
-                      'none',
-                      icon: Icons.groups_rounded,
-                      color: AppColors.primary,
-                      title: 'Nenhum horário serve?',
-                      highlight: 'Ver outros profissionais',
-                      message:
-                          'Vamos procurar outros profissionais para o mesmo dia e horário. Se não houver nenhum, o pedido é encerrado e o valor devolvido.',
-                      confirmLabel: 'Ver outros profissionais',
-                      okTitle: 'Pedido encerrado',
-                      okMsg: 'O valor será estornado automaticamente.',
-                    ),
-            child: const Text('Nenhum serve, ver outros profissionais',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          // Prefiro ver outros profissionais (mesmo dia e horário)
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _answer(
+                        'none',
+                        icon: Icons.groups_rounded,
+                        color: AppColors.primary,
+                        title: 'Prefere ver outros profissionais?',
+                        highlight: 'Mesmo dia e horário',
+                        message:
+                            'Vamos procurar outros profissionais para o mesmo dia e horário que você pediu. Se não houver nenhum, o pedido é encerrado e o valor devolvido.',
+                        confirmLabel: 'Ver outros profissionais',
+                        okTitle: 'Pedido encerrado',
+                        okMsg: 'O valor será estornado automaticamente.',
+                      ),
+              icon: const Icon(Icons.groups_rounded, size: 22),
+              label: const Text('Prefiro ver outros profissionais',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                foregroundColor: AppColors.primary,
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: AppColors.primary, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Prefiro cancelar a consulta (estorno total)
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _answer(
+                        'cancel',
+                        icon: Icons.undo_rounded,
+                        color: AppColors.error,
+                        title: 'Cancelar a consulta?',
+                        highlight: 'Estorno total',
+                        message:
+                            'A consulta será cancelada e o valor total devolvido automaticamente.',
+                        confirmLabel: 'Cancelar a consulta',
+                        okTitle: 'Consulta cancelada',
+                        okMsg: 'O valor será estornado automaticamente.',
+                      ),
+              icon: const Icon(Icons.close_rounded, size: 22),
+              label: const Text('Prefiro cancelar a consulta',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                foregroundColor: AppColors.error,
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: AppColors.error, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Center(
+            child: Text('O valor total será estornado.',
+                style: TextStyle(fontSize: 11, color: _amberDark)),
           ),
         ],
       ),
