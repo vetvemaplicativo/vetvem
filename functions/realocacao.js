@@ -22,6 +22,16 @@ async function authUid(req, res) {
   }
 }
 
+// Ao encerrar sem novo profissional, o pedido volta a mostrar o ÚLTIMO profissional que
+// recusou/não respondeu (em vez de "Escolhendo outro profissional").
+function lastVetFields(appt) {
+  const name = appt.relocationLastVetName || appt.originalVetName || "";
+  return {
+    ...(appt.relocationLastVetId ? { vetId: appt.relocationLastVetId } : {}),
+    ...(name ? { vetName: name } : {}),
+  };
+}
+
 exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const uid = await authUid(req, res);
@@ -63,6 +73,7 @@ exports.cancelRelocation = onRequest({ region: "southamerica-east1", cors: false
     relocationStatus: "declined",
     relocationOptions: admin.firestore.FieldValue.delete(),
     relocationDeadline: admin.firestore.FieldValue.delete(),
+    ...lastVetFields(appt),
   });
   return res.json({ ok: true });
 });
@@ -88,6 +99,7 @@ exports.expireRelocations = onSchedule(
         relocationStatus: "expired",
         relocationOptions: admin.firestore.FieldValue.delete(),
         relocationDeadline: admin.firestore.FieldValue.delete(),
+        ...lastVetFields(d),
       });
       n++;
       await notify(d.tutorId, "⏰ Prazo para escolher terminou",

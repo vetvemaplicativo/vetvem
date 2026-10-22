@@ -72,6 +72,7 @@ class ConsultationHistory {
   final Map<String, dynamic>? prontuario;
   final String vetCrmv;
   final String vetId;
+  final String rejectReason; // motivo do encerramento (relocation_declined, no_response...)
   final String petPhotoBase64;
   final String paymentStatus;
   // Sugestão de novos horários do profissional (proposalStatus = awaiting_tutor)
@@ -105,6 +106,7 @@ class ConsultationHistory {
     this.prontuario,
     this.vetCrmv = '',
     this.vetId = '',
+    this.rejectReason = '',
     this.petPhotoBase64 = '',
     this.paymentStatus = '',
     this.proposalStatus = '',
@@ -127,6 +129,17 @@ class ConsultationHistory {
       paymentStatus != 'in_process';
   bool get paymentInReview =>
       status == 'pending_confirmation' && paymentStatus == 'in_process';
+  // Encerrada por escolha do tutor (cancelou / nenhum horário ou profissional serviu).
+  bool get cancelledByTutor =>
+      status == 'rejected' &&
+      (rejectReason == 'relocation_declined' || rejectReason == 'tutor_no_option');
+  // Encerrada porque o tutor não respondeu a tempo.
+  bool get tutorTimedOut =>
+      status == 'rejected' &&
+      (rejectReason == 'relocation_expired' || rejectReason == 'proposal_expired');
+  // Encerrada porque o profissional não respondeu.
+  bool get vetNoResponse => status == 'rejected' && rejectReason == 'no_response';
+
   bool get awaitingRelocation =>
       status == 'pending_confirmation' &&
       relocationStatus == 'awaiting_tutor' &&
@@ -488,7 +501,12 @@ class ProfileController extends GetxController {
         print('[listen] doc=${doc.id} pet=${d['petName']} photoLen=${photo.length}');
         return ConsultationHistory(
           id: doc.id,
-          vetName: d['vetName'] ?? '',
+          // Registros antigos ficaram com "Escolhendo outro profissional" depois de encerrados:
+          // mostra o último profissional conhecido.
+          vetName: ((d['vetName'] ?? '') == 'Escolhendo outro profissional' &&
+                  d['relocationStatus'] != 'awaiting_tutor')
+              ? ((d['relocationLastVetName'] ?? d['originalVetName'] ?? d['vetName']) as String)
+              : (d['vetName'] ?? ''),
           specialty: d['serviceName'] ?? '',
           date: d['date'] ?? '',
           time: d['time'] ?? '',
@@ -521,6 +539,7 @@ class ProfileController extends GetxController {
           sentToClient: d['sentToClient'] == true,
           vetCrmv: d['vetCrmv'] ?? '',
           vetId: (d['vetId'] ?? '').toString(),
+          rejectReason: (d['rejectReason'] ?? '').toString(),
           petPhotoBase64: photo,
           prontuario: d['prontuario'] != null
               ? {

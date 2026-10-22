@@ -204,7 +204,8 @@ class _ConsultaCard extends StatelessWidget {
     switch (item.status) {
       case 'completed': return 'Concluída';
       case 'cancelled': return 'Cancelada';
-      case 'rejected': return 'Recusada';
+      case 'rejected':
+        return item.cancelledByTutor ? 'Cancelada' : item.tutorTimedOut ? 'Encerrada' : 'Recusada';
       case 'confirmed': return 'Confirmada ✓';
       case 'pending_confirmation': return 'Aguard. confirmação';
       case 'pending_payment': return 'Aguard. pagamento';

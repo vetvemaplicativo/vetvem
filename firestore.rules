@@ -129,7 +129,8 @@ service cloud.firestore {
                        'relocationRound', 'relocationTried', 'relocationAttempted',
                        'originalVetId', 'originalVetName', 'originalServiceName',
                        'originalValue', 'responseDeadline', 'relocationChosenAt',
-                       'relocationRefund', 'relocationRefundedAt', 'relocationRefundPending'])
+                       'relocationRefund', 'relocationRefundedAt', 'relocationRefundPending',
+                       'relocationLastVetId', 'relocationLastVetName'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())
           && cancelledByIsHonest();

@@ -72,7 +72,7 @@ class ConsultaDetailView extends StatelessWidget {
                   if (item.awaitingRelocation)
                     RelocationCard(item: item, onDone: () => Get.back()),
                   // Timeline de status
-                  _StatusTimeline(status: item.status),
+                  _StatusTimeline(status: item.status, item: item),
                   const SizedBox(height: 24),
 
                   // Veterinário: foto, nome e CRMV
@@ -550,7 +550,8 @@ class _PaymentCard extends StatelessWidget {
 
 class _StatusTimeline extends StatelessWidget {
   final String status;
-  const _StatusTimeline({required this.status});
+  final ConsultationHistory item;
+  const _StatusTimeline({required this.status, required this.item});
 
   static const _steps = [
     ('Agendado', Icons.calendar_today_rounded),
@@ -598,9 +599,15 @@ class _StatusTimeline extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    status == 'rejected'
-                        ? 'Consulta recusada pelo profissional'
-                        : 'Consulta cancelada',
+                    item.cancelledByTutor
+                        ? 'Consulta cancelada pelo tutor'
+                        : item.tutorTimedOut
+                            ? 'Consulta encerrada: o prazo para escolher terminou'
+                            : item.vetNoResponse
+                                ? 'Consulta sem resposta do profissional'
+                                : status == 'rejected'
+                                    ? 'Consulta recusada pelo profissional'
+                                    : 'Consulta cancelada',
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,

@@ -275,6 +275,8 @@ test("cancelRelocation: encerra com motivo para o estorno total", async () => {
   const a = appt();
   assert.equal(a.status, "rejected");
   assert.equal(a.rejectReason, "relocation_declined");
+  assert.equal(a.vetName, "Dra. Ana"); // volta ao último profissional que recusou
+  assert.equal(a.vetId, "vetA");
   assert.equal(a.relocationOptions, undefined);
   assert.equal((await call(cancelRelocation, "tut1", { appointmentId: "a1" })).code, 409);
 });
@@ -287,6 +289,7 @@ test("expireRelocations: tutor não escolheu no prazo => rejeita (estorno) e avi
   await expireRelocations.run({});
   assert.equal(appt().status, "rejected");
   assert.equal(appt().rejectReason, "relocation_expired");
+  assert.equal(appt().vetName, "Dra. Ana");
   assert.ok(notifsOf("tut1").some((n) => n.tipo === "realocacao_expirada"));
 });
 

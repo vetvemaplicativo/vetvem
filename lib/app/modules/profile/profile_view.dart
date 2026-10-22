@@ -1645,7 +1645,7 @@ class _ConsultationCard extends StatelessWidget {
     final statusLabel = isCompleted
         ? 'Concluída'
         : isCancelled
-            ? (item.status == 'rejected' ? 'Recusada' : 'Cancelada')
+            ? (item.status == 'rejected' && !item.cancelledByTutor && !item.tutorTimedOut ? 'Recusada' : item.tutorTimedOut ? 'Encerrada' : 'Cancelada')
             : isConfirmed
                 ? 'Confirmada'
                 : 'Aguardando';
