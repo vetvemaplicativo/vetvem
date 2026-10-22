@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
+import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
 
@@ -236,7 +237,7 @@ class SchedulingController extends GetxController {
     return pets[i].name;
   }
 
-  Future<void> confirmScheduling() async {
+  Future<void> confirmScheduling({bool confirmed = false}) async {
     if (selectedService.value == null) {
       Get.snackbar('Atenção', 'Selecione um serviço',
           snackPosition: SnackPosition.TOP);
@@ -267,6 +268,17 @@ class SchedulingController extends GetxController {
       Get.snackbar('Atenção', 'Selecione o endereço para atendimento',
           snackPosition: SnackPosition.TOP);
       return;
+    }
+
+    // Antes de seguir, avisa que o pagamento é a próxima etapa (é ele que envia o
+    // pedido ao veterinário).
+    if (!confirmed) {
+      final go = await Get.bottomSheet<bool>(
+        const _PayNextStepSheet(),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+      );
+      if (go != true) return;
     }
 
     final vet = Get.find<VetsController>().selectedVet.value;
@@ -372,5 +384,81 @@ class SchedulingController extends GetxController {
   void onClose() {
     notesController.dispose();
     super.onClose();
+  }
+}
+
+/// Aviso antes de seguir: o pagamento é a próxima etapa e confirma o pedido.
+class _PayNextStepSheet extends StatelessWidget {
+  const _PayNextStepSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF22C55E);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 14, 24, 24 + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: green.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.payments_rounded, size: 32, color: green),
+          ),
+          const SizedBox(height: 16),
+          const Text('Falta só o pagamento',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+          const SizedBox(height: 10),
+          const Text(
+            'Para confirmar o agendamento, é necessário efetuar o pagamento na próxima etapa (PIX ou cartão). É o pagamento que envia o seu pedido ao veterinário.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.textMedium),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Se o veterinário não puder atender, o valor é devolvido automaticamente.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Ir para o pagamento',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Voltar',
+                style: TextStyle(fontSize: 15, color: AppColors.textMedium)),
+          ),
+        ],
+      ),
+    );
   }
 }

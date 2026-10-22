@@ -296,31 +296,9 @@ class _SchedulingForm extends GetView<SchedulingController> {
             ),
 
             const SizedBox(height: 16),
-            // Aviso sobre pagamento
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'O pagamento será solicitado após o profissional confirmar a consulta. Você receberá uma notificação.',
-                      style: TextStyle(fontSize: 12, color: AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 20),
             Obx(() => ElevatedButton(
-              onPressed: controller.isLoading.value ? null : controller.confirmScheduling,
+              onPressed: controller.isLoading.value ? null : () => controller.confirmScheduling(),
               child: controller.isLoading.value
                   ? const SizedBox(
                       height: 20,
