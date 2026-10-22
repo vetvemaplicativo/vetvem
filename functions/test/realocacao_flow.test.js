@@ -148,6 +148,8 @@ test("startRelocation: oferece só quem atende (região, especialidade, preço <
   assert.equal(a.relocationOptions[0].price, 140);
   assert.equal(a.relocationOptions[0].crmv, "RJ-Dr. Bruno");
   assert.equal(a.vetId, "");
+  assert.notEqual(a.vetName, "Dra. Ana"); // sai da lista do Pro (que filtra por vetName)
+  assert.equal(a.originalVetName, "Dra. Ana");
   assert.equal(a.originalVetId, "vetA");
   assert.equal(a.originalValue, 150);
   assert.equal(a.relocationRound, 1);

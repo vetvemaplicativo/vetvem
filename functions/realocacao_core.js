@@ -131,6 +131,9 @@ async function startRelocation(ref, appt, deps = {}) {
       originalValue: L.paidAmount(appt),
     } : {}),
     vetId: "", // sai da fila do profissional que recusou/não respondeu
+    // O Pro lista os pedidos por vetName: sem trocar o nome, o pedido continuaria na fila (com
+    // Aceitar/Recusar) do profissional que recusou/não respondeu.
+    vetName: "Escolhendo outro profissional",
     // se o profissional tinha sugerido horários e o tutor disse "nenhum serve", encerra a sugestão
     ...(appt.proposalStatus === "awaiting_tutor" ? { proposalStatus: "declined" } : {}),
     rejectReason: FV().delete(),
