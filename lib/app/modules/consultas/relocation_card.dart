@@ -187,7 +187,7 @@ class _RelocationCardState extends State<RelocationCard> {
               const SizedBox(width: 10),
               const Expanded(
                 child: Text('Escolha outro profissional',
-                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.primary)),
               ),
             ],
           ),
@@ -214,7 +214,7 @@ class _RelocationCardState extends State<RelocationCard> {
                 const SizedBox(height: 8),
                 Text(item.date,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textDark)),
                 Text('às ${item.time}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.primary)),
