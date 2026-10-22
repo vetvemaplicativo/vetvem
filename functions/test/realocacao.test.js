@@ -79,7 +79,7 @@ test("rankCandidates: mais baratos primeiro, máximo 5", () => {
 });
 
 test("canRelocate: condições", () => {
-  const now = apptMs - 4 * HOUR;
+  const now = apptMs - 5 * HOUR;
   assert.ok(L.canRelocate(base, now).ok);
   assert.equal(L.canRelocate({ ...base, canRelocate: false }, now).ok, false);
   assert.equal(L.canRelocate({ ...base, bookingOrigin: "portal_web" }, now).ok, false);
@@ -87,13 +87,13 @@ test("canRelocate: condições", () => {
   assert.equal(L.canRelocate({ ...base, addrUf: "" }, now).ok, false);
   assert.equal(L.canRelocate({ ...base, relocationRound: 2 }, now).ok, false);
   assert.ok(L.canRelocate({ ...base, relocationRound: 1 }, now).ok);
-  assert.equal(L.canRelocate(base, apptMs - 2 * HOUR).ok, false); // < 3h
-  assert.ok(L.canRelocate(base, apptMs - 3 * HOUR).ok);
+  assert.equal(L.canRelocate(base, apptMs - 3 * HOUR).ok, false); // < 4h
+  assert.ok(L.canRelocate(base, apptMs - 4 * HOUR).ok);
 });
 
-test("prazos: tutor 30 min; profissional min(2h, 1h antes da consulta)", () => {
+test("prazos: tutor 1h; profissional min(2h, 1h antes da consulta)", () => {
   const now = apptMs - 4 * HOUR;
-  assert.equal(L.tutorDeadline(now), now + 30 * 60 * 1000);
+  assert.equal(L.tutorDeadline(now), now + 60 * 60 * 1000);
   assert.equal(L.vetDeadline(now, apptMs), now + 2 * HOUR); // 2h < 3h
   const late = apptMs - 90 * 60 * 1000;
   assert.equal(L.vetDeadline(late, apptMs), apptMs - HOUR); // 1h antes da consulta

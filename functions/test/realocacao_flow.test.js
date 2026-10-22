@@ -151,7 +151,7 @@ test("startRelocation: oferece só quem atende (região, especialidade, preço <
   assert.equal(a.originalVetId, "vetA");
   assert.equal(a.originalValue, 150);
   assert.equal(a.relocationRound, 1);
-  assert.ok(a.relocationDeadline > Date.now() && a.relocationDeadline <= Date.now() + 31 * 60 * 1000);
+  assert.ok(a.relocationDeadline > Date.now() && a.relocationDeadline <= Date.now() + 61 * 60 * 1000);
   assert.ok(a.historico_status.some((e) => e.status === "realocacao_oferecida"));
   assert.equal(notifsOf("tut1")[0].tipo, "realocacao");
   assert.ok(httpCalls.some((c) => c.url.includes("resend") && c.body.to[0] === "tut1@teste.com"));

@@ -7,10 +7,10 @@ const { priceForService, toNum } = require("./appointment_amount");
 
 const MAX_OPTIONS = 5;            // até 5 alternativas
 const MAX_ROUNDS = 3;             // original + até 2 tentativas com novos profissionais
-const TUTOR_WINDOW_MIN = 30;      // o tutor tem 30 min para escolher
+const TUTOR_WINDOW_MIN = 60;      // o tutor tem 1 hora para escolher
 const VET_RESPONSE_MIN = 120;     // novo profissional: até 2h para responder...
 const VET_END_MARGIN_MIN = 60;    // ...mas nunca depois de 1h antes da consulta
-const MIN_REMAINING_HOURS = 3;    // só oferece com >= 3h até a consulta (30 min tutor + resposta + margem)
+const MIN_REMAINING_HOURS = 4;    // só oferece com >= 4h até a consulta (1h tutor + resposta do novo profissional + margem)
 const MIN_SIMILARITY = 0.5;       // semelhança mínima entre nomes de serviço
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
