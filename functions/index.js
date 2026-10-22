@@ -330,7 +330,7 @@ exports.mpWebhook = onRequest(
                 .collection("pending")
                 .add({
                   title: "🗓️ Novo agendamento pago!",
-                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES} min ou a solicitação expira.`,
+                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES / 60} horas ou a solicitação expira.`,
                   read: false,
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   tipo: "novo_agendamento",
@@ -1108,14 +1108,14 @@ exports.appointmentHistorian = onDocumentWritten(
 
 // ─── Expiração de solicitação sem resposta do profissional ───────────────────
 // Roda a cada 5 min. Uma solicitação em pending_confirmation vira "rejected"
-// quando: (a) passou 1h desde a criação (tempo de sobra pro profissional
+// quando: (a) passou 2h desde a criação (tempo de sobra pro profissional
 // confirmar depois de já ter recebido o pagamento), ou (b) chegou a hora da
 // consulta sem resposta. Reaproveita o status "rejected" (os dois apps já
 // sabem exibir esse valor — nenhum filtro/UI existente quebra); o evento
 // distinto do funil (ignorado_timeout) fica só no historico_status, via
 // rejectReason.
 
-const RESPONSE_DEADLINE_MINUTES = 60;
+const RESPONSE_DEADLINE_MINUTES = 120;
 
 exports.expireUnanswered = onSchedule(
   { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
