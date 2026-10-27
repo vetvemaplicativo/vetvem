@@ -1533,3 +1533,6 @@ Object.assign(exports, require("./horarios"));
 
 // Realocação de profissional (tutor escolhe outro quando o veterinário recusa/não responde).
 Object.assign(exports, require("./realocacao"));
+
+// Cadastro rejeitado que reenvia documentos volta para a fila de análise.
+Object.assign(exports, require("./account_review"));

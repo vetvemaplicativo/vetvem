@@ -141,6 +141,47 @@ function contarPalavras(html) {
   return t ? t.split(" ").length : 0;
 }
 
+/* ---------- medidas de SEO/legibilidade (estilo Yoast), só informativas ---------- */
+
+const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const STOP = new Set(["de", "do", "da", "dos", "das", "o", "a", "os", "as", "e", "em", "no", "na", "nos", "nas", "para", "por", "um", "uma", "que", "com"]);
+
+// Palavras/expressões de transição comuns em português (aproximação da lista do Yoast).
+const TRANSICAO = [
+  "alem disso", "alem do mais", "por isso", "por esse motivo", "no entanto", "porem", "mas", "entretanto", "contudo", "todavia",
+  "ou seja", "por exemplo", "assim", "dessa forma", "desse modo", "portanto", "logo", "por outro lado", "em contrapartida",
+  "tambem", "ainda", "enquanto", "porque", "pois", "quando", "embora", "apesar", "se ", "caso", "ate porque", "mesmo assim",
+  "em seguida", "depois", "antes", "primeiro", "segundo", "por fim", "finalmente", "em resumo", "de fato", "na pratica",
+  "com isso", "nesse caso", "alem", "sobretudo", "principalmente", "inclusive", "afinal", "dessa maneira", "como resultado",
+];
+
+function textoDeHtml(html) { return semHtml(html); }
+
+function palavrasDaFrase(kw) { return norm(kw).split(/\s+/).filter((w) => w && !STOP.has(w)); }
+
+function contemFrase(texto, kw) {
+  const t = norm(texto);
+  const palavras = palavrasDaFrase(kw);
+  return palavras.length > 0 && palavras.every((w) => t.includes(w));
+}
+
+function analisarSEO(a) {
+  const html = String(a.conteudo_html || "");
+  const kw = a.palavra_chave || "";
+  const primeiroP = (html.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [, ""])[1];
+  const subtitulos = [...html.matchAll(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi)].map((m) => textoDeHtml(m[1]));
+  const frases = textoDeHtml(html).split(/(?<=[.!?])\s+/).filter((f) => f.length > 3);
+  const comTransicao = frases.filter((f) => { const n = ` ${norm(f)} `; return TRANSICAO.some((t) => n.includes(` ${t.trim()} `) || n.includes(` ${t.trim()},`)); }).length;
+  return {
+    kwNoTitulo: contemFrase(a.titulo, kw),
+    kwNaIntroducao: contemFrase(textoDeHtml(primeiroP), kw),
+    kwEmSubtitulo: subtitulos.some((s) => contemFrase(s, kw)),
+    kwNaMetaDescricao: contemFrase(a.meta_descricao, kw),
+    pctTransicao: frases.length ? Math.round((100 * comTransicao) / frases.length) : 0,
+    frases: frases.length,
+  };
+}
+
 /** Retorna lista de problemas que IMPEDEM publicar (se vazia, o artigo é aceitável). */
 // Mínimo de palavras por tipo: novidade científica tem menos fatos confirmáveis, então aceita texto
 // mais enxuto (melhor curto e correto do que enchido com suposição).
@@ -180,5 +221,5 @@ function decidirStatus({ kind, dataInfo, artigo, fontesValidas, textoCompleto })
 module.exports = {
   TZ, JANELA, CATEGORIAS, KINDS_SEMPRE_RASCUNHO, DATAS_FIXAS,
   dataComemorativa, rngFrom, shuffle, dateKeySP, minutosSP, diaDaSemana, inicioDaSemana,
-  planoDoDia, pareceReceita, semHtml, contarPalavras, validarArtigo, decidirStatus,
+  planoDoDia, pareceReceita, semHtml, contarPalavras, validarArtigo, decidirStatus, analisarSEO,
 };

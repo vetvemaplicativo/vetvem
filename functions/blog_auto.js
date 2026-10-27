@@ -78,6 +78,11 @@ Formato do conteúdo (HTML simples, sem H1):
 - Links permitidos no corpo: (a) páginas do site listadas no pedido, usando o caminho relativo completo como https://vetvem.com.br/..., em 1 a 3 pontos onde fizer sentido; (b) as URLs das fontes que você usou. Nenhum outro link.
 - Todas as afirmações factuais relevantes devem poder ser rastreadas às fontes que você listar em "fontes".
 
+Frase-chave e legibilidade (o site usa o plugin Yoast, que mede isto):
+- "palavra_chave" é a busca natural que o tutor digitaria (2 a 4 palavras, ex.: "alimentos tóxicos para cachorro"), escrita em minúsculas e sem inventar variações.
+- Use a frase-chave EXATA ou quase exata: (a) no "titulo", (b) já no primeiro parágrafo (nas duas primeiras frases), (c) em pelo menos um <h2> ou <h3>, (d) na meta descrição e no slug. Nos demais pontos use sinônimos e variações; nunca repita a frase de forma forçada.
+- Ligue as ideias com palavras de transição em pelo menos 30% das frases: "além disso", "por isso", "no entanto", "porém", "ou seja", "por exemplo", "dessa forma", "portanto", "por outro lado", "também", "assim", "quando", "porque", "na prática", "mesmo assim". Mantenha frases curtas e voz ativa.
+
 SEO e limites (conte os caracteres): "titulo" com NO MÁXIMO 70 caracteres e a palavra-chave principal perto do início; "meta_titulo" com no máximo 60; "meta_descricao" de 140 a 160 caracteres que convide ao clique; "slug" curto em minúsculas sem acentos. Notícias de ciência com poucos fatos confirmados podem ter ~600 a 800 palavras: nunca encha o texto com suposições.`;
 
 function descricaoDoTipo(kind, dataInfo) {
@@ -400,9 +405,12 @@ async function gerarEPublicar({ kind, dataInfo, dry, forcarRascunho }) {
     motivo_rascunho: decisao.motivo,
   };
 
+  const seo = L.analisarSEO(artigo);
+  console.log("blog: medidas de SEO", JSON.stringify({ kw: artigo.palavra_chave, ...seo }));
   const resumo = {
     titulo: artigo.titulo, slug, categoria: artigo.categoria, status: decisao.status, motivo: decisao.motivo,
     palavras: L.contarPalavras(artigo.conteudo_html), fontes: fontesValidas.length, foto: !!foto,
+    palavra_chave: artigo.palavra_chave, seo,
   };
   if (dry) return { ...resumo, dry: true, meta_descricao: artigo.meta_descricao, fontes_lista: fontesValidas, html: artigo.conteudo_html };
 
