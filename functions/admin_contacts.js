@@ -4,6 +4,7 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { pickContact } = require("./admin_contacts_lib");
+const { portalLink } = require("./realocacao_core");
 
 async function contactOf(uid, appt, fallbackName) {
   if (!uid) return { name: fallbackName || "", phone: "", email: "" };
@@ -34,5 +35,10 @@ exports.adminAppointmentContacts = onRequest({ region: "southamerica-east1", cor
     contactOf(appt.tutorId, appt, appt.tutorName),
     contactOf(appt.vetId, null, appt.vetName),
   ]);
-  return res.json({ result: { tutor, vet } });
+  // Pedido do portal esperando a tutora escolher outro profissional: link para mandar no WhatsApp.
+  let relocationLink = "";
+  if (appt.bookingOrigin === "portal_web" && appt.relocationStatus === "awaiting_tutor") {
+    relocationLink = await portalLink(String(appointmentId));
+  }
+  return res.json({ result: { tutor, vet, relocationLink } });
 });

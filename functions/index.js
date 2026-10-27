@@ -1027,7 +1027,9 @@ async function handleRejectedPayment(ref, after, mpToken, resendKey) {
       after.email,
       "Seu agendamento VetVem não pôde ser confirmado",
       `<p>Olá${after.tutorName ? ", " + after.tutorName : ""}!</p>
-       <p>Infelizmente <strong>${after.vetName || "o profissional"}</strong> não pôde confirmar o atendimento agendado.</p>
+       ${after.rejectReason === "relocation_declined"
+         ? "<p>Conforme você pediu, cancelamos a consulta.</p>"
+         : `<p>Infelizmente <strong>${after.vetName || "o profissional"}</strong> não pôde confirmar o atendimento agendado.</p>`}
        ${refunded ? "<p>O valor pago via PIX já foi estornado e deve cair na sua conta em instantes.</p>" : ""}
        <p>Você pode <a href="https://agendar.vetvem.com.br">voltar ao site</a> e escolher outro profissional.</p>
        <p>Ou baixe o app VetVem e tenha acesso a mais veterinários, acompanhamento em tempo real e pagamento direto pelo app:
@@ -1533,6 +1535,7 @@ Object.assign(exports, require("./horarios"));
 
 // Realocação de profissional (tutor escolhe outro quando o veterinário recusa/não responde).
 Object.assign(exports, require("./realocacao"));
+Object.assign(exports, require("./portal_relocation"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.
 Object.assign(exports, require("./account_review"));

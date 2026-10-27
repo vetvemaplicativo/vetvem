@@ -6,7 +6,12 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
-const { chooseVet, notify } = require("./realocacao_core");
+const { defineSecret } = require("firebase-functions/params");
+const { chooseVet, notify, cancelRelocationNow, lastVetFields, sendMail } = require("./realocacao_core");
+const { isPortal } = require("./realocacao_lib");
+
+const RESEND_SECRET = defineSecret("RESEND_API_KEY");
+const resendKeyOrNull = () => { try { return RESEND_SECRET.value() || null; } catch (_) { return null; } };
 const { petLabel } = require("./appointment_amount");
 const { parseDateTimeMs } = require("./horarios_lib");
 
@@ -22,17 +27,7 @@ async function authUid(req, res) {
   }
 }
 
-// Ao encerrar sem novo profissional, o pedido volta a mostrar o ÚLTIMO profissional que
-// recusou/não respondeu (em vez de "Escolhendo outro profissional").
-function lastVetFields(appt) {
-  const name = appt.relocationLastVetName || appt.originalVetName || "";
-  return {
-    ...(appt.relocationLastVetId ? { vetId: appt.relocationLastVetId } : {}),
-    ...(name ? { vetName: name } : {}),
-  };
-}
-
-exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false }, async (req, res) => {
+exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET] }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const uid = await authUid(req, res);
   if (!uid) return;
@@ -43,7 +38,7 @@ exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false
   if (!appt) return res.status(404).json({ error: "Pedido não encontrado." });
   if (appt.tutorId !== uid) return res.status(403).json({ error: "Este pedido não é seu." });
   try {
-    const r = await chooseVet(ref, appt, String(vetId));
+    const r = await chooseVet(ref, appt, String(vetId), { resendKey: resendKeyOrNull() });
     if (!r.ok) return res.status(r.code).json({ error: r.error });
     return res.json({ ok: true, vetName: r.vetName, price: r.price, deadline: r.deadline });
   } catch (e) {
@@ -66,20 +61,12 @@ exports.cancelRelocation = onRequest({ region: "southamerica-east1", cors: false
     return res.status(409).json({ error: "Não há escolha pendente neste pedido." });
   }
   // O estorno total é feito pelo appointmentHistorian ao ver status = rejected.
-  await ref.update({
-    status: "rejected",
-    rejectReason: "relocation_declined",
-    rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
-    relocationStatus: "declined",
-    relocationOptions: admin.firestore.FieldValue.delete(),
-    relocationDeadline: admin.firestore.FieldValue.delete(),
-    ...lastVetFields(appt),
-  });
+  await cancelRelocationNow(ref, appt);
   return res.json({ ok: true });
 });
 
 exports.expireRelocations = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = Date.now();
@@ -102,9 +89,20 @@ exports.expireRelocations = onSchedule(
         ...lastVetFields(d),
       });
       n++;
-      await notify(d.tutorId, "⏰ Prazo para escolher terminou",
-        `Você não escolheu um profissional para ${petLabel(d, "seu pet")} no prazo. O pedido foi encerrado e o valor será estornado.`,
-        { tipo: "realocacao_expirada", appointmentId: doc.id });
+      if (isPortal(d)) {
+        const key = resendKeyOrNull();
+        if (key && d.email) {
+          try {
+            await sendMail(key, d.email, "O prazo para escolher terminou",
+              `<p>O prazo para escolher outro profissional para ${petLabel(d, "seu pet")} terminou. O pedido foi encerrado e o valor pago via PIX será estornado.</p>
+               <p>Você pode <a href="https://agendar.vetvem.com.br">voltar ao site</a> e agendar de novo quando quiser.</p>`);
+          } catch (e) { console.error("expireRelocations email:", e.message); }
+        }
+      } else {
+        await notify(d.tutorId, "⏰ Prazo para escolher terminou",
+          `Você não escolheu um profissional para ${petLabel(d, "seu pet")} no prazo. O pedido foi encerrado e o valor será estornado.`,
+          { tipo: "realocacao_expirada", appointmentId: doc.id });
+      }
     }
     console.log(`expireRelocations: ${n} realocação(ões) expirada(s).`);
   }

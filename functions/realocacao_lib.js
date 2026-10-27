@@ -11,6 +11,8 @@ const TUTOR_WINDOW_MIN = 60;      // o tutor tem 1 hora para escolher
 const VET_RESPONSE_MIN = 120;     // novo profissional: até 2h para responder...
 const VET_END_MARGIN_MIN = 60;    // ...mas nunca depois de 1h antes da consulta
 const MIN_REMAINING_HOURS = 4;    // só oferece com >= 4h até a consulta (1h tutor + resposta do novo profissional + margem)
+const PORTAL_TUTOR_WINDOW_MIN = 120;   // tutora do portal (e-mail, sem push): 2h para escolher
+const PORTAL_MIN_REMAINING_HOURS = 5;  // e só se faltarem >= 5h até a consulta
 const MIN_SIMILARITY = 0.5;       // semelhança mínima entre nomes de serviço
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -138,13 +140,15 @@ function rankCandidates(list) {
 function canRelocate(appt, nowMs) {
   if (!appt) return { ok: false, why: "sem pedido" };
   if (appt.canRelocate !== true) return { ok: false, why: "app sem realocação" };
-  if (appt.bookingOrigin === "portal_web") return { ok: false, why: "portal" };
+  // Portal: só com a marca (portal novo) e e-mail para mandar o link de escolha.
+  if (isPortal(appt) && !appt.email) return { ok: false, why: "portal sem e-mail" };
   if (appt.paymentStatus !== "approved" || !appt.paymentId) return { ok: false, why: "não pago" };
   if (!appt.addrUf || !appt.addrCity) return { ok: false, why: "sem endereço estruturado" };
   if ((Number(appt.relocationRound) || 0) >= MAX_ROUNDS - 1) return { ok: false, why: "limite de tentativas" };
   const ms = parseDateTimeMs(appt.date, appt.time);
   if (ms === null) return { ok: false, why: "data inválida" };
-  if (ms - nowMs < MIN_REMAINING_HOURS * HOUR) return { ok: false, why: "pouco tempo até a consulta" };
+  const minHours = isPortal(appt) ? PORTAL_MIN_REMAINING_HOURS : MIN_REMAINING_HOURS;
+  if (ms - nowMs < minHours * HOUR) return { ok: false, why: "pouco tempo até a consulta" };
   return { ok: true };
 }
 
@@ -154,9 +158,11 @@ function paidAmount(appt) {
   return p > 0 ? p : toNum(appt.value);
 }
 
-// Prazo do tutor (ms).
-function tutorDeadline(nowMs) {
-  return nowMs + TUTOR_WINDOW_MIN * MIN;
+const isPortal = (appt) => !!appt && appt.bookingOrigin === "portal_web";
+
+// Prazo do tutor (ms): 1h no app; 2h no portal (a escolha vem por e-mail).
+function tutorDeadline(nowMs, portal = false) {
+  return nowMs + (portal ? PORTAL_TUTOR_WINDOW_MIN : TUTOR_WINDOW_MIN) * MIN;
 }
 
 // Prazo do novo profissional (ms): 2h, mas nunca depois de 1h antes da consulta.
@@ -179,5 +185,5 @@ function moneyString(n) {
 module.exports = {
   MAX_OPTIONS, MAX_ROUNDS, TUTOR_WINDOW_MIN, VET_RESPONSE_MIN, VET_END_MARGIN_MIN, MIN_REMAINING_HOURS,
   normText, serviceSimilarity, coversAddress, weekdayLabel, worksAt, sharesCategory,
-  pickService, rankCandidates, canRelocate, paidAmount, tutorDeadline, vetDeadline, formatDeadline, moneyString,
+  isPortal, pickService, rankCandidates, canRelocate, paidAmount, tutorDeadline, vetDeadline, formatDeadline, moneyString,
 };

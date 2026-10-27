@@ -105,3 +105,14 @@ test("paidAmount e moneyString", () => {
   assert.equal(L.moneyString(99.9), "99,90");
   assert.equal(L.moneyString(1000), "1000,00");
 });
+
+test("portal: precisa de e-mail e de 5h; prazo da tutora é 2h", () => {
+  const now = apptMs - 6 * HOUR;
+  const portal = { ...base, bookingOrigin: "portal_web", email: "t@t.com" };
+  assert.ok(L.canRelocate(portal, now).ok);
+  assert.equal(L.canRelocate({ ...portal, email: "" }, now).ok, false);
+  assert.equal(L.canRelocate(portal, apptMs - 4 * HOUR).ok, false); // < 5h
+  assert.ok(L.canRelocate(portal, apptMs - 5 * HOUR).ok);
+  assert.equal(L.tutorDeadline(now, true), now + 120 * 60 * 1000);
+  assert.equal(L.tutorDeadline(now, false), now + 60 * 60 * 1000);
+});

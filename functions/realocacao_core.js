@@ -8,6 +8,7 @@
 //   declined/expired : tutor desistiu / não escolheu no prazo (estorno total pelo historiador)
 // Só as Cloud Functions escrevem esses campos (regras do Firestore bloqueiam o cliente).
 const admin = require("firebase-admin");
+const crypto = require("crypto");
 const axios = require("axios");
 const L = require("./realocacao_lib");
 const { petLabel, toNum } = require("./appointment_amount");
@@ -55,6 +56,53 @@ async function slotTaken(vetId, date, time, exceptId) {
     if (d.id === exceptId) return false;
     const s = d.data().status;
     return s === "pending_confirmation" || s === "confirmed";
+  });
+}
+
+const PORTAL_URL = "https://agendar.vetvem.com.br";
+const escapeHtml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Chave secreta de uso único por pedido (portal): só fica em relocation_tokens/{id}, coleção que
+// os clientes não leem (appointments são legíveis por qualquer usuário autenticado).
+async function issuePortalToken(apptId) {
+  const token = crypto.randomBytes(24).toString("hex");
+  await admin.firestore().collection("relocation_tokens").doc(apptId).set({ token, at: Date.now() });
+  return token;
+}
+
+async function portalLink(apptId) {
+  const t = (await admin.firestore().collection("relocation_tokens").doc(apptId).get()).data();
+  return t && t.token ? `${PORTAL_URL}/escolher?id=${apptId}&t=${t.token}` : "";
+}
+
+// Confere a chave recebida no link (comparação em tempo constante).
+async function verifyPortalToken(apptId, token) {
+  if (!apptId || !token || typeof token !== "string") return false;
+  const t = (await admin.firestore().collection("relocation_tokens").doc(String(apptId)).get()).data();
+  if (!t || typeof t.token !== "string" || t.token.length !== token.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(t.token), Buffer.from(token));
+}
+
+// Ao encerrar sem novo profissional, o pedido volta a mostrar o ÚLTIMO profissional que
+// recusou/não respondeu (em vez de "Escolhendo outro profissional").
+function lastVetFields(appt) {
+  const name = appt.relocationLastVetName || appt.originalVetName || "";
+  return {
+    ...(appt.relocationLastVetId ? { vetId: appt.relocationLastVetId } : {}),
+    ...(name ? { vetName: name } : {}),
+  };
+}
+
+// Tutor desistiu: encerra para estorno total (feito pelo appointmentHistorian ao ver rejected).
+async function cancelRelocationNow(ref, appt) {
+  await ref.update({
+    status: "rejected",
+    rejectReason: "relocation_declined",
+    rejectedAt: FV().serverTimestamp(),
+    relocationStatus: "declined",
+    relocationOptions: FV().delete(),
+    relocationDeadline: FV().delete(),
+    ...lastVetFields(appt),
   });
 }
 
@@ -116,7 +164,9 @@ async function startRelocation(ref, appt, deps = {}) {
   const prevVetName = appt.vetName || "o profissional";
   const tried = [...new Set([...(appt.relocationTried || []), prevVet].filter(Boolean))];
   const first = !appt.originalVetId;
-  const deadline = L.tutorDeadline(now);
+  const portal = L.isPortal(appt);
+  const deadline = L.tutorDeadline(now, portal);
+  const token = portal ? await issuePortalToken(ref.id) : null;
   await ref.update({
     status: "pending_confirmation",
     relocationStatus: "awaiting_tutor",
@@ -149,9 +199,11 @@ async function startRelocation(ref, appt, deps = {}) {
   const pet = petLabel(appt, "seu pet");
   const when = `${appt.date} às ${appt.time}`;
   const until = L.formatDeadline(deadline);
-  await notify(appt.tutorId, "🔄 Escolha outro profissional",
-    `${prevVetName} não pôde atender ${pet} em ${when}. Veja quem atende no mesmo dia e horário e escolha até ${until}. O valor pago continua reservado: nada foi cobrado a mais.`,
-    { tipo: "realocacao", appointmentId: ref.id });
+  if (!portal) {
+    await notify(appt.tutorId, "🔄 Escolha outro profissional",
+      `${prevVetName} não pôde atender ${pet} em ${when}. Veja quem atende no mesmo dia e horário e escolha até ${until}. O valor pago continua reservado: nada foi cobrado a mais.`,
+      { tipo: "realocacao", appointmentId: ref.id });
+  }
 
   // Se o profissional simplesmente não respondeu, avisa que o pedido foi oferecido a outros.
   if (appt.rejectReason === "no_response" && prevVet) {
@@ -160,16 +212,26 @@ async function startRelocation(ref, appt, deps = {}) {
       { tipo: "consulta_expirada", appointmentId: ref.id });
   }
 
-  // E-mail ao tutor (quem fecha o app pode não ver o push).
-  if (deps.resendKey && appt.tutorId) {
+  // Portal: o e-mail com o link é o único aviso. App: e-mail extra (quem fecha o app pode não ver o push).
+  if (deps.resendKey) {
     try {
-      const user = await admin.auth().getUser(appt.tutorId);
-      if (user && user.email) {
-        await sendMail(deps.resendKey, user.email, "Escolha outro profissional para a sua consulta 🐾",
-          `<p>Olá${appt.tutorName ? ", " + appt.tutorName : ""}!</p>
-           <p><strong>${prevVetName}</strong> não pôde atender ${pet} em ${when}.</p>
-           <p>Há <strong>${options.length}</strong> profissional(is) disponível(is) no mesmo dia e horário. Abra o app VetVem e escolha até <strong>${until}</strong>.</p>
-           <p>O valor que você pagou continua reservado. Se o novo valor for menor, a diferença é devolvida. Se nenhum servir, você pode pedir o estorno total no próprio app.</p>`);
+      if (portal) {
+        const link = `${PORTAL_URL}/escolher?id=${ref.id}&t=${token}`;
+        await sendMail(deps.resendKey, appt.email, "Escolha outro profissional para a sua consulta 🐾",
+          `<p>Olá${appt.tutorName ? ", " + escapeHtml(appt.tutorName) : ""}!</p>
+           <p>Infelizmente <strong>${escapeHtml(prevVetName)}</strong> não pôde atender ${escapeHtml(pet)} em <strong>${when}</strong>.</p>
+           <p>Mas encontramos <strong>${options.length}</strong> profissional(is) que atende(m) no <strong>mesmo dia e horário</strong>. Escolha até <strong>${until}</strong>:</p>
+           <p><a href="${link}" style="background:#FF6B2B;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Escolher outro profissional</a></p>
+           <p>O valor que você pagou continua reservado. Se o novo valor for menor, a diferença é devolvida. Se nenhum servir, você pode cancelar e receber o valor de volta pelo mesmo link.</p>`);
+      } else if (appt.tutorId) {
+        const user = await admin.auth().getUser(appt.tutorId);
+        if (user && user.email) {
+          await sendMail(deps.resendKey, user.email, "Escolha outro profissional para a sua consulta 🐾",
+            `<p>Olá${appt.tutorName ? ", " + escapeHtml(appt.tutorName) : ""}!</p>
+             <p><strong>${escapeHtml(prevVetName)}</strong> não pôde atender ${escapeHtml(pet)} em ${when}.</p>
+             <p>Há <strong>${options.length}</strong> profissional(is) disponível(is) no mesmo dia e horário. Abra o app VetVem e escolha até <strong>${until}</strong>.</p>
+             <p>O valor que você pagou continua reservado. Se o novo valor for menor, a diferença é devolvida. Se nenhum servir, você pode pedir o estorno total no próprio app.</p>`);
+        }
       }
     } catch (e) {
       console.error("startRelocation email:", (e.response && e.response.data) || e.message);
@@ -193,7 +255,7 @@ async function takeSlotLock(vetId, date, time, apptId) {
 }
 
 // Tutor escolheu um profissional. Retorna { ok:true, ... } ou { ok:false, code, error }.
-async function chooseVet(ref, appt, vetId) {
+async function chooseVet(ref, appt, vetId, deps = {}) {
   const now = Date.now();
   if (appt.status !== "pending_confirmation" || appt.relocationStatus !== "awaiting_tutor") {
     return { ok: false, code: 409, error: "Não há profissionais para escolher neste pedido." };
@@ -254,9 +316,22 @@ async function chooseVet(ref, appt, vetId) {
   await notify(pick.vetId, "🗓️ Novo agendamento pago!",
     `${appt.tutorName || "Um tutor"} agendou ${pick.serviceName || "uma consulta"} para ${pet} em ${appt.date} às ${appt.time}. Confirme até ${until} ou a solicitação expira.`,
     { tipo: "novo_agendamento", appointmentId: ref.id });
-  await notify(appt.tutorId, "📨 Pedido enviado ao novo profissional",
-    `${pick.vetName} recebeu o seu pedido para ${appt.date} às ${appt.time} e tem até ${until} para confirmar.`,
-    { tipo: "realocacao_enviada", appointmentId: ref.id });
+  if (L.isPortal(appt)) {
+    if (deps.resendKey && appt.email) {
+      try {
+        await sendMail(deps.resendKey, appt.email, "Pedido enviado ao novo profissional 🐾",
+          `<p>Olá${appt.tutorName ? ", " + escapeHtml(appt.tutorName) : ""}!</p>
+           <p><strong>${escapeHtml(pick.vetName)}</strong> recebeu o seu pedido para ${appt.date} às ${appt.time} e tem até <strong>${until}</strong> para confirmar.</p>
+           <p>Assim que confirmar, você recebe outro e-mail. Se não puder, o valor é devolvido ou você escolhe outro profissional.</p>`);
+      } catch (e) {
+        console.error("chooseVet email:", (e.response && e.response.data) || e.message);
+      }
+    }
+  } else {
+    await notify(appt.tutorId, "📨 Pedido enviado ao novo profissional",
+      `${pick.vetName} recebeu o seu pedido para ${appt.date} às ${appt.time} e tem até ${until} para confirmar.`,
+      { tipo: "realocacao_enviada", appointmentId: ref.id });
+  }
 
   return { ok: true, vetName: pick.vetName, price: pick.price, deadline: vetDeadline };
 }
@@ -297,7 +372,14 @@ async function settleRelocation(ref, appt, deps = {}) {
     ...(pending ? { relocationRefundPending: diff } : {}),
   });
   await appendHist(ref, "reagendado_com_outro_profissional", "app_pro", appt.vetId, null);
-  if (appt.tutorId) {
+  if (L.isPortal(appt)) {
+    if (refunded > 0 && deps.resendKey && appt.email) {
+      try {
+        await sendMail(deps.resendKey, appt.email, "Devolvemos a diferença da sua consulta",
+          `<p>Como o novo profissional cobra menos, devolvemos a diferença de <strong>R$ ${refunded.toFixed(2).replace(".", ",")}</strong> no mesmo PIX. Ela deve aparecer na sua conta em instantes.</p>`);
+      } catch (e) { console.error("settleRelocation email:", e.message); }
+    }
+  } else if (appt.tutorId) {
     await notify(appt.tutorId, "✅ Consulta confirmada com outro profissional",
       `${appt.vetName || "O profissional"} confirmou a consulta de ${petLabel(appt, "seu pet")} em ${appt.date} às ${appt.time}.` +
       (refunded > 0 ? ` Devolvemos a diferença de R$ ${refunded.toFixed(2).replace(".", ",")} (valor menor).` : ""),
@@ -307,4 +389,5 @@ async function settleRelocation(ref, appt, deps = {}) {
 
 module.exports = {
   findCandidates, startRelocation, chooseVet, settleRelocation, slotTaken, notify, appendHist,
+  issuePortalToken, portalLink, verifyPortalToken, cancelRelocationNow, lastVetFields, sendMail,
 };
