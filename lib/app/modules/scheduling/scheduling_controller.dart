@@ -317,6 +317,8 @@ class SchedulingController extends GetxController {
         'date': formattedDate,
         'time': selectedTime.value ?? '',
         'address': addr.fullLine,
+        // Observações do tutor (antes o campo existia na tela mas não era salvo)
+        if (notesController.text.trim().isNotEmpty) 'notes': notesController.text.trim(),
         'value': total.toStringAsFixed(2).replaceAll('.', ','),
         // Marcas lidas pelo servidor: este app sabe escolher novos horários e MOSTRA a
         // taxa de deslocamento ao tutor (sem isso o servidor não soma a taxa).

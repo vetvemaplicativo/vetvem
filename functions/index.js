@@ -1536,3 +1536,6 @@ Object.assign(exports, require("./realocacao"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.
 Object.assign(exports, require("./account_review"));
+
+// Contatos do agendamento para o painel admin.
+Object.assign(exports, require("./admin_contacts"));
