@@ -62,6 +62,11 @@ async function verifyAdmin(req, res) {
 // Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
 // não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
 const { priceForService, toNum, petLabel } = require("./appointment_amount");
+const { quoteTravel, ORS_SECRET } = require("./travel_core");
+const TRAVEL_ERRORS = {
+  fora_do_raio: "Este profissional não atende o seu endereço (fora do raio de deslocamento).",
+  deslocamento_indisponivel: "Não foi possível calcular o deslocamento agora. Tente novamente.",
+};
 
 async function computeAppointmentAmount(appt, clientAmount) {
   const fallback = { amount: Number(clientAmount), source: "client", count: 1 };
@@ -72,10 +77,31 @@ async function computeAppointmentAmount(appt, clientAmount) {
     const vet = (await admin.firestore().collection("users").doc(vetId).get()).data() || {};
     const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
     if (!svc) return { ...fallback, source: "client-sem-servico" };
-    const priced = priceForService(svc, appt);
+    // Deslocamento por km: só quando o app declarou que MOSTROU o valor calculado (travelQuoted)
+    // para o CEP do tutor. Cliente antigo segue na taxa fixa do serviço, como antes.
+    // O profissional por km escolhe, serviço a serviço, se cobra deslocamento (svc.travelByKm).
+    const byKmVet = vet.travelModel === "per_km";
+    let opts;
+    if (byKmVet && appt.feesDisclosed === true && appt.travelQuoted === true && svc.travelByKm !== true) {
+      opts = { travelFee: 0 };
+    } else if (appt.feesDisclosed === true && appt.travelQuoted === true && appt.addrCep && (!byKmVet || svc.travelByKm === true)) {
+      let q;
+      try {
+        q = await quoteTravel(vetId, appt.addrCep, { uid: appt.tutorId, vet });
+      } catch (e) {
+        console.error("computeAppointmentAmount deslocamento:", e.message);
+        q = { ok: false };
+      }
+      if (!q.ok) return { ...fallback, source: "deslocamento", error: "deslocamento_indisponivel" };
+      if (q.mode === "per_km") {
+        if (q.outOfRange) return { ...fallback, source: "deslocamento", error: "fora_do_raio" };
+        opts = { travelFee: q.fee };
+      }
+    }
+    const priced = priceForService(svc, appt, opts);
     if (!priced) return { ...fallback, source: "client-preco-zero" };
-    const { amount: total, count } = priced;
-    return { amount: total, source: "server", count };
+    const { amount: total, count, travel } = priced;
+    return { amount: total, source: "server", count, travel };
   } catch (e) {
     console.error("computeAppointmentAmount:", e.message);
     return fallback;
@@ -83,7 +109,7 @@ async function computeAppointmentAmount(appt, clientAmount) {
 }
 
 exports.createPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -101,6 +127,7 @@ exports.createPayment = onRequest(
     try {
       const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
       const priced = await computeAppointmentAmount(apptForAmount, amount);
+      if (priced.error) return res.status(422).json({ error: TRAVEL_ERRORS[priced.error], code: priced.error });
       const finalAmount = priced.amount > 0 ? priced.amount : Number(amount);
       if (Math.abs(finalAmount - Number(amount)) > 0.009) {
         console.warn(`valor do app (${amount}) difere do calculado (${finalAmount}, ${priced.source}) em ${appointmentId}`);
@@ -170,7 +197,7 @@ exports.createPayment = onRequest(
 
 // ─── Criar pagamento PIX ──────────────────────────────────────────────────────
 exports.createPixPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -188,6 +215,7 @@ exports.createPixPayment = onRequest(
     try {
       const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
       const priced = await computeAppointmentAmount(apptForAmount, amount);
+      if (priced.error) return res.status(422).json({ error: TRAVEL_ERRORS[priced.error], code: priced.error });
       const finalAmount = priced.amount > 0 ? priced.amount : Number(amount);
       if (Math.abs(finalAmount - Number(amount)) > 0.009) {
         console.warn(`valor do app (${amount}) difere do calculado (${finalAmount}, ${priced.source}) em ${appointmentId}`);
@@ -1044,7 +1072,7 @@ exports.appointmentHistorian = onDocumentWritten(
   {
     document: "appointments/{appointmentId}",
     region: "southamerica-east1",
-    secrets: [MP_SECRET, RESEND_SECRET],
+    secrets: [MP_SECRET, RESEND_SECRET, ORS_SECRET],
   },
   async (event) => {
     const before = event.data?.before?.exists ? event.data.before.data() : null;
@@ -1133,7 +1161,7 @@ exports.appointmentHistorian = onDocumentWritten(
 const RESPONSE_DEADLINE_MINUTES = 120;
 
 exports.expireUnanswered = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
+  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = new Date();
@@ -1536,6 +1564,7 @@ Object.assign(exports, require("./horarios"));
 // Realocação de profissional (tutor escolhe outro quando o veterinário recusa/não responde).
 Object.assign(exports, require("./realocacao"));
 Object.assign(exports, require("./portal_relocation"));
+Object.assign(exports, require("./travel"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.
 Object.assign(exports, require("./account_review"));

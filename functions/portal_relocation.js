@@ -9,6 +9,7 @@ const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const { chooseVet, cancelRelocationNow, verifyPortalToken } = require("./realocacao_core");
 const { isPortal } = require("./realocacao_lib");
+const { ORS_SECRET } = require("./travel_core");
 
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const resendKeyOrNull = () => { try { return RESEND_SECRET.value() || null; } catch (_) { return null; } };
@@ -49,7 +50,7 @@ exports.portalRelocationInfo = onRequest(OPTS, async (req, res) => {
   });
 });
 
-exports.portalChooseRelocation = onRequest({ ...OPTS, secrets: [RESEND_SECRET] }, async (req, res) => {
+exports.portalChooseRelocation = onRequest({ ...OPTS, secrets: [RESEND_SECRET, ORS_SECRET] }, async (req, res) => {
   const o = await open(req, res);
   if (!o) return;
   const { vetId } = req.body || {};

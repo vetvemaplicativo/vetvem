@@ -9,6 +9,7 @@ const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
 const { chooseVet, notify, cancelRelocationNow, lastVetFields, sendMail } = require("./realocacao_core");
 const { isPortal } = require("./realocacao_lib");
+const { ORS_SECRET } = require("./travel_core");
 
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const resendKeyOrNull = () => { try { return RESEND_SECRET.value() || null; } catch (_) { return null; } };
@@ -27,7 +28,7 @@ async function authUid(req, res) {
   }
 }
 
-exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET] }, async (req, res) => {
+exports.chooseRelocation = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET, ORS_SECRET] }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const uid = await authUid(req, res);
   if (!uid) return;

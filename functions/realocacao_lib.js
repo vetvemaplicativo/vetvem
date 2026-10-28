@@ -108,14 +108,16 @@ const sharesCategory = (a, b) => {
 // Escolhe, entre os serviços do candidato, o que mais se parece com o pedido
 // ORIGINAL e cujo total (para o mesmo nº de animais) não passa do valor pago.
 // Retorna { name, amount, travel, similarity } ou null.
-function pickService(services, originalServiceName, appt, maxAmount) {
+// travelFee (opcional): deslocamento já calculado por km para este profissional.
+function pickService(services, originalServiceName, appt, maxAmount, travelFee) {
   let best = null;
   for (const s of Array.isArray(services) ? services : []) {
     if (!s || !s.name) continue;
     const sim = serviceSimilarity(originalServiceName, s.name);
     if (sim < MIN_SIMILARITY) continue;
     // O preço é calculado como no pagamento (inclui deslocamento e vários animais).
-    const priced = priceForService(s, { ...appt, feesDisclosed: true });
+    const priced = priceForService(s, { ...appt, feesDisclosed: true },
+      typeof travelFee === "number" ? { travelFee: s.travelByKm === true ? travelFee : 0 } : undefined); // por km: só serviços marcados (travelByKm) cobram
     if (!priced || !(priced.amount > 0)) continue;
     if (priced.amount > maxAmount + 0.009) continue; // nunca mais caro que o valor pago
     const cand = { name: String(s.name), amount: priced.amount, travel: priced.travel, similarity: sim };

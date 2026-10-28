@@ -138,8 +138,8 @@ service cloud.firestore {
 
     match /notifications/{userId}/pending/{notifId} {
       allow read, write: if isAdmin();
-      // Dono lê e marca como lida as suas
-      allow read, update: if request.auth != null
+      // Dono lê, marca como lida e apaga as suas (botão "Excluir todas")
+      allow read, update, delete: if request.auth != null
           && request.auth.uid == userId;
       // Qualquer autenticado notifica outro (tutor→vet e vice-versa),
       // mas só com os campos esperados e sempre não-lida

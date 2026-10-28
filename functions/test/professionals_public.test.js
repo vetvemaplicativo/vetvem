@@ -82,3 +82,20 @@ test("vitrine: serviço leva taxa de deslocamento e orientações (e corta orien
   assert.equal(pub.services[2].travelFee, undefined);
   assert.equal(pub.services[2].instructions, undefined);
 });
+
+test("deslocamento por km: espelha modelo e serviços marcados, nunca o CEP", () => {
+  const { buildPublicDoc } = require("../professionals_public").__test;
+  const pub = buildPublicDoc({
+    role: "professional", name: "Dr. X", travelModel: "per_km", travelPerKm: "2,5", travelRoundTrip: true, travelMaxKm: 30,
+    originCep: "20040020", originLabel: "Rua A", originGeoStatus: "ok",
+    services: [{ name: "Consulta", price: "100", travelByKm: true }, { name: "Vacina", price: "50" }],
+  });
+  assert.equal(pub.travelModel, "per_km");
+  assert.equal(pub.travelPerKm, 2.5);
+  assert.equal(pub.travelRoundTrip, true);
+  assert.equal(pub.travelMaxKm, 30);
+  assert.equal(pub.services[0].travelByKm, true);
+  assert.equal(pub.services[1].travelByKm, undefined);
+  assert.ok(!JSON.stringify(pub).includes("20040020") && !JSON.stringify(pub).includes("Rua A"));
+  assert.equal(buildPublicDoc({ role: "professional", travelModel: "fixed", travelPerKm: 2 }).travelModel, undefined);
+});

@@ -13,6 +13,7 @@ const axios = require("axios");
 const L = require("./realocacao_lib");
 const { petLabel, toNum } = require("./appointment_amount");
 const { parseDateTimeMs } = require("./horarios_lib");
+const { quoteTravel, loadRules } = require("./travel_core");
 
 const HIST_FIELD = "historico_status";
 const ADMIN_EMAIL = "ronalddesouzabr@gmail.com";
@@ -109,7 +110,7 @@ async function cancelRelocationNow(ref, appt) {
 // Lista de profissionais que podem assumir o pedido: mesma região, mesma
 // especialidade, serviço parecido, trabalham naquele dia/horário, agenda livre e
 // preço igual ou menor ao valor pago. onlyVetId = confere só esse profissional.
-async function findCandidates(appt, apptId, onlyVetId) {
+async function findCandidates(appt, apptId, onlyVetId, deps = {}) {
   const db = admin.firestore();
   const origVetId = appt.originalVetId || appt.vetId || "";
   const tried = new Set([...(appt.relocationTried || []), appt.vetId, appt.originalVetId].filter(Boolean));
@@ -119,6 +120,7 @@ async function findCandidates(appt, apptId, onlyVetId) {
   const origPub = origVetId ? (await db.collection("professionals_public").doc(origVetId).get()).data() : null;
   const snap = await db.collection("professionals_public").get();
 
+  const rules = await loadRules();
   const pre = [];
   for (const doc of snap.docs) {
     const id = doc.id;
@@ -129,7 +131,18 @@ async function findCandidates(appt, apptId, onlyVetId) {
     if (!L.sharesCategory(origPub && origPub.categories, pub.categories)) continue;
     if (!L.coversAddress(pub.area_atuacao, appt.addrUf, appt.addrCity, appt.addrNeighborhood)) continue;
     if (!L.worksAt(pub, appt.date, appt.time)) continue;
-    const svc = L.pickService(pub.services, origService, appt, maxAmount);
+    // Profissional que cobra deslocamento por km: valor calculado até o CEP deste pedido.
+    let travelFee;
+    if (pub.travelModel === "per_km") {
+      if (!appt.addrCep) continue; // sem CEP não dá para cotar
+      let q;
+      try {
+        q = await quoteTravel(id, appt.addrCep, { vet: pub, rules, uid: appt.tutorId, orsKey: deps.orsKey });
+      } catch (_) { q = { ok: false }; }
+      if (!q.ok || q.mode !== "per_km" || q.outOfRange) continue;
+      travelFee = q.fee;
+    }
+    const svc = L.pickService(pub.services, origService, appt, maxAmount, travelFee);
     if (!svc) continue;
     pre.push({
       vetId: id, vetName: String(pub.name || ""), crmv: String(pub.crmv || ""),

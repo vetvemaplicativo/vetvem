@@ -26,7 +26,8 @@ function animalsOf(appt) {
 
 // svc: item de users/{vetId}.services; appt: documento do agendamento.
 // Retorna { amount, count } ou null se o serviço não tem preço válido.
-function priceForService(svc, appt) {
+// opts.travelFee (número >= 0): deslocamento já calculado por km; substitui a taxa fixa do serviço.
+function priceForService(svc, appt, opts) {
   const base = toNum(svc.price);
   if (!(base > 0)) return null;
   const n = animalsOf(appt);
@@ -41,7 +42,8 @@ function priceForService(svc, appt) {
   // Taxa de deslocamento: valor FIXO por visita (não por animal), opcional por serviço.
   // SÓ cobra se o app/portal declarou que MOSTROU a taxa ao tutor (feesDisclosed):
   // clientes antigos exibem o preço sem a taxa e o tutor seria cobrado a mais.
-  const travelRaw = toNum(svc.travelFee);
+  const perKm = opts && typeof opts.travelFee === "number" && opts.travelFee >= 0;
+  const travelRaw = perKm ? opts.travelFee : toNum(svc.travelFee);
   const travel = travelRaw > 0 && appt && appt.feesDisclosed === true ? travelRaw : 0;
   const amount = Math.round((base + (count - 1) * extra + travel) * 100) / 100;
   return { amount, count, travel };

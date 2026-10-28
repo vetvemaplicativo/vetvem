@@ -66,6 +66,8 @@ function servicesOf(d) {
       if (s.travelFee !== undefined && s.travelFee !== null && String(s.travelFee).trim() !== "") {
         out.travelFee = String(s.travelFee);
       }
+      // Deslocamento por km: só os serviços marcados cobram (o profissional escolhe serviço a serviço).
+      if (s.travelByKm === true) out.travelByKm = true;
       const instr = str(s.instructions).trim().slice(0, 240);
       if (instr) out.instructions = instr;
       return out;
@@ -90,10 +92,26 @@ function areaOf(d) {
   };
 }
 
+// Deslocamento por km: só modelo e condições (valor por km, ida e volta, raio). O CEP de
+// origem e as coordenadas NUNCA entram aqui (ficam em vet_origins, privado). O valor final
+// vem sempre de travelQuote, que também aplica os tetos do VetVem.
+function travelOf(d) {
+  const perKm = parseFloat(String(d.travelPerKm === undefined || d.travelPerKm === null ? "" : d.travelPerKm).replace(",", "."));
+  if (d.travelModel !== "per_km" || !(perKm > 0)) return {};
+  const maxKm = parseFloat(String(d.travelMaxKm === undefined || d.travelMaxKm === null ? "" : d.travelMaxKm).replace(",", "."));
+  return {
+    travelModel: "per_km",
+    travelPerKm: perKm,
+    travelRoundTrip: d.travelRoundTrip === true,
+    ...(maxKm > 0 ? { travelMaxKm: maxKm } : {}),
+  };
+}
+
 // Lista branca. NUNCA adicionar: phone, email, address, pixKeys, termos_*,
 // fcmToken, platform, feeOverride, pixChangedAt, createdAt, accountStatus.
 function buildPublicDoc(d) {
   return {
+    ...travelOf(d),
     name: str(d.name), // sem trim: o app casa avaliações por vetName exato
     crmv: str(d.crmv),
     bio: str(d.bio),
