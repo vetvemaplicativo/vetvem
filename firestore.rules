@@ -130,6 +130,8 @@ service cloud.firestore {
                        'originalVetId', 'originalVetName', 'originalServiceName',
                        'originalValue', 'responseDeadline', 'relocationChosenAt',
                        'relocationRefund', 'relocationRefundedAt', 'relocationRefundPending',
+                       // lembretes de consulta já enviados: só a Cloud Function escreve
+                       'remindersSent',
                        'relocationLastVetId', 'relocationLastVetName'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())

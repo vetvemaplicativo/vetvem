@@ -1571,3 +1571,6 @@ Object.assign(exports, require("./account_review"));
 
 // Contatos do agendamento para o painel admin.
 Object.assign(exports, require("./admin_contacts"));
+
+// Lembretes de consulta (véspera 18h e 2h antes, profissional e tutor)
+Object.assign(exports, require("./lembretes"));

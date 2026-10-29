@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Anexos do prontuário (fotos e PDFs): prontuarios/{uid do veterinário}/{id da consulta}/{arquivo}
+    // - Só o veterinário dono da pasta envia/apaga (imagem ou PDF, até 10 MB) e grava no arquivo o
+    //   uid do tutor da consulta (metadata.tutorId).
+    // - Quem abre: o veterinário, o tutor gravado no arquivo e o admin. Não há listagem de pastas.
+    match /prontuarios/{vetId}/{apptId}/{fileName} {
+      allow read: if isAdmin()
+          || (request.auth != null
+              && (request.auth.uid == vetId || resource.metadata.tutorId == request.auth.uid));
+      allow create: if request.auth != null
+          && request.auth.uid == vetId
+          && request.resource.size < 10 * 1024 * 1024
+          && (request.resource.contentType.matches('image/.*')
+              || request.resource.contentType == 'application/pdf')
+          && request.resource.metadata.tutorId is string;
+      allow delete: if request.auth != null && request.auth.uid == vetId;
+      allow update: if false;
+    }
+  }
+}

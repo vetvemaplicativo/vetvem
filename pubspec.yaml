@@ -2,7 +2,7 @@ name: vetvem
 description: "VetVem - Agende veterinarios a domicilio para seu pet."
 publish_to: 'none'
 
-version: 1.0.16+38
+version: 1.0.17+39
 
 environment:
   sdk: ^3.12.1
@@ -33,6 +33,9 @@ dependencies:
   http: ^1.2.2
   get_storage: ^2.1.1
   package_info_plus: ^8.1.2
+  firebase_storage: ^12.4.10
+  share_plus: ^12.0.2
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

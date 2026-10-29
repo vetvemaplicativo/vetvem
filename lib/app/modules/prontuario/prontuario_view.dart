@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import 'anexos_links.dart';
 
 class ProntuarioView extends StatelessWidget {
   const ProntuarioView({super.key});
@@ -245,6 +246,17 @@ class ProntuarioView extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
 
+                // Anexos (fotos e PDFs enviados pelo veterinário)
+                if ((p['anexos'] as List?)?.isNotEmpty == true) ...[
+                  _Section(
+                    icon: Icons.attach_file_rounded,
+                    color: AppColors.primary,
+                    title: 'Anexos',
+                    child: AnexosLinks(items: p['anexos'] as List),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Complementos
                 if (complementos.isNotEmpty) ...[
                   _Section(
@@ -264,11 +276,22 @@ class ProntuarioView extends StatelessWidget {
                                 color: const Color(0xFF8B5CF6)
                                     .withValues(alpha: 0.2)),
                           ),
-                          child: Text(c['texto']?.toString() ?? '',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textDark,
-                                  height: 1.5)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if ((c['texto']?.toString() ?? '').isNotEmpty)
+                                Text(c['texto'].toString(),
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textDark,
+                                        height: 1.5)),
+                              if ((c['anexos'] as List?)?.isNotEmpty == true) ...[
+                                if ((c['texto']?.toString() ?? '').isNotEmpty)
+                                  const SizedBox(height: 8),
+                                AnexosLinks(items: c['anexos'] as List),
+                              ],
+                            ],
+                          ),
                         );
                       }).toList(),
                     ),
