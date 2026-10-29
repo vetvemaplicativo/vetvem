@@ -62,7 +62,7 @@ async function verifyAdmin(req, res) {
 // Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
 // não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
 const { priceForService, toNum, petLabel } = require("./appointment_amount");
-const { quoteTravel, ORS_SECRET } = require("./travel_core");
+const { quoteTravel, ORS_SECRET, AWESOME_SECRET } = require("./travel_core");
 const TRAVEL_ERRORS = {
   fora_do_raio: "Este profissional não atende o seu endereço (fora do raio de deslocamento).",
   deslocamento_indisponivel: "Não foi possível calcular o deslocamento agora. Tente novamente.",
@@ -109,7 +109,7 @@ async function computeAppointmentAmount(appt, clientAmount) {
 }
 
 exports.createPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET, AWESOME_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -197,7 +197,7 @@ exports.createPayment = onRequest(
 
 // ─── Criar pagamento PIX ──────────────────────────────────────────────────────
 exports.createPixPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET, AWESOME_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -1072,7 +1072,7 @@ exports.appointmentHistorian = onDocumentWritten(
   {
     document: "appointments/{appointmentId}",
     region: "southamerica-east1",
-    secrets: [MP_SECRET, RESEND_SECRET, ORS_SECRET],
+    secrets: [MP_SECRET, RESEND_SECRET, ORS_SECRET, AWESOME_SECRET],
   },
   async (event) => {
     const before = event.data?.before?.exists ? event.data.before.data() : null;
@@ -1161,7 +1161,7 @@ exports.appointmentHistorian = onDocumentWritten(
 const RESPONSE_DEADLINE_MINUTES = 120;
 
 exports.expireUnanswered = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET] },
+  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = new Date();

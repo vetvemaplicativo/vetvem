@@ -9,7 +9,7 @@ const admin = require("firebase-admin");
 const T = require("./travel_lib");
 const core = require("./travel_core");
 
-const { ORS_SECRET, orsKey: orsKeyOrNull } = core;
+const { ORS_SECRET, AWESOME_SECRET, orsKey: orsKeyOrNull } = core;
 
 async function authUid(req) {
   const auth = req.headers.authorization || "";
@@ -26,7 +26,7 @@ const ERRORS = {
 };
 
 exports.travelQuote = onRequest(
-  { region: "southamerica-east1", cors: true, secrets: [ORS_SECRET] },
+  { region: "southamerica-east1", cors: true, secrets: [ORS_SECRET, AWESOME_SECRET] },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     const uid = await authUid(req);
@@ -49,7 +49,7 @@ exports.travelQuote = onRequest(
 
 // Quando o profissional informa/troca o CEP de origem, guarda as coordenadas (privadas).
 exports.geocodeVetOrigin = onDocumentWritten(
-  { document: "users/{uid}", region: "southamerica-east1", secrets: [ORS_SECRET], timeoutSeconds: 60 },
+  { document: "users/{uid}", region: "southamerica-east1", secrets: [ORS_SECRET, AWESOME_SECRET], timeoutSeconds: 60 },
   async (event) => {
     const after = event.data?.after?.exists ? event.data.after.data() : null;
     const before = event.data?.before?.exists ? event.data.before.data() : null;
@@ -77,7 +77,10 @@ exports.geocodeVetOrigin = onDocumentWritten(
       await userRef.update({ originGeoStatus: "not_found" });
       return;
     }
-    await originRef.set({ lat: p.lat, lng: p.lng, cep, at: Date.now() });
+    await originRef.set({ lat: p.lat, lng: p.lng, cep, v: 3, at: Date.now() });
     await userRef.update({ originGeoStatus: "ok" });
   }
 );
+// rev 1793223788
+// rev 1793279028
+// rev 1793279182

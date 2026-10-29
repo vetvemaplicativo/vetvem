@@ -8,6 +8,7 @@ import '../../services/analytics_service.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
+import 'travel_quote.dart';
 
 class SchedulePeriod {
   final String label;
@@ -43,11 +44,40 @@ class SchedulingController extends GetxController {
     return n < 1 ? 1 : n;
   }
 
-  /// Total do pedido para o serviço escolhido.
+  // ── Deslocamento por km ────────────────────────────────────────────
+  // Profissional por km: o servidor calcula a distância até o CEP do endereço escolhido.
+  final travelQuote = Rx<TravelQuote>(const TravelQuote.idle());
+  int _quoteSeq = 0;
+
+  VetModel? get _vet => Get.find<VetsController>().selectedVet.value;
+  bool get vetChargesByKm => _vet?.chargesTravelByKm ?? false;
+  bool get usesTravelByKm => vetChargesByKm && (selectedService.value?.travelByKm ?? false);
+  double get _kmFee => usesTravelByKm && travelQuote.value.isOk ? travelQuote.value.fee : 0;
+
+  Future<void> refreshTravelQuote() async {
+    final seq = ++_quoteSeq;
+    final vet = _vet;
+    final addr = selectedAddress.value;
+    if (!usesTravelByKm || vet == null || addr == null) {
+      travelQuote.value = const TravelQuote.idle();
+      return;
+    }
+    final cep = addr.cep.replaceAll(RegExp(r'\D'), '');
+    if (cep.length != 8) {
+      travelQuote.value = const TravelQuote.problem(
+          'no_cep', 'Este endereço está sem CEP. Edite o endereço no seu Perfil para calcular o deslocamento.');
+      return;
+    }
+    travelQuote.value = const TravelQuote.loading();
+    final q = await fetchTravelQuote(vet.id, cep);
+    if (seq == _quoteSeq) travelQuote.value = q;
+  }
+
+  /// Total do pedido para o serviço escolhido (inclui o deslocamento por km já calculado).
   double get totalPrice {
     final s = selectedService.value;
     if (s == null) return 0;
-    return s.grandTotalFor(animalCount);
+    return ((s.grandTotalFor(animalCount) + _kmFee) * 100).round() / 100;
   }
 
   void togglePet(int i) {
@@ -94,7 +124,10 @@ class SchedulingController extends GetxController {
     }
   }
 
-  void selectAddress(SavedAddress addr) => selectedAddress.value = addr;
+  void selectAddress(SavedAddress addr) {
+    selectedAddress.value = addr;
+    refreshTravelQuote();
+  }
 
   // Dias da semana no formato salvo pelo app Pro (weekday 1=Seg … 7=Dom)
   static const _dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
@@ -118,6 +151,7 @@ class SchedulingController extends GetxController {
 
   void selectService(VetService service) {
     selectedService.value = service;
+    refreshTravelQuote();
   }
 
   // Horários agrupados por período — vêm do vet selecionado
@@ -270,6 +304,22 @@ class SchedulingController extends GetxController {
       return;
     }
 
+    // Deslocamento por km: o valor calculado precisa estar pronto (é o mesmo que será cobrado).
+    if (usesTravelByKm) {
+      if (travelQuote.value.state == 'idle') await refreshTravelQuote();
+      final q = travelQuote.value;
+      if (q.isLoading) {
+        Get.snackbar('Calculando o deslocamento', 'Aguarde um instante e toque em continuar de novo.',
+            snackPosition: SnackPosition.TOP);
+        return;
+      }
+      if (!q.isOk) {
+        Get.snackbar('Deslocamento', q.message.isEmpty ? 'Não foi possível calcular o deslocamento.' : q.message,
+            snackPosition: SnackPosition.TOP);
+        return;
+      }
+    }
+
     // Antes de seguir, avisa que o pagamento é a próxima etapa (é ele que envia o
     // pedido ao veterinário).
     if (!confirmed) {
@@ -292,7 +342,9 @@ class SchedulingController extends GetxController {
         (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList();
     final count = animalCount;
     final multi = service.perAnimal || count > 1;
-    final total = service.grandTotalFor(count);
+    final kmFee = _kmFee;
+    final kmDistance = usesTravelByKm ? travelQuote.value.km : 0.0;
+    final total = ((service.grandTotalFor(count) + kmFee) * 100).round() / 100;
     final pet = chosen.first; // validado acima: há ao menos um animal cadastrado
 
     isLoading.value = true;
@@ -331,6 +383,14 @@ class SchedulingController extends GetxController {
         'addrNeighborhood': addr.neighborhood,
         'feesDisclosed': true,
         if (service.travel > 0) 'travelFee': service.travel,
+        // Deslocamento por km: CEP do tutor + marca de que este app MOSTROU o valor calculado
+        // (sem ela o servidor não cobra o deslocamento por km).
+        if (vetChargesByKm) ...{
+          'addrCep': addr.cep.replaceAll(RegExp(r'\D'), ''),
+          'travelQuoted': true,
+          if (kmFee > 0) 'travelFee': kmFee,
+          if (kmFee > 0) 'travelKm': kmDistance,
+        },
         if (multi) ...{
           'petCount': count,
           'pets': [

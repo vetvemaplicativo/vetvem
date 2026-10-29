@@ -11,6 +11,8 @@ class VetService {
   final double? additionalPrice; // valor de cada animal adicional; null = mesmo preço
   // Taxa de deslocamento FIXA por visita (opcional) e orientações ao tutor.
   final double? travelFee;
+  // Profissional por km: este serviço cobra deslocamento calculado pela distância.
+  final bool travelByKm;
   final String instructions;
 
   const VetService({
@@ -22,6 +24,7 @@ class VetService {
     this.perAnimal = false,
     this.additionalPrice,
     this.travelFee,
+    this.travelByKm = false,
     this.instructions = '',
   });
 
@@ -105,7 +108,18 @@ class VetModel {
     this.services = const [],
     this.animalSpecies = const [],
     this.areaAtuacao,
+    this.travelModel = 'fixed',
+    this.travelPerKm = 0,
+    this.travelRoundTrip = true,
+    this.travelMaxKm = 0,
   });
+
+  // Deslocamento: 'fixed' (taxa fixa por serviço) ou 'per_km' (calculado pela distância)
+  final String travelModel;
+  final double travelPerKm;
+  final bool travelRoundTrip;
+  final double travelMaxKm;
+  bool get chargesTravelByKm => travelModel == 'per_km';
 
   /// Score de ranking: 50% avaliação + 30% atendimentos + 20% taxa de cancelamento
   double get rankScore {

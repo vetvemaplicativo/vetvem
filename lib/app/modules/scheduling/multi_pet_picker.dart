@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'travel_quote.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
@@ -37,18 +38,30 @@ class MultiPetPicker extends StatelessWidget {
           if (pets.isNotEmpty) ...[
             Row(
               children: [
-                if (hasCats && hasDogs) ...[
-                  _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
-                  const SizedBox(width: 6),
-                  _FilterChip('Gatos', filter == 'cat', () => c.petFilter.value = 'cat'),
-                  const SizedBox(width: 6),
-                  _FilterChip('Cães', filter == 'dog', () => c.petFilter.value = 'dog'),
-                ],
-                const Spacer(),
-                TextButton(
-                  onPressed: shown.isEmpty ? null : c.toggleAllFiltered,
-                  child: Text(allShownSelected ? 'Limpar' : 'Selecionar todos',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (hasCats && hasDogs) ...[
+                        _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
+                        _FilterChip('Gatos', filter == 'cat', () => c.petFilter.value = 'cat'),
+                        _FilterChip('Cães', filter == 'dog', () => c.petFilter.value = 'dog'),
+                      ],
+                    ],
+                  ),
+                ),
+                InkWell(
+                  onTap: shown.isEmpty ? null : c.toggleAllFiltered,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    child: Text(allShownSelected ? 'Limpar' : 'Selecionar todos',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: shown.isEmpty ? AppColors.textLight : AppColors.primary)),
+                  ),
                 ),
               ],
             ),
@@ -216,7 +229,8 @@ class MultiPriceSummary extends StatelessWidget {
       final s = c.selectedService.value;
       final n = c.animalCount;
       // Com 1 animal em serviço comum não há o que somar: o resumo some.
-      if (s == null || (!s.perAnimal && n <= 1 && s.travel <= 0)) return const SizedBox.shrink();
+      final byKm = c.usesTravelByKm;
+      if (s == null || (!s.perAnimal && n <= 1 && s.travel <= 0 && !byKm)) return const SizedBox.shrink();
       final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
       final line = n <= 1
           ? '1 animal: ${_money(s.price)}'
@@ -238,6 +252,7 @@ class MultiPriceSummary extends StatelessWidget {
             if (s.travel > 0)
               Text('Deslocamento (taxa fixa por visita): ${_money(s.travel)}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            if (byKm) _TravelLine(c.travelQuote.value),
             const SizedBox(height: 2),
             Text('Total: ${_money(c.totalPrice)}',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
@@ -296,5 +311,34 @@ class ServiceInstructionsNotice extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+/// Linha do deslocamento por km no resumo do pedido (calculando / valor / aviso).
+class _TravelLine extends StatelessWidget {
+  final TravelQuote q;
+  const _TravelLine(this.q);
+
+  @override
+  Widget build(BuildContext context) {
+    const base = TextStyle(fontSize: 12, color: AppColors.textMedium);
+    if (q.isLoading) {
+      return const Text('Deslocamento: calculando pelo seu endereço…', style: base);
+    }
+    if (q.isOk) {
+      final km = q.km.toStringAsFixed(1).replaceAll('.', ',');
+      final how = q.roundTrip ? 'ida e volta' : 'só ida';
+      return Text(
+          'Deslocamento ($km km, $how): ${_money(q.fee)}${q.capped ? ' · valor máximo' : ''}',
+          style: base);
+    }
+    if (q.state == 'idle') {
+      return const Text('Deslocamento: escolha o endereço para calcular.', style: base);
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(q.message,
+          style: const TextStyle(fontSize: 12, height: 1.35, color: Color(0xFFB91C1C))),
+    );
   }
 }

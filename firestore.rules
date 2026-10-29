@@ -124,7 +124,7 @@ service cloud.firestore {
                        'chosenIndex', 'instructionsText', 'instructionsSentAt',
                        'canChooseTimes', 'feesDisclosed',
                        // realocação de profissional: só as Cloud Functions escrevem
-                       'canRelocate', 'addrUf', 'addrCity', 'addrNeighborhood',
+                       'canRelocate', 'addrUf', 'addrCity', 'addrNeighborhood', 'addrCep', 'travelQuoted',
                        'relocationStatus', 'relocationOptions', 'relocationDeadline',
                        'relocationRound', 'relocationTried', 'relocationAttempted',
                        'originalVetId', 'originalVetName', 'originalServiceName',

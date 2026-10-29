@@ -186,6 +186,7 @@ class VetsController extends GetxController {
             additionalPrice: addRaw.trim().isEmpty ? null : double.tryParse(addRaw),
             travelFee: double.tryParse(
                 (s['travelFee']?.toString() ?? '').replaceAll(',', '.')),
+            travelByKm: s['travelByKm'] == true,
             instructions: (s['instructions']?.toString() ?? '').trim(),
           );
         }).toList();
@@ -236,6 +237,10 @@ class VetsController extends GetxController {
           services: services,
           animalSpecies: List<String>.from(d['animalSpecies'] ?? []),
           areaAtuacao: area.isEmpty ? null : area,
+          travelModel: d['travelModel'] == 'per_km' ? 'per_km' : 'fixed',
+          travelPerKm: (d['travelPerKm'] as num?)?.toDouble() ?? 0,
+          travelRoundTrip: d['travelRoundTrip'] != false,
+          travelMaxKm: (d['travelMaxKm'] as num?)?.toDouble() ?? 0,
         );
       }).toList();
 
@@ -395,6 +400,10 @@ class VetsController extends GetxController {
               services: vet.services,
               animalSpecies: vet.animalSpecies,
               areaAtuacao: vet.areaAtuacao,
+              travelModel: vet.travelModel,
+              travelPerKm: vet.travelPerKm,
+              travelRoundTrip: vet.travelRoundTrip,
+              travelMaxKm: vet.travelMaxKm,
             );
             allVets.removeAt(idx);
             allVets.insert(idx, updated);

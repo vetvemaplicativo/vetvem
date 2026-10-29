@@ -16,6 +16,9 @@ const DAILY_LOOKUPS_PER_USER = 60; // consultas externas novas por usuário/dia 
 const ORS_SECRET = defineSecret("ORS_API_KEY");
 // Chave do OpenRouteService: só existe nas funções que listam ORS_SECRET em `secrets`.
 const orsKey = () => { try { return ORS_SECRET.value() || null; } catch (_) { return null; } };
+// Chave da AwesomeAPI (CEP -> coordenada da rua). Sem ela a cota é compartilhada com outros IPs do Google e dá 429.
+const AWESOME_SECRET = defineSecret("AWESOME_API_KEY");
+const awesomeKey = () => { try { return AWESOME_SECRET.value() || null; } catch (_) { return null; } };
 
 const db = () => admin.firestore();
 
@@ -30,6 +33,22 @@ async function loadRules() {
 }
 
 const inBrazil = (p) => p && p.lat > -34 && p.lat < 6 && p.lng > -74 && p.lng < -28;
+
+// AwesomeAPI: coordenadas por CEP no nível da RUA (a BrasilAPI devolve o centro da cidade para
+// muitos CEPs, o que zerava a distância entre dois endereços da mesma cidade).
+async function viaAwesomeApi(cep) {
+  try {
+    const key = awesomeKey();
+    const r = await axios.get(`https://cep.awesomeapi.com.br/json/${cep}`, {
+      timeout: 6000, headers: key ? { "x-api-key": key } : {},
+    });
+    const p = r.data ? { lat: parseFloat(r.data.lat), lng: parseFloat(r.data.lng) } : null;
+    return inBrazil(p) ? p : null;
+  } catch (e) {
+    console.error("travel geocode Awesome:", e.response ? e.response.status : e.message);
+    return null;
+  }
+}
 
 async function viaBrasilApi(cep) {
   try {
@@ -66,10 +85,15 @@ async function viaOrsGeocode(cep, orsKey) {
 async function geocodeCep(cep, orsKey) {
   const ref = db().collection("cep_geo").doc(cep);
   const hit = (await ref.get()).data();
-  if (hit && Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) return { lat: hit.lat, lng: hit.lng };
-  const p = (await viaBrasilApi(cep)) || (await viaOrsGeocode(cep, orsKey));
-  if (p) await ref.set({ lat: p.lat, lng: p.lng, at: Date.now() });
-  return p;
+  // v:2 = coordenadas da AwesomeAPI/mais precisas; entradas antigas (sem v) eram imprecisas e são refeitas
+  if (hit && hit.v === 3 && Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) return { lat: hit.lat, lng: hit.lng };
+  const precise = await viaAwesomeApi(cep);
+  if (precise) {
+    await ref.set({ lat: precise.lat, lng: precise.lng, v: 3, at: Date.now() });
+    return precise;
+  }
+  // Plano B: BrasilAPI costuma devolver só o centro da cidade (imprecisa) — serve de estimativa, mas NÃO vai ao cache
+  return (await viaBrasilApi(cep)) || (await viaOrsGeocode(cep, orsKey));
 }
 
 // Distância por estrada (km) entre dois pontos, ou null se o serviço falhar.
@@ -103,9 +127,17 @@ async function allowLookup(uid) {
 }
 
 // Coordenadas privadas de origem do profissional (vet_origins/{uid}), gravadas por geocodeVetOrigin.
-async function vetOrigin(vetId) {
-  const o = (await db().collection("vet_origins").doc(vetId).get()).data();
-  return o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? o : null;
+async function vetOrigin(vetId, orsKey) {
+  const ref = db().collection("vet_origins").doc(vetId);
+  const o = (await ref.get()).data();
+  if (!o || !T.normalizeCep(o.cep)) return null;
+  if (o.v === 3 && Number.isFinite(o.lat) && Number.isFinite(o.lng)) return o;
+  // coordenada antiga (imprecisa): refaz a partir do CEP
+  const p = await geocodeCep(o.cep, orsKey);
+  if (!p) return null;
+  const fresh = { lat: p.lat, lng: p.lng, cep: o.cep, v: 3, at: Date.now() };
+  await ref.set(fresh);
+  return fresh;
 }
 
 // Cota o deslocamento do profissional `vetId` até o CEP do tutor.
@@ -124,10 +156,10 @@ async function quoteTravel(vetId, destCepRaw, opts = {}) {
 
   const destCep = T.normalizeCep(destCepRaw);
   if (!destCep) return { ok: false, error: "cep_invalido" };
-  const origin = await vetOrigin(vetId);
+  const origin = await vetOrigin(vetId, key0);
   if (!origin || !T.normalizeCep(origin.cep)) return { ok: false, error: "origem_ausente" };
 
-  const key = `${origin.cep}_${destCep}`;
+  const key = `${origin.cep}_${destCep}_3`;
   const cacheRef = db().collection("travel_cache").doc(key);
   const cached = (await cacheRef.get()).data();
   let km = cached && Number.isFinite(cached.km) ? cached.km : null;
@@ -137,7 +169,7 @@ async function quoteTravel(vetId, destCepRaw, opts = {}) {
     // coordenadas do destino: cache primeiro; só consulta fora se couber na cota
     let dest = null;
     const geoHit = (await db().collection("cep_geo").doc(destCep).get()).data();
-    if (geoHit && Number.isFinite(geoHit.lat)) dest = { lat: geoHit.lat, lng: geoHit.lng };
+    if (geoHit && geoHit.v === 3 && Number.isFinite(geoHit.lat)) dest = { lat: geoHit.lat, lng: geoHit.lng };
     if (!dest) {
       if (opts.noExternal) return { ok: false, error: "destino_nao_encontrado" };
       if (!(await allowLookup(opts.uid))) return { ok: false, error: "limite" };
@@ -160,4 +192,4 @@ async function quoteTravel(vetId, destCepRaw, opts = {}) {
   return { ok: true, mode: "per_km", source, ...T.feeForDistance(km, cfg, rules) };
 }
 
-module.exports = { ORS_SECRET, orsKey, loadRules, geocodeCep, routeKm, vetOrigin, quoteTravel, allowLookup, DAILY_LOOKUPS_PER_USER };
+module.exports = { ORS_SECRET, AWESOME_SECRET, orsKey, loadRules, geocodeCep, routeKm, vetOrigin, quoteTravel, allowLookup, DAILY_LOOKUPS_PER_USER };

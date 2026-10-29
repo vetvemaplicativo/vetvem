@@ -10,7 +10,7 @@ const admin = require("firebase-admin");
 const { validateOptions, computeDeadline, formatDeadline, parseDateTimeMs } = require("./horarios_lib");
 const { petLabel } = require("./appointment_amount");
 const { startRelocation } = require("./realocacao_core");
-const { ORS_SECRET } = require("./travel_core");
+const { ORS_SECRET, AWESOME_SECRET } = require("./travel_core");
 const { defineSecret } = require("firebase-functions/params");
 
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
@@ -117,7 +117,7 @@ exports.proposeNewTimes = onRequest({ region: "southamerica-east1", cors: false 
 });
 
 // ── Tutor escolhe um horário (choice = 0..2) ou recusa todos (choice = "none") ─
-exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET, ORS_SECRET] }, async (req, res) => {
+exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: false, secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const uid = await authUid(req, res);
   if (!uid) return;

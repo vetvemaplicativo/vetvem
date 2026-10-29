@@ -32,10 +32,16 @@ const fakeAdmin = {
 
 const calls = [];
 let brasilCoords = {};          // cep -> {latitude, longitude}
+let awesomeCoords = {};         // cep -> {lat, lng}
 let routeMeters = 12000;        // null => serviço de rotas fora do ar
 const fakeAxios = {
   async get(url, opts) {
     calls.push({ m: "GET", url });
+    if (url.includes("awesomeapi")) {
+      const c = awesomeCoords[url.split("/").pop()];
+      if (!c) throw new Error("404");
+      return { data: c };
+    }
     if (url.includes("brasilapi")) {
       const cep = url.split("/").pop();
       const c = brasilCoords[cep];
@@ -84,9 +90,10 @@ function post(fn, uid, body) {
 const KEY = "ors-key";
 function seed(vetOver = {}) {
   store.clear(); calls.length = 0; routeMeters = 12000;
-  brasilCoords = { "22000000": { latitude: "-22.95", longitude: "-43.20" } }; // destino com coordenadas
+  awesomeCoords = { "22000000": { lat: "-22.95", lng: "-43.20" } }; // destino com coordenadas
+  brasilCoords = {};
   store.set("users/vet1", { role: "professional", travelModel: "per_km", travelPerKm: "2", travelRoundTrip: false, travelMaxKm: "30", ...vetOver });
-  store.set("vet_origins/vet1", { lat: -22.9, lng: -43.17, cep: "20040020", at: 1 });
+  store.set("vet_origins/vet1", { lat: -22.9, lng: -43.17, cep: "20040020", v: 3, at: 1 });
 }
 const roadCalls = () => calls.filter((c) => c.url.includes("directions"));
 
@@ -103,7 +110,7 @@ test("quote: por estrada, só ida; guarda no cache e não repete a consulta", as
   const again = await core.quoteTravel("vet1", "22000000", { orsKey: KEY, uid: "t1" });
   assert.equal(again.fee, 24);
   assert.equal(roadCalls().length, 1); // veio do cache
-  assert.ok(store.has("travel_cache/20040020_22000000"));
+  assert.ok(store.has("travel_cache/20040020_22000000_3"));
 });
 
 test("quote: ida e volta dobra; teto por km e teto total valem", async () => {
@@ -113,7 +120,7 @@ test("quote: ida e volta dobra; teto por km e teto total valem", async () => {
   assert.equal(q.billedKm, 24);
   assert.equal(q.fee, 72); // 24 km × 3
   routeMeters = 20000; // 20 km × 2 × 3 = 120 -> teto 80
-  store.delete("travel_cache/20040020_22000000");
+  store.delete("travel_cache/20040020_22000000_3");
   const q2 = await core.quoteTravel("vet1", "22000000", { orsKey: KEY });
   assert.equal(q2.fee, 80);
   assert.equal(q2.capped, true);
@@ -136,17 +143,17 @@ test("quote: serviço de rotas fora do ar => estimativa (linha reta × 1,3), sem
   assert.equal(q.ok, true);
   assert.equal(q.source, "estimate");
   assert.ok(q.km > 6 && q.km < 12, String(q.km));
-  assert.ok(!store.has("travel_cache/20040020_22000000"));
+  assert.ok(!store.has("travel_cache/20040020_22000000_3"));
 });
 
-test("quote: CEP sem coordenadas na BrasilAPI usa a geocodificação do ORS (e guarda)", async () => {
-  seed(); brasilCoords = {};
+test("quote: CEP sem coordenadas na BrasilAPI usa a geocodificação do ORS (sem guardar no cache)", async () => {
+  seed(); brasilCoords = {}; awesomeCoords = {};
   const q = await core.quoteTravel("vet1", "22000000", { orsKey: KEY });
   assert.equal(q.ok, true);
   assert.ok(calls.some((c) => c.url.includes("/geocode/search")));
-  assert.ok(store.has("cep_geo/22000000"));
+  assert.ok(!store.has("cep_geo/22000000")) // plano B (impreciso) não vai ao cache;
   // sem chave do ORS e sem coordenadas: não acha
-  seed(); brasilCoords = {};
+  seed(); brasilCoords = {}; awesomeCoords = {};
   assert.equal((await core.quoteTravel("vet1", "22000000", {})).error, "destino_nao_encontrado");
 });
 
@@ -155,7 +162,7 @@ test("limite diário de consultas externas por usuário", async () => {
   store.set(`travel_usage/abuser_${new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "")}`, { n: core.DAILY_LOOKUPS_PER_USER });
   assert.equal((await core.quoteTravel("vet1", "22000000", { orsKey: KEY, uid: "abuser" })).error, "limite");
   // quem já está em cache não gasta cota
-  store.set("travel_cache/20040020_22000000", { km: 5, at: 1 });
+  store.set("travel_cache/20040020_22000000_3", { km: 5, at: 1 });
   assert.equal((await core.quoteTravel("vet1", "22000000", { orsKey: KEY, uid: "abuser" })).fee, 10);
 });
 
@@ -197,10 +204,34 @@ test("realocação: candidato por km é cotado para o CEP do pedido; fora do rai
   assert.equal(opts[0].travel, 0);
   store.set("professionals_public/vet1", pub({ travelModel: "per_km", travelPerKm: 2, travelMaxKm: 30 }));
   routeMeters = 45000;
-  store.delete("travel_cache/20040020_22000000");
+  store.delete("travel_cache/20040020_22000000_3");
   opts = await rcore.findCandidates(appt, "a1", undefined, { orsKey: KEY });
   assert.equal(opts.length, 0); // fora do raio
   routeMeters = 12000;
   opts = await rcore.findCandidates({ ...appt, addrCep: "" }, "a1", undefined, { orsKey: KEY });
   assert.equal(opts.length, 0); // sem CEP não dá para cotar
+});
+
+test("coordenada antiga (sem v:3) é refeita; CEPs diferentes na mesma cidade não dão 0 km", async () => {
+  seed();
+  // origem antiga e imprecisa (centro da cidade) + destino antigo no cache
+  store.set("vet_origins/vet1", { lat: -22.9, lng: -43.17, cep: "20040020", at: 1 });
+  store.set("cep_geo/22000000", { lat: -22.90642, lng: -43.18223, at: 1 });
+  awesomeCoords["20040020"] = { lat: "-22.9050", lng: "-43.1751" };
+  routeMeters = 9000;
+  const q = await core.quoteTravel("vet1", "22000000", { orsKey: KEY });
+  assert.equal(q.km, 9);
+  assert.equal(q.fee, 18);
+  assert.equal(store.get("vet_origins/vet1").v, 3);
+  assert.equal(store.get("cep_geo/22000000").v, 3);
+  assert.ok(roadCalls().length === 1);
+  const dest = roadCalls()[0].body.coordinates[1];
+  assert.equal(dest[0], -43.2); // refeito pela AwesomeAPI, não o centro antigo
+});
+
+test("sem AwesomeAPI usa a BrasilAPI", async () => {
+  seed(); awesomeCoords = {}; brasilCoords = { "22000000": { latitude: "-22.95", longitude: "-43.20" } };
+  const q = await core.quoteTravel("vet1", "22000000", { orsKey: KEY });
+  assert.equal(q.ok, true);
+  assert.ok(!calls.some((c) => c.url.includes("/geocode/search")));
 });

@@ -2049,7 +2049,7 @@ class _SettingsList extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AddAddressSheet(controller: controller),
+      builder: (_) => AddAddressSheet(controller: controller),
     );
   }
 
@@ -2066,15 +2066,16 @@ class _SettingsList extends StatelessWidget {
 
 // ─── Add Address Sheet ────────────────────────────────────────────────────────
 
-class _AddAddressSheet extends StatefulWidget {
+class AddAddressSheet extends StatefulWidget {
   final ProfileController controller;
   final SavedAddress? existing; // != null: editando um endereço salvo
-  const _AddAddressSheet({required this.controller, this.existing});
+  final void Function(SavedAddress saved)? onSaved; // ex.: selecionar o endereço no agendamento
+  const AddAddressSheet({super.key, required this.controller, this.existing, this.onSaved});
   @override
-  State<_AddAddressSheet> createState() => _AddAddressSheetState();
+  State<AddAddressSheet> createState() => AddAddressSheetState();
 }
 
-class _AddAddressSheetState extends State<_AddAddressSheet> {
+class AddAddressSheetState extends State<AddAddressSheet> {
   final _cep = TextEditingController();
   final _street = TextEditingController();
   final _number = TextEditingController();
@@ -2237,6 +2238,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                 } else {
                   widget.controller.addAddress(saved);
                 }
+                widget.onSaved?.call(saved);
                 Get.back();
                 Get.snackbar('Endereço salvo', widget.existing != null ? '$_label atualizado com sucesso' : '$_label adicionado com sucesso',
                     snackPosition: SnackPosition.BOTTOM,
@@ -2393,7 +2395,7 @@ class _AddressesSheet extends StatelessWidget {
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (_) =>
-                          _AddAddressSheet(controller: controller, existing: a),
+                          AddAddressSheet(controller: controller, existing: a),
                     );
                   },
                 ),
@@ -2412,7 +2414,7 @@ class _AddressesSheet extends StatelessWidget {
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                builder: (_) => _AddAddressSheet(controller: controller),
+                builder: (_) => AddAddressSheet(controller: controller),
               );
             },
             icon: const Icon(Icons.add, size: 16),

@@ -3,6 +3,7 @@ import 'multi_pet_picker.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import '../profile/profile_view.dart' show AddAddressSheet;
 import '../vets/vets_controller.dart';
 import 'scheduling_controller.dart';
 
@@ -433,164 +434,15 @@ class _AddressSelector extends GetView<SchedulingController> {
     });
   }
 
+  // Mesmo formulário do Perfil: o CEP vem primeiro e preenche rua, bairro, cidade e UF.
   void _showAddAddressSheet(BuildContext context, ProfileController profileCtrl) {
-    final streetCtrl = TextEditingController();
-    final numberCtrl = TextEditingController();
-    final complementCtrl = TextEditingController();
-    final neighborhoodCtrl = TextEditingController();
-    final cityCtrl = TextEditingController();
-    final cepCtrl = TextEditingController();
-    String selectedLabel = 'Casa';
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: StatefulBuilder(
-            builder: (_, ss) => SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36, height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE5E7EB),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Novo endereço',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark)),
-                  const SizedBox(height: 16),
-                  // Label
-                  Wrap(
-                    spacing: 8,
-                    children: ['Casa', 'Trabalho', 'Outro'].map((l) {
-                      final sel = selectedLabel == l;
-                      return GestureDetector(
-                        onTap: () => ss(() => selectedLabel = l),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: sel ? AppColors.primary : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: sel ? AppColors.primary : const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Text(l,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: sel ? Colors.white : AppColors.textDark,
-                              )),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: streetCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Rua / Avenida',
-                      prefixIcon: Icon(Icons.location_on_outlined,
-                          color: AppColors.textLight, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: numberCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'Número'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: complementCtrl,
-                          decoration: const InputDecoration(hintText: 'Complemento (opcional)'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: neighborhoodCtrl,
-                    decoration: const InputDecoration(hintText: 'Bairro'),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: cityCtrl,
-                          decoration: const InputDecoration(hintText: 'Cidade'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: cepCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'CEP'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      final street = streetCtrl.text.trim();
-                      final number = numberCtrl.text.trim();
-                      final neighborhood = neighborhoodCtrl.text.trim();
-                      final city = cityCtrl.text.trim();
-                      if (street.isEmpty || number.isEmpty || neighborhood.isEmpty || city.isEmpty) {
-                        Get.snackbar('Atenção', 'Preencha rua, número, bairro e cidade',
-                            snackPosition: SnackPosition.TOP);
-                        return;
-                      }
-                      final newAddr = SavedAddress(
-                        label: selectedLabel,
-                        street: street,
-                        number: number,
-                        complement: complementCtrl.text.trim(),
-                        neighborhood: neighborhood,
-                        city: city,
-                        state: 'RJ',
-                        cep: cepCtrl.text.trim(),
-                      );
-                      profileCtrl.addAddress(newAddr);
-                      controller.selectAddress(newAddr);
-                      Get.back();
-                    },
-                    child: const Text('Salvar endereço'),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ),
-        ),
+      builder: (_) => AddAddressSheet(
+        controller: profileCtrl,
+        onSaved: controller.selectAddress,
       ),
     );
   }
@@ -733,6 +585,14 @@ class _ServiceSelector extends GetView<SchedulingController> {
                               '+ Deslocamento R\$ ${s.travel.toStringAsFixed(2).replaceAll('.', ',')} (taxa fixa por visita)',
                               style: const TextStyle(
                                   fontSize: 11, color: AppColors.textMedium),
+                            ),
+                          ),
+                        if (controller.vetChargesByKm && s.travelByKm)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 3),
+                            child: Text(
+                              '+ Deslocamento calculado pela distância até o seu endereço',
+                              style: TextStyle(fontSize: 11, color: AppColors.textMedium),
                             ),
                           ),
                         if (s.instructions.isNotEmpty)

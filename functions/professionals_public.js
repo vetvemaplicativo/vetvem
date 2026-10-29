@@ -19,6 +19,7 @@
 //    reconcileProfessionalsPublicNow) — backfill inicial, repara falhas e
 //    remove órfãos.
 //
+// (v3: inclui deslocamento por km)
 // ATENÇÃO: isPublic() é o MESMO critério de site_sync.js (duplicado de
 // propósito: site_sync não exporta helpers, e tudo que ele exporta vira
 // Cloud Function via Object.assign em index.js). Mudou lá, mude aqui.
