@@ -70,3 +70,43 @@ test("taxa de deslocamento NAO é cobrada de cliente antigo (sem feesDisclosed)"
   assert.equal(priceForService({ price: "200", travelFee: "80" }, { feesDisclosed: false }).amount, 200);
   assert.equal(priceForService({ price: "200", travelFee: "80" }, { petCount: 2 }).amount, 400);
 });
+
+// ── Vários serviços na mesma consulta ──
+const { priceForServices, serviceNamesOf } = require("../appointment_amount");
+const cons = { name: "Consulta", price: "150", unit: "consulta" };
+const vac = { name: "Vacina", price: "80", unit: "consulta", perAnimal: true, additionalPrice: "60" };
+
+test("serviceNamesOf: lista com 2+ nomes; senão serviceName; sem repetidos", () => {
+  assert.deepEqual(serviceNamesOf({ serviceName: "A" }), ["A"]);
+  assert.deepEqual(serviceNamesOf({ serviceName: "A + B", services: [{ name: "A" }, { name: "B" }] }), ["A", "B"]);
+  assert.deepEqual(serviceNamesOf({ serviceName: "A", services: [{ name: "A" }, { name: "A" }] }), ["A"]);
+  assert.deepEqual(serviceNamesOf({}), []);
+  const many = Array.from({ length: 30 }, (_, i) => ({ name: "S" + i }));
+  assert.equal(serviceNamesOf({ services: many }).length, 10);
+});
+
+test("vários serviços: soma dos preços, 1 animal", () => {
+  assert.deepEqual(priceForServices([cons, vac], {}, undefined), { amount: 230, count: 1, travel: 0 });
+});
+
+test("vários serviços com vários animais: cada serviço segue a própria regra", () => {
+  // consulta (comum) 2 × 150 + vacina (por animal) 80 + 60
+  assert.equal(priceForServices([cons, vac], { petCount: 2 }, undefined).amount, 440);
+});
+
+test("deslocamento fixo: cobra uma vez (a maior taxa), só se divulgada", () => {
+  const a = { ...cons, travelFee: "20" };
+  const b = { ...vac, travelFee: "30" };
+  assert.equal(priceForServices([a, b], { feesDisclosed: true }, undefined).amount, 260);
+  assert.equal(priceForServices([a, b], {}, undefined).amount, 230);
+});
+
+test("deslocamento por km: valor calculado uma vez só", () => {
+  const r = priceForServices([cons, vac], { feesDisclosed: true }, { travelFee: 47.4 });
+  assert.deepEqual(r, { amount: 277.4, count: 1, travel: 47.4 });
+  assert.equal(priceForServices([cons, vac], { feesDisclosed: true }, { travelFee: 0 }).amount, 230);
+});
+
+test("serviço sem preço válido invalida o conjunto", () => {
+  assert.equal(priceForServices([cons, { name: "x" }], {}, undefined), null);
+});

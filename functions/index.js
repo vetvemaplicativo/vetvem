@@ -61,7 +61,7 @@ async function verifyAdmin(req, res) {
 // additionalPrice (opcional; padrão = price) em cada adicional.
 // Compatível com apps antigos: 1 animal => mesmo valor de antes. Se o serviço
 // não for achado no catálogo, mantém o valor enviado pelo app (e registra aviso).
-const { priceForService, toNum, petLabel } = require("./appointment_amount");
+const { priceForService, priceForServices, serviceNamesOf, toNum, petLabel } = require("./appointment_amount");
 const { quoteTravel, ORS_SECRET, AWESOME_SECRET } = require("./travel_core");
 const TRAVEL_ERRORS = {
   fora_do_raio: "Este profissional não atende o seu endereço (fora do raio de deslocamento).",
@@ -72,11 +72,14 @@ async function computeAppointmentAmount(appt, clientAmount) {
   const fallback = { amount: Number(clientAmount), source: "client", count: 1 };
   try {
     const vetId = appt.vetId;
-    const name = String(appt.serviceName || "").trim();
-    if (!vetId || !name) return fallback;
+    const names = serviceNamesOf(appt);
+    if (!vetId || names.length === 0) return fallback;
     const vet = (await admin.firestore().collection("users").doc(vetId).get()).data() || {};
-    const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
-    if (!svc) return { ...fallback, source: "client-sem-servico" };
+    const found = names.map((name) => (vet.services || []).find((x) => String((x && x.name) || "").trim() === name));
+    if (found.some((x) => !x)) return { ...fallback, source: "client-sem-servico" };
+    const svcs = found;
+    // Vários serviços: o deslocamento por km vale se ALGUM deles cobra; é cobrado uma vez só.
+    const svc = { ...svcs[0], travelByKm: svcs.some((x) => x.travelByKm === true) };
     // Deslocamento por km: só quando o app declarou que MOSTROU o valor calculado (travelQuoted)
     // para o CEP do tutor. Cliente antigo segue na taxa fixa do serviço, como antes.
     // O profissional por km escolhe, serviço a serviço, se cobra deslocamento (svc.travelByKm).
@@ -98,7 +101,7 @@ async function computeAppointmentAmount(appt, clientAmount) {
         opts = { travelFee: q.fee };
       }
     }
-    const priced = priceForService(svc, appt, opts);
+    const priced = svcs.length > 1 ? priceForServices(svcs, appt, opts) : priceForService(svcs[0], appt, opts);
     if (!priced) return { ...fallback, source: "client-preco-zero" };
     const { amount: total, count, travel } = priced;
     return { amount: total, source: "server", count, travel };
@@ -943,9 +946,15 @@ async function sendInstructions(ref, appt) {
   try {
     if (!appt.vetId || !appt.serviceName) return "";
     const vet = (await admin.firestore().collection("users").doc(appt.vetId).get()).data() || {};
-    const name = String(appt.serviceName).trim();
-    const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
-    const text = String((svc && svc.instructions) || "").trim().slice(0, 240);
+    const names = serviceNamesOf(appt);
+    const texts = names
+      .map((name) => {
+        const svc = (vet.services || []).find((x) => String((x && x.name) || "").trim() === name);
+        const t = String((svc && svc.instructions) || "").trim().slice(0, 240);
+        return t && names.length > 1 ? `${name}: ${t}` : t;
+      })
+      .filter(Boolean);
+    const text = texts.join("\n").slice(0, names.length > 1 ? 700 : 240);
     if (!text) return "";
     await ref.update({
       instructionsText: text,

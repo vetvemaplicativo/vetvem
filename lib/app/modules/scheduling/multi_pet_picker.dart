@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/models/vet_model.dart';
 import 'travel_quote.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -226,17 +227,24 @@ class MultiPriceSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<SchedulingController>();
     return Obx(() {
-      final s = c.selectedService.value;
+      final list = c.selectedServices.toList();
       final n = c.animalCount;
       // Com 1 animal em serviço comum não há o que somar: o resumo some.
       final byKm = c.usesTravelByKm;
-      if (s == null || (!s.perAnimal && n <= 1 && s.travel <= 0 && !byKm)) return const SizedBox.shrink();
-      final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
-      final line = n <= 1
-          ? '1 animal: ${_money(s.price)}'
-          : (extra == s.price
-              ? '$n animais: $n × ${_money(s.price)}'
-              : '$n animais: ${_money(s.price)} + ${n - 1} × ${_money(extra)}');
+      final fixed = c.fixedTravel;
+      if (list.isEmpty ||
+          (list.length == 1 && !list.first.perAnimal && n <= 1 && fixed <= 0 && !byKm)) {
+        return const SizedBox.shrink();
+      }
+      String lineOf(VetService s) {
+        final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
+        final body = n <= 1
+            ? _money(s.price)
+            : (extra == s.price
+                ? '$n × ${_money(s.price)}'
+                : '${_money(s.price)} + ${n - 1} × ${_money(extra)}');
+        return list.length > 1 ? '${s.name}: $body' : (n <= 1 ? '1 animal: $body' : '$n animais: $body');
+      }
       final tooMany = n > SchedulingController.maxAnimalsBeforeQuote;
       return Container(
         margin: const EdgeInsets.only(top: 4),
@@ -248,9 +256,12 @@ class MultiPriceSummary extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(line, style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
-            if (s.travel > 0)
-              Text('Deslocamento (taxa fixa por visita): ${_money(s.travel)}',
+            for (final s in list)
+              Text(lineOf(s), style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            if (list.length > 1 && n > 1)
+              Text('$n animais', style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            if (!byKm && fixed > 0)
+              Text('Deslocamento (taxa fixa por visita): ${_money(fixed)}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
             if (byKm) _TravelLine(c.travelQuote.value),
             const SizedBox(height: 2),
@@ -266,7 +277,7 @@ class MultiPriceSummary extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: () => launchUrl(
                   Uri.parse(
-                      'https://wa.me/$_vetvemWhatsapp?text=${Uri.encodeComponent('Olá! Quero agendar "${s.name}" para $n animais e gostaria de um orçamento.')}'),
+                      'https://wa.me/$_vetvemWhatsapp?text=${Uri.encodeComponent('Olá! Quero agendar "${c.serviceLabel}" para $n animais e gostaria de um orçamento.')}'),
                   mode: LaunchMode.externalApplication,
                 ),
                 icon: const Icon(Icons.chat_outlined, size: 18),
@@ -289,8 +300,10 @@ class ServiceInstructionsNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<SchedulingController>();
     return Obx(() {
-      final s = c.selectedService.value;
-      if (s == null || s.instructions.isEmpty) return const SizedBox.shrink();
+      final withText = c.selectedServices.where((x) => x.instructions.isNotEmpty).toList();
+      if (withText.isEmpty) return const SizedBox.shrink();
+      final many = c.selectedServices.length > 1;
+      final text = withText.map((x) => many ? '${x.name}: ${x.instructions}' : x.instructions).join('\n');
       return Container(
         width: double.infinity,
         margin: const EdgeInsets.only(top: 10),
@@ -305,7 +318,7 @@ class ServiceInstructionsNotice extends StatelessWidget {
             const Text('⚠️ Orientação do veterinário para este serviço',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFB45309))),
             const SizedBox(height: 4),
-            Text(s.instructions,
+            Text(text,
                 style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFB45309))),
           ],
         ),

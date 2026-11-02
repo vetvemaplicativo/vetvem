@@ -39,7 +39,7 @@ class PaymentController extends GetxController {
   late final double price;
 
   // ── MP Public Key (segura no cliente — só cria tokens, não cobra) ──
-  static const _mpPublicKey = 'APP_USR-8b0f8ba4-7197-48f6-845b-bb96d906cd8f';
+  static const _mpPublicKey = 'APP_USR-9373d076-9bce-472f-ad0c-e037ce2b3107';
 
   // ── Cloud Functions base URL ───────────────────────────────────────
   static const _cfBase = 'https://southamerica-east1-vetvem-18bf4.cloudfunctions.net';

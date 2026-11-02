@@ -142,6 +142,9 @@ function rankCandidates(list) {
 function canRelocate(appt, nowMs) {
   if (!appt) return { ok: false, why: "sem pedido" };
   if (appt.canRelocate !== true) return { ok: false, why: "app sem realocação" };
+  // Vários serviços na mesma consulta: ainda não há como achar outro profissional que faça todos
+  // pelo mesmo valor; o pedido segue o caminho de antes (estorno automático).
+  if (Array.isArray(appt.services) && appt.services.length > 1) return { ok: false, why: "vários serviços" };
   // Portal: só com a marca (portal novo) e e-mail para mandar o link de escolha.
   if (isPortal(appt) && !appt.email) return { ok: false, why: "portal sem e-mail" };
   if (appt.paymentStatus !== "approved" || !appt.paymentId) return { ok: false, why: "não pago" };

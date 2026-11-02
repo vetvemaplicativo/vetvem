@@ -47,7 +47,10 @@ class _SchedulingForm extends GetView<SchedulingController> {
             const SizedBox(height: 24),
 
             // ── Serviço ───────────────────────────────────────────────
-            const _SectionTitle('Qual serviço?'),
+            const _SectionTitle('Quais serviços?'),
+            const SizedBox(height: 4),
+            const Text('Você pode marcar mais de um (ex.: consulta e vacina) na mesma visita.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
             const SizedBox(height: 12),
             _ServiceSelector(),
             const MultiPriceSummary(),
@@ -487,12 +490,12 @@ class _ServiceSelector extends GetView<SchedulingController> {
     }
 
     return Obx(() {
-      final selected = controller.selectedService.value;
+      final selected = controller.selectedServices.map((x) => x.name).toSet();
       return Column(
         children: services.map((s) {
-          final isSelected = selected?.name == s.name;
+          final isSelected = selected.contains(s.name);
           return GestureDetector(
-            onTap: () => controller.selectService(s),
+            onTap: () => controller.toggleService(s),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(bottom: 10),
@@ -620,9 +623,7 @@ class _ServiceSelector extends GetView<SchedulingController> {
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    isSelected
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked,
+                    isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
                     color: isSelected ? AppColors.primary : AppColors.textLight,
                     size: 22,
                   ),

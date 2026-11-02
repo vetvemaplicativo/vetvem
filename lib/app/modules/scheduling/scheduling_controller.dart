@@ -51,7 +51,7 @@ class SchedulingController extends GetxController {
 
   VetModel? get _vet => Get.find<VetsController>().selectedVet.value;
   bool get vetChargesByKm => _vet?.chargesTravelByKm ?? false;
-  bool get usesTravelByKm => vetChargesByKm && (selectedService.value?.travelByKm ?? false);
+  bool get usesTravelByKm => vetChargesByKm && selectedServices.any((s) => s.travelByKm);
   double get _kmFee => usesTravelByKm && travelQuote.value.isOk ? travelQuote.value.fee : 0;
 
   Future<void> refreshTravelQuote() async {
@@ -73,11 +73,23 @@ class SchedulingController extends GetxController {
     if (seq == _quoteSeq) travelQuote.value = q;
   }
 
-  /// Total do pedido para o serviço escolhido (inclui o deslocamento por km já calculado).
+  /// Soma dos serviços escolhidos (cada um com a sua regra de animais), sem deslocamento.
+  double get servicesTotal {
+    final n = animalCount;
+    return selectedServices.fold<double>(0, (a, s) => a + s.totalFor(n));
+  }
+
+  /// Taxa fixa de deslocamento: uma vez por visita (a maior entre os serviços escolhidos).
+  double get fixedTravel => selectedServices.fold<double>(0, (a, s) => s.travel > a ? s.travel : a);
+
+  /// Nome do pedido: "Consulta + Vacina" (os apps que não conhecem a lista mostram este texto).
+  String get serviceLabel => selectedServices.map((s) => s.name).join(' + ');
+
+  /// Total do pedido (inclui o deslocamento: por km já calculado, ou a taxa fixa — uma vez só).
   double get totalPrice {
-    final s = selectedService.value;
-    if (s == null) return 0;
-    return ((s.grandTotalFor(animalCount) + _kmFee) * 100).round() / 100;
+    if (selectedServices.isEmpty) return 0;
+    final travel = usesTravelByKm ? _kmFee : fixedTravel;
+    return ((servicesTotal + travel) * 100).round() / 100;
   }
 
   void togglePet(int i) {
@@ -104,7 +116,7 @@ class SchedulingController extends GetxController {
   }
 
   void setExtraAnimals(int n) => extraAnimals.value = n.clamp(0, 50);
-  final selectedService = Rx<VetService?>(null);
+  final selectedServices = <VetService>[].obs; // 1 ou mais serviços na mesma consulta
   final selectedDate = Rx<DateTime?>(null);
   final selectedTime = Rx<String?>(null);
   final selectedAddress = Rx<SavedAddress?>(null);
@@ -149,8 +161,14 @@ class SchedulingController extends GetxController {
     return DateTime.now().add(const Duration(days: 1));
   }
 
-  void selectService(VetService service) {
-    selectedService.value = service;
+  /// Marca/desmarca um serviço (o tutor pode combinar quantos quiser, ex.: consulta + vacina).
+  void toggleService(VetService service) {
+    final i = selectedServices.indexWhere((s) => s.name == service.name);
+    if (i >= 0) {
+      selectedServices.removeAt(i);
+    } else {
+      selectedServices.add(service);
+    }
     refreshTravelQuote();
   }
 
@@ -272,8 +290,8 @@ class SchedulingController extends GetxController {
   }
 
   Future<void> confirmScheduling({bool confirmed = false}) async {
-    if (selectedService.value == null) {
-      Get.snackbar('Atenção', 'Selecione um serviço',
+    if (selectedServices.isEmpty) {
+      Get.snackbar('Atenção', 'Selecione ao menos um serviço',
           snackPosition: SnackPosition.TOP);
       return;
     }
@@ -333,7 +351,7 @@ class SchedulingController extends GetxController {
 
     final vet = Get.find<VetsController>().selectedVet.value;
     final profile = Get.find<ProfileController>();
-    final service = selectedService.value!;
+    final services = selectedServices.toList();
     final addr = selectedAddress.value!;
     // Pets do pedido: 1 ou vários. petCount/pets só vão no documento quando há
     // mais de um animal (ou serviço "por animal") — com 1 animal em serviço
@@ -341,10 +359,11 @@ class SchedulingController extends GetxController {
     final chosen =
         (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList();
     final count = animalCount;
-    final multi = service.perAnimal || count > 1;
+    final multi = services.any((s) => s.perAnimal) || count > 1;
     final kmFee = _kmFee;
     final kmDistance = usesTravelByKm ? travelQuote.value.km : 0.0;
-    final total = ((service.grandTotalFor(count) + kmFee) * 100).round() / 100;
+    final total = totalPrice;
+    final label = serviceLabel;
     final pet = chosen.first; // validado acima: há ao menos um animal cadastrado
 
     isLoading.value = true;
@@ -365,7 +384,9 @@ class SchedulingController extends GetxController {
         'petAge': pet.ageLabel.isNotEmpty ? pet.ageLabel : pet.age,
         'petCastrated': pet.castrated,
         'petPhotoBase64': pet.photoBase64,
-        'serviceName': service.name,
+        'serviceName': label,
+        // Mais de um serviço: o servidor calcula o valor pela lista (só os nomes valem).
+        if (services.length > 1) 'services': [for (final s in services) {'name': s.name, 'price': s.price}],
         'date': formattedDate,
         'time': selectedTime.value ?? '',
         'address': addr.fullLine,
@@ -382,7 +403,7 @@ class SchedulingController extends GetxController {
         'addrCity': addr.city,
         'addrNeighborhood': addr.neighborhood,
         'feesDisclosed': true,
-        if (service.travel > 0) 'travelFee': service.travel,
+        if (fixedTravel > 0) 'travelFee': fixedTravel,
         // Deslocamento por km: CEP do tutor + marca de que este app MOSTROU o valor calculado
         // (sem ela o servidor não cobra o deslocamento por km).
         if (vetChargesByKm) ...{
@@ -412,7 +433,7 @@ class SchedulingController extends GetxController {
 
       Get.find<AnalyticsService>().logAppointmentCreated(
         vetId: vet?.id ?? '',
-        serviceName: service.name,
+        serviceName: label,
       );
 
       // Fluxo atual: paga já ao solicitar (como Uber/iFood), em vez de
@@ -433,7 +454,7 @@ class SchedulingController extends GetxController {
         'petAge': pet.ageLabel.isNotEmpty ? pet.ageLabel : pet.age,
         'petCastrated': pet.castrated,
         'petPhotoBase64': pet.photoBase64,
-        'serviceName': service.name,
+        'serviceName': label,
         'date': formattedDate,
         'time': selectedTime.value ?? '',
         'address': addr.fullLine,

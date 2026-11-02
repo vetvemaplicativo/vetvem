@@ -49,6 +49,51 @@ function priceForService(svc, appt, opts) {
   return { amount, count, travel };
 }
 
+// ── Vários serviços na mesma consulta ─────────────────────────────────────────
+// O pedido pode trazer appt.services = [{name, ...}] (2 ou mais). O servidor só confia nos
+// NOMES: preço e regras vêm do catálogo do profissional. serviceName guarda o texto
+// "A + B" só para exibição nos apps/painel que não conhecem a lista.
+const MAX_SERVICES = 10;
+
+// Nomes dos serviços do pedido: a lista quando tem 2+ itens; senão, só serviceName.
+function serviceNamesOf(appt) {
+  const list = appt && Array.isArray(appt.services) ? appt.services : [];
+  const seen = new Set();
+  const names = [];
+  for (const it of list) {
+    const n = String((it && it.name) || "").trim();
+    if (n && !seen.has(n)) {
+      seen.add(n);
+      names.push(n);
+    }
+  }
+  if (names.length >= 2) return names.slice(0, MAX_SERVICES);
+  const one = String((appt && appt.serviceName) || "").trim();
+  return one ? [one] : [];
+}
+
+// svcs: itens do catálogo já encontrados (2+). Cada serviço é calculado como no pedido
+// de um serviço só (vários animais incluídos); o deslocamento entra UMA vez:
+//  - por km (opts.travelFee): o valor calculado;
+//  - taxa fixa: a maior entre os serviços escolhidos (é a mesma visita).
+// Retorna { amount, count, travel } ou null se algum serviço não tem preço válido.
+function priceForServices(svcs, appt, opts) {
+  let sum = 0;
+  let count = 1;
+  let fixedTravel = 0;
+  for (const s of svcs) {
+    const p = priceForService(s, appt, { travelFee: 0 });
+    if (!p) return null;
+    sum += p.amount;
+    count = Math.max(count, p.count);
+    fixedTravel = Math.max(fixedTravel, toNum(s.travelFee));
+  }
+  const perKm = opts && typeof opts.travelFee === "number" && opts.travelFee >= 0;
+  const travelRaw = perKm ? opts.travelFee : fixedTravel;
+  const travel = travelRaw > 0 && appt && appt.feesDisclosed === true ? travelRaw : 0;
+  return { amount: Math.round((sum + travel) * 100) / 100, count, travel };
+}
+
 // Nome do(s) animal(is) para usar em textos/notificações: "Mingau" quando é um
 // só; "Mingau +12" quando o pedido tem 13 animais; "13 animais" se faltar o nome.
 function petLabel(appt, fallback) {
@@ -58,4 +103,4 @@ function petLabel(appt, fallback) {
   return first ? `${first} +${n - 1}` : `${n} animais`;
 }
 
-module.exports = { priceForService, animalsOf, petLabel, toNum, MAX_ANIMALS };
+module.exports = { priceForService, priceForServices, serviceNamesOf, MAX_SERVICES, animalsOf, petLabel, toNum, MAX_ANIMALS };
