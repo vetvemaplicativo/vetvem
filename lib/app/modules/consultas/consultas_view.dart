@@ -207,7 +207,13 @@ class _ConsultaCard extends StatelessWidget {
       case 'rejected':
         return item.cancelledByTutor ? 'Cancelada' : item.tutorTimedOut ? 'Encerrada' : 'Recusada';
       case 'confirmed': return 'Confirmada ✓';
-      case 'pending_confirmation': return 'Aguard. confirmação';
+      // Ainda não pago: o pedido nem chegou ao profissional (só chega depois do pagamento aprovado).
+      case 'pending_confirmation':
+        return item.awaitingPayment
+            ? 'Aguard. pagamento'
+            : item.paymentInReview
+                ? 'Pagamento em análise'
+                : 'Aguard. confirmação';
       case 'pending_payment': return 'Aguard. pagamento';
       default: return 'Agendada';
     }

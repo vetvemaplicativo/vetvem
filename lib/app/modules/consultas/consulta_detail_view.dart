@@ -486,7 +486,13 @@ class _PaymentCard extends StatelessWidget {
             ? const Color(0xFF22C55E)
             : const Color(0xFFF59E0B);
 
-    final label = isCancelled ? 'Estornado' : isPaid ? 'Pago ✓' : 'Aguardando';
+    final label = isCancelled
+        ? 'Estornado'
+        : isPaid
+            ? 'Pago ✓'
+            : item.awaitingPayment
+                ? 'Pendente'
+                : 'Aguardando';
 
     final description = isCancelled
         ? 'Estornado ao seu método de pagamento'
@@ -494,7 +500,9 @@ class _PaymentCard extends StatelessWidget {
             ? 'Pagamento confirmado — obrigado!'
             : item.paymentInReview
                 ? 'Pagamento em análise pelo Mercado Pago'
-                : 'Aguardando confirmação do profissional';
+                : item.awaitingPayment
+                    ? 'Aguardando pagamento: o pedido só vai ao profissional depois de pago'
+                    : 'Aguardando confirmação do profissional';
 
     final methodIcon = item.paymentMethod == 'pix'
         ? Icons.pix_rounded

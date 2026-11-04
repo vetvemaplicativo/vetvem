@@ -10,7 +10,15 @@ setGlobalOptions({ maxInstances: 10, region: "southamerica-east1" });
 
 admin.initializeApp();
 
-const MP_SECRET = defineSecret("MP_ACCESS_TOKEN");
+const {
+  MP_SECRET,
+  MP_SECRET_V2,
+  CARD_ORDER,
+  PIX_ORDER,
+  tokenOf,
+  accountOf,
+  withAccountFallback,
+} = require("./mp_accounts");
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const { startRelocation, settleRelocation } = require("./realocacao_core");
 
@@ -111,8 +119,13 @@ async function computeAppointmentAmount(appt, clientAmount) {
   }
 }
 
+// URL de notificação: a conta nova identifica-se por ?acc=v2 (o webhook usa o token dela).
+function webhookUrl(account) {
+  return `https://southamerica-east1-vetvem-18bf4.cloudfunctions.net/mpWebhook${account === "v2" ? "?acc=v2" : ""}`;
+}
+
 exports.createPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET, AWESOME_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2, ORS_SECRET, AWESOME_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -125,8 +138,6 @@ exports.createPayment = onRequest(
       return res.status(400).json({ error: "Dados de pagamento incompletos" });
     }
 
-    const MP_ACCESS_TOKEN = MP_SECRET.value();
-
     try {
       const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
       const priced = await computeAppointmentAmount(apptForAmount, amount);
@@ -137,7 +148,9 @@ exports.createPayment = onRequest(
       }
       // De 1 a 12 parcelas; os juros ficam por conta do tutor (o MP soma ao total pago).
       const safeInstallments = Math.min(12, Math.max(1, Math.floor(Number(installments)) || 1));
-      const response = await axios.post(
+      // O token do cartão vale só na conta do MP que o gerou (app antigo: v1; 1.0.18+: v2):
+      // tenta uma e, se o MP disser que o token não existe ali, a outra (nada é cobrado na errada).
+      const { account, value: response } = await withAccountFallback(CARD_ORDER, (acc) => axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
           transaction_amount: finalAmount,
@@ -157,21 +170,22 @@ exports.createPayment = onRequest(
                 ...(cpf ? { identification: { type: "CPF", number: cpf } } : {}),
               },
           external_reference: appointmentId,
-          notification_url: `https://southamerica-east1-vetvem-18bf4.cloudfunctions.net/mpWebhook`,
+          notification_url: webhookUrl(acc),
         },
         {
           headers: {
-            Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+            Authorization: `Bearer ${tokenOf(acc)}`,
             "Content-Type": "application/json",
             "X-Idempotency-Key": appointmentId,
           },
         }
-      );
+      ));
 
       const payment = response.data;
-      console.log(`createPayment: ${payment.id} → ${payment.status} (${payment.status_detail})`);
+      console.log(`createPayment: ${payment.id} → ${payment.status} (${payment.status_detail}) conta ${account}`);
 
       await admin.firestore().collection("appointments").doc(appointmentId).update({
+        paymentAccount: account,
         paymentId: String(payment.id),
         paymentStatus: payment.status,
         paymentMethod: paymentMethodId,
@@ -200,7 +214,7 @@ exports.createPayment = onRequest(
 
 // ─── Criar pagamento PIX ──────────────────────────────────────────────────────
 exports.createPixPayment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, ORS_SECRET, AWESOME_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2, ORS_SECRET, AWESOME_SECRET], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -212,8 +226,6 @@ exports.createPixPayment = onRequest(
     if (!appointmentId || !amount || !email) {
       return res.status(400).json({ error: "Dados incompletos" });
     }
-
-    const MP_ACCESS_TOKEN = MP_SECRET.value();
 
     try {
       const apptForAmount = (await admin.firestore().collection("appointments").doc(appointmentId).get()).data() || {};
@@ -247,7 +259,9 @@ exports.createPixPayment = onRequest(
       }
 
       const pixExpiresAt = Date.now() + 30 * 60 * 1000;
-      const response = await axios.post(
+      // PIX é só do servidor: a conta vem de PIX_ORDER; se a primeira falhar (ex.: conta nova ainda
+      // sem PIX liberado) e houver outra na lista, tenta a seguinte.
+      const { account, value: response } = await withAccountFallback(PIX_ORDER, (acc) => axios.post(
         "https://api.mercadopago.com/v1/payments",
         {
           transaction_amount: finalAmount,
@@ -261,23 +275,24 @@ exports.createPixPayment = onRequest(
           },
           external_reference: appointmentId,
           date_of_expiration: new Date(pixExpiresAt).toISOString(),
-          notification_url: `https://southamerica-east1-vetvem-18bf4.cloudfunctions.net/mpWebhook`,
+          notification_url: webhookUrl(acc),
         },
         {
           headers: {
-            Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+            Authorization: `Bearer ${tokenOf(acc)}`,
             "Content-Type": "application/json",
             // Chave única por geração: com chave fixa o MP devolveria sempre o
             // PIX antigo (já expirado) quando o tutor volta para pagar.
             "X-Idempotency-Key": `pix-${appointmentId}-${pixExpiresAt}`,
           },
         }
-      );
+      ), () => true);
 
       const payment = response.data;
       const pixData = payment.point_of_interaction?.transaction_data;
 
       await apptRef.update({
+        paymentAccount: account,
         paymentId: String(payment.id),
         paymentStatus: payment.status,
         paymentMethod: "pix",
@@ -307,7 +322,7 @@ exports.createPixPayment = onRequest(
 
 // ─── Webhook do Mercado Pago ──────────────────────────────────────────────────
 exports.mpWebhook = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, RESEND_SECRET] },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2, RESEND_SECRET] },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
@@ -315,11 +330,18 @@ exports.mpWebhook = onRequest(
 
     if (type === "payment" && data?.id) {
       try {
-        const MP_ACCESS_TOKEN = MP_SECRET.value();
-        const mpRes = await axios.get(
-          `https://api.mercadopago.com/v1/payments/${data.id}`,
-          { headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` } }
+        // ?acc=v2 vem das notificações de pagamentos da conta nova; sem ele é a conta antiga. Se o
+        // pagamento não existir na conta indicada, tenta a outra.
+        const first = req.query && req.query.acc === "v2" ? "v2" : "v1";
+        const { account, value: mpRes } = await withAccountFallback(
+          [first, first === "v2" ? "v1" : "v2"],
+          (acc) => axios.get(
+            `https://api.mercadopago.com/v1/payments/${data.id}`,
+            { headers: { Authorization: `Bearer ${tokenOf(acc)}` } }
+          ),
+          (e) => !!(e && e.response && (e.response.status === 404 || e.response.status === 400 || e.response.status === 401))
         );
+        const MP_ACCESS_TOKEN = tokenOf(account);
 
         const payment = mpRes.data;
         const appointmentId = payment.external_reference;
@@ -327,6 +349,7 @@ exports.mpWebhook = onRequest(
         if (appointmentId) {
           const ref = admin.firestore().collection("appointments").doc(appointmentId);
           await ref.update({
+            paymentAccount: account,
             paymentStatus: payment.status,
             paymentStatusDetail: payment.status_detail,
             paymentUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -673,7 +696,7 @@ exports.sendPush = onDocumentCreated(
 // (por e-mail) e anexa o cartão a ele. Nas próximas compras o app só pede o
 // CVV — o número completo nunca é armazenado por nós (PCI: fica no MP).
 exports.saveCard = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -683,16 +706,18 @@ exports.saveCard = onRequest(
     const { token, email } = req.body;
     if (!token || !email) return res.status(400).json({ error: "Dados incompletos" });
 
-    const MP_ACCESS_TOKEN = MP_SECRET.value();
-    const headers = {
-      Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
-    };
-
     try {
-      // 1. Usa o customerId já salvo, ou busca/cria por e-mail
       const userRef = admin.firestore().collection("users").doc(uid);
-      let customerId = (await userRef.get()).data()?.mpCustomerId;
+      // O cartão (e o customer do cofre) fica na conta do MP que gerou o token: tenta uma e depois a
+      // outra. Cada conta tem o seu customer (mpCustomerId = antiga; mpCustomerIdV2 = nova).
+      const { account, value: out } = await withAccountFallback(CARD_ORDER, async (acc) => {
+        const headers = {
+          Authorization: `Bearer ${tokenOf(acc)}`,
+          "Content-Type": "application/json",
+        };
+        const idField = acc === "v2" ? "mpCustomerIdV2" : "mpCustomerId";
+        // 1. Usa o customerId já salvo, ou busca/cria por e-mail
+        let customerId = (await userRef.get()).data()?.[idField];
 
       if (!customerId) {
         const search = await axios.get(
@@ -709,7 +734,7 @@ exports.saveCard = onRequest(
           );
           customerId = created.data.id;
         }
-        await userRef.update({ mpCustomerId: customerId });
+        await userRef.update({ [idField]: customerId });
       }
 
       // 2. Anexa o cartão ao customer
@@ -718,7 +743,10 @@ exports.saveCard = onRequest(
         { token },
         { headers }
       );
-      const card = cardRes.data;
+        return { customerId, card: cardRes.data };
+      });
+      const { customerId, card } = out;
+      console.log(`saveCard: conta ${account}`);
 
       return res.json({
         result: {
@@ -1081,7 +1109,7 @@ exports.appointmentHistorian = onDocumentWritten(
   {
     document: "appointments/{appointmentId}",
     region: "southamerica-east1",
-    secrets: [MP_SECRET, RESEND_SECRET, ORS_SECRET, AWESOME_SECRET],
+    secrets: [MP_SECRET, MP_SECRET_V2, RESEND_SECRET, ORS_SECRET, AWESOME_SECRET],
   },
   async (event) => {
     const before = event.data?.before?.exists ? event.data.before.data() : null;
@@ -1111,7 +1139,7 @@ exports.appointmentHistorian = onDocumentWritten(
         await logEvent(ref, "confirmado", "app_pro", vetId, after.confirmedAt || null);
         // Pedido realocado: o novo profissional aceitou — devolve a diferença de preço.
         if (after.relocationStatus === "awaiting_vet") {
-          await settleRelocation(ref, after, { mpToken: MP_SECRET.value(), resendKey: RESEND_SECRET.value() });
+          await settleRelocation(ref, after, { mpToken: tokenOf(accountOf(after)), resendKey: RESEND_SECRET.value() });
         }
         const instructions = await sendInstructions(ref, after);
         return onPortalConfirmed(after, RESEND_SECRET.value(), instructions);
@@ -1134,7 +1162,7 @@ exports.appointmentHistorian = onDocumentWritten(
           const started = await startRelocation(ref, after, { resendKey: RESEND_SECRET.value() });
           if (started) return;
         }
-        return handleRejectedPayment(ref, after, MP_SECRET.value(), RESEND_SECRET.value());
+        return handleRejectedPayment(ref, after, tokenOf(accountOf(after)), RESEND_SECRET.value());
       }
 
       case "completed":
@@ -1252,7 +1280,7 @@ exports.expireUnanswered = onSchedule(
 // pedido do usuário via suporte). Cancela, estorna se já pago e notifica as
 // duas partes — a mesma lógica que os cancelamentos automáticos já usam.
 exports.adminCancelAppointment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -1286,7 +1314,7 @@ exports.adminCancelAppointment = onRequest(
       let refunded = false;
       if (d.paymentStatus === "approved" && d.paymentId) {
         try {
-          await refundPayment(d.paymentId, MP_SECRET.value());
+          await refundPayment(d.paymentId, tokenOf(accountOf(d)));
           await ref.update({
             paymentStatus: "refunded",
             refundedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1391,7 +1419,7 @@ exports.seedTaxonomies = onRequest(
 // ainda em aberto são cancelados e a outra parte é avisada + reembolsada
 // (mesma lógica do handleRejectedPayment).
 exports.deleteAccount = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2], cors: true },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -1405,8 +1433,6 @@ exports.deleteAccount = onRequest(
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
     const user = userSnap.data();
-    const MP_ACCESS_TOKEN = MP_SECRET.value();
-
     try {
       // 1) Cancela agendamentos em aberto (como tutor OU como vet) e
       // reembolsa/avisa a outra parte.
@@ -1432,7 +1458,7 @@ exports.deleteAccount = onRequest(
         let refunded = false;
         if (d.paymentStatus === "approved" && d.paymentId) {
           try {
-            await refundPayment(d.paymentId, MP_ACCESS_TOKEN);
+            await refundPayment(d.paymentId, tokenOf(accountOf(d)));
             await doc.ref.update({
               paymentStatus: "refunded",
               refundedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1457,11 +1483,12 @@ exports.deleteAccount = onRequest(
       }
 
       // 2) Remove o customer do cofre do Mercado Pago (leva os cartões salvos).
-      if (user.mpCustomerId) {
+      for (const [field, acc] of [["mpCustomerId", "v1"], ["mpCustomerIdV2", "v2"]]) {
+        if (!user[field]) continue;
         try {
           await axios.delete(
-            `https://api.mercadopago.com/v1/customers/${user.mpCustomerId}`,
-            { headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` } }
+            `https://api.mercadopago.com/v1/customers/${user[field]}`,
+            { headers: { Authorization: `Bearer ${tokenOf(acc)}` } }
           );
         } catch (e) {
           console.error("deleteAccount mpCustomer error:", e.response?.data || e.message);
