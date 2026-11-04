@@ -12,9 +12,9 @@ const MP_SECRET = defineSecret("MP_ACCESS_TOKEN");
 const MP_SECRET_V2 = defineSecret("MP_ACCESS_TOKEN_V2");
 
 // Ordem de tentativa. Cartão: apps antigos (v1) acertam de primeira; o app novo cai em v2.
-// PIX é só servidor: fica em v1 até testarmos a conta nova; depois vira ["v2", "v1"].
+// PIX é só servidor: tenta a conta nova (CNPJ) primeiro e cai na antiga se ela falhar.
 const CARD_ORDER = ["v1", "v2"];
-const PIX_ORDER = ["v1"];
+const PIX_ORDER = ["v2", "v1"];
 
 function tokenOf(account) {
   const raw = account === "v2" ? MP_SECRET_V2.value() : MP_SECRET.value();
