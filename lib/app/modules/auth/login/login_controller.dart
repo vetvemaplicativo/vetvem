@@ -7,6 +7,7 @@ import '../../../services/analytics_service.dart';
 import '../../../services/auth_exceptions.dart';
 import '../../../services/auth_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../phone/phone_gate.dart';
 import '../../terms/terms_view.dart';
 
 class LoginController extends GetxController {
@@ -62,8 +63,15 @@ class LoginController extends GetxController {
     if (!ok) {
       await FirebaseAuth.instance.signOut();
       _showError('É necessário aceitar os Termos de Uso para usar o app.');
+      return false;
     }
-    return ok;
+    // Celular (WhatsApp) obrigatório — também para Google/Apple e contas antigas.
+    if (!await PhoneGate.ensure()) {
+      await FirebaseAuth.instance.signOut();
+      _showError('Informe seu celular para continuar.');
+      return false;
+    }
+    return true;
   }
 
   Future<void> loginWithGoogle() async {

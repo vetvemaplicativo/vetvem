@@ -1169,8 +1169,12 @@ exports.appointmentHistorian = onDocumentWritten(
         // Backfill: versões antigas do app Pro podem não gravar completedAt.
         return logEvent(ref, "concluido", "app_pro", vetId,
           after.completedAt || null, null,
-          after.completedAt ? {} :
-            { completedAt: admin.firestore.FieldValue.serverTimestamp() });
+          {
+            ...(after.completedAt ? {} : { completedAt: admin.firestore.FieldValue.serverTimestamp() }),
+            // E-mail de avaliação automático (avaliacao.js): sai ~45 min após concluir.
+            ...(after.reviewEmailSentAt || after.reviewEmailDueAt ? {} :
+              { reviewEmailDueAt: Date.now() + 45 * 60 * 1000 }),
+          });
 
       case "cancelled": {
         const by = after.cancelledBy || "sistema";
@@ -1345,6 +1349,110 @@ exports.adminCancelAppointment = onRequest(
     } catch (e) {
       console.error("adminCancelAppointment error:", e.message);
       return res.status(500).json({ error: "Erro ao cancelar agendamento" });
+    }
+  }
+);
+
+// ─── Remarcação por acordo pelo painel admin ──────────────────────────────────
+// Caso típico: pedido do portal em realocação, tutor e profissional combinaram um novo
+// dia/horário por fora. Devolve o pedido ao profissional (original, ou o informado),
+// troca data/hora, encerra a realocação e mantém o pagamento intacto (sem estorno/cobrança).
+// Com confirm=true já o deixa "confirmed" (o historian manda o e-mail ao tutor do portal).
+exports.adminRescheduleAppointment = onRequest(
+  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+    const adminUid = await verifyAdmin(req, res);
+    if (!adminUid) return;
+
+    const { appointmentId, date, time, vetId: vetIdIn, confirm } = req.body || {};
+    if (!appointmentId || !/^\d{2}\/\d{2}\/\d{4}$/.test(String(date || "")) || !/^\d{2}:\d{2}$/.test(String(time || ""))) {
+      return res.status(400).json({ error: "Informe appointmentId, date (dd/MM/aaaa) e time (HH:mm)" });
+    }
+
+    const db = admin.firestore();
+    const ref = db.collection("appointments").doc(appointmentId);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ error: "Agendamento não encontrado" });
+    const d = snap.data();
+    if (!["pending_confirmation", "confirmed"].includes(d.status)) {
+      return res.status(400).json({ error: `Agendamento com status "${d.status}" não pode ser remarcado` });
+    }
+
+    const vetId = vetIdIn || d.vetId || d.originalVetId || d.relocationLastVetId || "";
+    if (!vetId) return res.status(400).json({ error: "Não foi possível determinar o profissional" });
+
+    // Horário ocupado por outro pedido ativo do mesmo profissional?
+    const clash = await db.collection("appointments")
+      .where("vetId", "==", vetId).where("date", "==", date).where("time", "==", time).get();
+    if (clash.docs.some((x) => x.id !== appointmentId && ["pending_confirmation", "confirmed"].includes(x.data().status))) {
+      return res.status(409).json({ error: "O profissional já tem outro pedido nesse horário" });
+    }
+
+    let vetName = d.vetName;
+    if (!d.vetId || vetId !== d.vetId) {
+      const vs = await db.collection("users").doc(vetId).get();
+      vetName = (vs.exists && (vs.data().name || vs.data().displayName)) ||
+        d.originalVetName || d.relocationLastVetName || "";
+    }
+    const FV = admin.firestore.FieldValue;
+    try {
+      await ref.update({
+        date, time, vetId, vetName,
+        status: confirm ? "confirmed" : "pending_confirmation",
+        ...(confirm ? { confirmedAt: FV.serverTimestamp() } : {}),
+        rescheduledByAdmin: { by: adminUid, at: FV.serverTimestamp(), fromDate: d.date || "", fromTime: d.time || "" },
+        relocationStatus: FV.delete(),
+        relocationOptions: FV.delete(),
+        relocationDeadline: FV.delete(),
+        relocationLastVetId: FV.delete(),
+        relocationLastVetName: FV.delete(),
+        ...(confirm ? {} : { responseDeadline: Date.now() + RESPONSE_DEADLINE_MINUTES * 60 * 1000 }),
+      });
+      if (!confirm) {
+        await db.collection("notifications").doc(vetId).collection("pending").add({
+          title: "Consulta remarcada",
+          body: `${d.tutorName || "O tutor"} e você combinaram ${date} às ${time}. Confirme no app.`,
+          read: false, createdAt: FV.serverTimestamp(),
+        });
+      }
+      return res.json({ result: { ok: true, status: confirm ? "confirmed" : "pending_confirmation", vetName } });
+    } catch (e) {
+      console.error("adminRescheduleAppointment error:", e.message);
+      return res.status(500).json({ error: "Erro ao remarcar agendamento" });
+    }
+  }
+);
+
+// Reenvia o e-mail de confirmação (pedido do portal) com a data/hora ATUAIS do pedido.
+exports.adminResendConfirmationEmail = onRequest(
+  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+    if (!(await verifyAdmin(req, res))) return;
+    const { appointmentId } = req.body || {};
+    if (!appointmentId) return res.status(400).json({ error: "appointmentId é obrigatório" });
+    const ref = admin.firestore().collection("appointments").doc(appointmentId);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ error: "Agendamento não encontrado" });
+    const d = snap.data();
+    if (d.status !== "confirmed") return res.status(400).json({ error: "O pedido não está confirmado" });
+    if (d.bookingOrigin !== "portal_web" || !d.email) {
+      return res.status(400).json({ error: "Só pedidos do portal com e-mail" });
+    }
+    try {
+      await sendEmail(
+        RESEND_SECRET.value(), String(d.email).trim(),
+        "Seu agendamento VetVem foi confirmado! 🐾",
+        `<p>Olá${d.tutorName ? ", " + escapeHtml(String(d.tutorName).trim()) : ""}!</p>
+         <p><strong>${escapeHtml(d.vetName || "O profissional")}</strong> confirmou o atendimento ` +
+          `para <strong>${escapeHtml(petLabel(d, "seu pet"))}</strong> em ${d.date} às ${d.time}.</p>
+         <p>Endereço: ${escapeHtml(d.address || "")}</p>`
+      );
+      return res.json({ result: { ok: true } });
+    } catch (e) {
+      console.error("adminResendConfirmationEmail error:", e.response?.data || e.message);
+      return res.status(500).json({ error: "Erro ao enviar e-mail" });
     }
   }
 );
@@ -1600,6 +1708,7 @@ Object.assign(exports, require("./horarios"));
 // Realocação de profissional (tutor escolhe outro quando o veterinário recusa/não responde).
 Object.assign(exports, require("./realocacao"));
 Object.assign(exports, require("./portal_relocation"));
+Object.assign(exports, require("./avaliacao"));
 Object.assign(exports, require("./travel"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.

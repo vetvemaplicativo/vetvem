@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../phone/phone_gate.dart';
 import '../terms/terms_view.dart';
 
 class SplashView extends StatefulWidget {
@@ -23,7 +24,10 @@ class _SplashViewState extends State<SplashView> {
         return;
       }
       // Sessão persistida: garante o aceite dos termos antes da home
-      final ok = await TermsView.ensureAccepted();
+      var ok = await TermsView.ensureAccepted();
+      // Celular (WhatsApp) obrigatório: pede a contas sem telefone (Google/Apple/antigas)
+      if (ok) ok = await PhoneGate.ensure();
+      if (!ok) await authService.signOut();
       Get.offAllNamed(ok ? Routes.home : Routes.login);
     });
   }
