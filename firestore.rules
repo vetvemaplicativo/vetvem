@@ -138,6 +138,35 @@ service cloud.firestore {
           && cancelledByIsHonest();
     }
 
+    // Adicionais durante o atendimento: o profissional do pedido monta o RASCUNHO (itens);
+    // cobrança, PIX, status e pagamento são só das Cloud Functions. O tutor lê só os já pagos.
+    match /appointments/{appointmentId}/extras/{extraId} {
+      function apptData() {
+        return get(/databases/$(database)/documents/appointments/$(appointmentId)).data;
+      }
+      function isThisVet() {
+        return request.auth != null && apptData().vetId == request.auth.uid;
+      }
+      function validItems(d) {
+        return d.items is list && d.items.size() > 0 && d.items.size() <= 20;
+      }
+      allow read, write: if isAdmin();
+      allow read: if isThisVet()
+          || (request.auth != null && apptData().tutorId == request.auth.uid
+              && resource.data.status == 'paid');
+      allow create: if isThisVet()
+          && request.resource.data.status == 'draft'
+          && request.resource.data.vetId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['status', 'vetId', 'items', 'createdAt'])
+          && validItems(request.resource.data);
+      allow update: if isThisVet()
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'draft'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items'])
+          && validItems(request.resource.data);
+      allow delete: if isThisVet() && resource.data.status == 'draft';
+    }
+
     match /notifications/{userId}/pending/{notifId} {
       allow read, write: if isAdmin();
       // Dono lê, marca como lida e apaga as suas (botão "Excluir todas")

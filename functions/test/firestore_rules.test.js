@@ -32,6 +32,10 @@ test.before(async () => {
     await db.doc(`users/${TUTOR}`).set({ role: "tutor", name: "Tutor" });
     await db.doc(`professionals_public/${VET}`).set({ name: "Dra. Ana", rating: 4 });
     await db.doc("appointments/a1").set({ tutorId: TUTOR, vetId: VET, vetName: "Dra. Ana", status: "confirmed" });
+    const items = [{ name: "Curativo", value: 40 }];
+    await db.doc("appointments/a1/extras/draft1").set({ status: "draft", vetId: VET, items });
+    await db.doc("appointments/a1/extras/pend1").set({ status: "awaiting_payment", vetId: VET, items, total: 40, pixCopyPaste: "x" });
+    await db.doc("appointments/a1/extras/paid1").set({ status: "paid", vetId: VET, items, total: 40 });
   });
 });
 test.after(async () => { await env?.cleanup(); });
@@ -110,4 +114,55 @@ test(FASE3
   for (const db of [tutorPwd(), tutorGoogle(), tutorApple()]) {
     for (const r of profQueries(db)) await (FASE3 ? assertFails(r()) : assertSucceeds(r()));
   }
+});
+
+// ── Adicionais durante o atendimento (só em firestore.rules; a cópia da fase 3 ainda não os tem) ──
+const ITEMS = [{ name: "Curativo", value: 40 }];
+const extra = (db, id) => db.doc(`appointments/a1/extras/${id}`);
+const otherVet = () => as("vet2", "password");
+
+test("adicionais: o profissional do pedido cria rascunho; ninguém mais", { skip: FASE3 }, async () => {
+  await assertSucceeds(extra(vet(), "n1").set({ status: "draft", vetId: VET, items: ITEMS, createdAt: serverTimestamp() }));
+  await assertFails(extra(otherVet(), "n2").set({ status: "draft", vetId: "vet2", items: ITEMS }));
+  await assertFails(extra(tutorPwd(), "n3").set({ status: "draft", vetId: TUTOR, items: ITEMS }));
+  await assertFails(extra(anon(), "n4").set({ status: "draft", vetId: "anon1", items: ITEMS }));
+});
+
+test("adicionais: o rascunho não nasce já cobrado nem com campos de pagamento", { skip: FASE3 }, async () => {
+  await assertFails(extra(vet(), "n5").set({ status: "paid", vetId: VET, items: ITEMS }));
+  await assertFails(extra(vet(), "n6").set({ status: "awaiting_payment", vetId: VET, items: ITEMS }));
+  await assertFails(extra(vet(), "n7").set({ status: "draft", vetId: VET, items: ITEMS, total: 1, pixCopyPaste: "x" }));
+  await assertFails(extra(vet(), "n8").set({ status: "draft", vetId: VET, items: [] }));
+  await assertFails(extra(vet(), "n9").set({ status: "draft", vetId: VET, items: Array.from({ length: 21 }, () => ITEMS[0]) }));
+});
+
+test("adicionais: edita itens só do rascunho; status, total e PIX são só do servidor", { skip: FASE3 }, async () => {
+  await assertSucceeds(extra(vet(), "draft1").update({ items: [...ITEMS, { name: "Vacina", value: 60 }] }));
+  await assertFails(extra(vet(), "draft1").update({ status: "paid" }));
+  await assertFails(extra(vet(), "draft1").update({ total: 1 }));
+  await assertFails(extra(vet(), "pend1").update({ items: ITEMS }));   // já cobrado: congelado
+  await assertFails(extra(vet(), "paid1").update({ items: ITEMS }));
+  await assertFails(extra(otherVet(), "draft1").update({ items: ITEMS }));
+});
+
+test("adicionais: só apaga rascunho", { skip: FASE3 }, async () => {
+  await assertSucceeds(extra(vet(), "n1").delete());
+  await assertFails(extra(vet(), "pend1").delete());
+  await assertFails(extra(vet(), "paid1").delete());
+  await assertFails(extra(tutorPwd(), "draft1").delete());
+});
+
+test("adicionais: profissional lê tudo; tutor lê só o pago; estranho e anônimo nada", { skip: FASE3 }, async () => {
+  await assertSucceeds(extra(vet(), "draft1").get());
+  await assertSucceeds(extra(vet(), "pend1").get());
+  await assertSucceeds(vet().collection("appointments/a1/extras").get());       // o app do Pro lê a coleção inteira
+  await assertFails(otherVet().collection("appointments/a1/extras").get());
+  await assertSucceeds(extra(tutorPwd(), "paid1").get());
+  await assertFails(extra(tutorPwd(), "draft1").get());
+  await assertFails(extra(tutorPwd(), "pend1").get());
+  await assertSucceeds(tutorPwd().collection("appointments/a1/extras").where("status", "==", "paid").get());
+  await assertFails(tutorPwd().collection("appointments/a1/extras").get());
+  await assertFails(extra(otherVet(), "paid1").get());
+  await assertFails(extra(anon(), "paid1").get());
+  await assertSucceeds(extra(admin(), "pend1").get());
 });

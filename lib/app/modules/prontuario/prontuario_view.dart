@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import '../consultas/paid_extras_card.dart';
 import 'anexos_links.dart';
 
 class ProntuarioView extends StatelessWidget {
@@ -298,6 +299,9 @@ class ProntuarioView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
+
+                // Adicionais pagos (curativo, medicação...) — só aparece se houve
+                PaidExtrasCard(appointmentId: item.id, bottomGap: 4),
 
                 // Rodapé
                 Container(

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import 'paid_extras_card.dart';
 import 'proposal_card.dart';
 import 'relocation_card.dart';
 import 'vet_photo.dart';
@@ -227,6 +228,9 @@ class ConsultaDetailView extends StatelessWidget {
 
                   // Pagamento
                   _PaymentCard(item: item),
+
+                  // Adicionais já pagos (só leitura)
+                  PaidExtrasCard(appointmentId: item.id),
 
                   // Avaliação (se já avaliado)
                   if (item.rating != null) ...[

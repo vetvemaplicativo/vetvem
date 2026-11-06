@@ -21,6 +21,8 @@ const {
 } = require("./mp_accounts");
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const { startRelocation, settleRelocation } = require("./realocacao_core");
+const { settleExtraPayment } = require("./adicionais_core");
+const { parseRef: parseExtraRef } = require("./adicionais_lib");
 
 // ─── Helper: verifica token Firebase e retorna UID ────────────────────────────
 async function verifyToken(req, res) {
@@ -346,7 +348,10 @@ exports.mpWebhook = onRequest(
         const payment = mpRes.data;
         const appointmentId = payment.external_reference;
 
-        if (appointmentId) {
+        if (parseExtraRef(appointmentId)) {
+          // Pagamento de adicionais (referência "add:{pedido}:{extra}"): não mexe no pedido.
+          await settleExtraPayment({ payment, account });
+        } else if (appointmentId) {
           const ref = admin.firestore().collection("appointments").doc(appointmentId);
           await ref.update({
             paymentAccount: account,
@@ -412,29 +417,9 @@ exports.mpWebhook = onRequest(
 // (descontando a taxa do app), grava em `payouts` e envia notificação ao admin
 // com valores e chaves PIX prontos para transferência manual.
 
-// Taxa regressiva por volume: consultas concluídas E pagas no MÊS ANTERIOR
-// definem a taxa do mês atual do profissional.
-//   1–9 → 15%  |  10–19 → 12%  |  20+ → 10%
-// IMPORTANTE: mesma tabela existe no app Pro (home_controller.dart,
-// feePercentFor) — mudanças aqui precisam ser replicadas lá.
-// Faixas padrão; editáveis no painel admin via doc config/fees {tiers:[{min,pct}]}
-const DEFAULT_TIERS = [{ min: 20, pct: 10 }, { min: 10, pct: 12 }, { min: 0, pct: 15 }];
-
-async function loadFeeTiers(db) {
-  try {
-    const cfg = await db.collection("config").doc("fees").get();
-    const tiers = cfg.data()?.tiers;
-    if (Array.isArray(tiers) && tiers.length > 0) {
-      return tiers.slice().sort((a, b) => b.min - a.min);
-    }
-  } catch (_) {}
-  return DEFAULT_TIERS;
-}
-
-function feePercentFor(completedLastMonth, tiers) {
-  for (const t of tiers) if (completedLastMonth >= t.min) return t.pct;
-  return 15;
-}
+// Taxa regressiva por volume (tabela, faixas e regra em payout_fees.js — compartilhada com os
+// repasses de adicionais). IMPORTANTE: mesma tabela existe no app Pro (home_controller.dart).
+const { loadFeeTiers, feePercentFor } = require("./payout_fees");
 
 const PIX_HOLD_HOURS = 48; // carência dos repasses após trocar a chave PIX
 const ADMIN_EMAIL ="ronalddesouzabr@gmail.com"; // conta que recebe o resumo diário
@@ -1709,6 +1694,8 @@ Object.assign(exports, require("./horarios"));
 Object.assign(exports, require("./realocacao"));
 Object.assign(exports, require("./portal_relocation"));
 Object.assign(exports, require("./avaliacao"));
+// Adicionais durante o atendimento (PIX único no fim da consulta)
+Object.assign(exports, require("./adicionais"));
 Object.assign(exports, require("./travel"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.

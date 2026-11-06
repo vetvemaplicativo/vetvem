@@ -2,7 +2,7 @@
 /// contas antigas sejam solicitadas a aceitar novamente se necessário.
 const termsVersion = '2.0';
 
-/// RASCUNHO — revisar com advogado antes do lançamento oficial.
+/// Texto vigente dos Termos de Uso e Política de Privacidade (revisado por advogado).
 const termsText = '''
 TERMOS DE USO E POLÍTICA DE PRIVACIDADE — VETVEM (TUTOR)
 Versão 2.0 · Outubro de 2026
