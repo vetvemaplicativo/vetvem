@@ -117,7 +117,7 @@ class FirstConsultGuide extends StatelessWidget {
                 children: [
                   _Bullet('Você paga ao solicitar a consulta, por Pix ou cartão de crédito. '
                       'O pedido só chega ao veterinário depois que o pagamento é aprovado.'),
-                  _Bullet('O veterinário tem até 2 horas para aceitar ou recusar o pedido.'),
+                  _Bullet('O veterinário tem até 3 horas para aceitar ou recusar o pedido.'),
                   _Bullet('Se ele recusar ou não responder, o valor é devolvido '
                       'automaticamente. O prazo para aparecer na sua conta ou fatura '
                       'depende do seu banco ou cartão.'),

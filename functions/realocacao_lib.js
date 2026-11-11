@@ -8,11 +8,11 @@ const { priceForService, toNum } = require("./appointment_amount");
 const MAX_OPTIONS = 5;            // até 5 alternativas
 const MAX_ROUNDS = 3;             // original + até 2 tentativas com novos profissionais
 const TUTOR_WINDOW_MIN = 60;      // o tutor tem 1 hora para escolher
-const VET_RESPONSE_MIN = 120;     // novo profissional: até 2h para responder...
+const VET_RESPONSE_MIN = 180;     // novo profissional: até 3h para responder...
 const VET_END_MARGIN_MIN = 60;    // ...mas nunca depois de 1h antes da consulta
-const MIN_REMAINING_HOURS = 4;    // só oferece com >= 4h até a consulta (1h tutor + resposta do novo profissional + margem)
+const MIN_REMAINING_HOURS = 5;    // só oferece com >= 5h até a consulta (1h tutor + 3h resposta do novo profissional + 1h margem)
 const PORTAL_TUTOR_WINDOW_MIN = 120;   // tutora do portal (e-mail, sem push): 2h para escolher
-const PORTAL_MIN_REMAINING_HOURS = 5;  // e só se faltarem >= 5h até a consulta
+const PORTAL_MIN_REMAINING_HOURS = 6;  // e só se faltarem >= 6h até a consulta (2h tutora + 3h profissional + 1h margem)
 const MIN_SIMILARITY = 0.5;       // semelhança mínima entre nomes de serviço
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;

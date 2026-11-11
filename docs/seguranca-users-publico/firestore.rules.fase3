@@ -21,7 +21,7 @@ service cloud.firestore {
       let wasPending = resource.data.get('accountStatus', 'pending') == 'pending';
       let crmvChanged = changed.hasAny(['crmv'])
           && resource.data.get('crmv', '') != '';
-      return changed.hasAny(['blocked', 'feeOverride', 'pixChangedAt'])
+      return changed.hasAny(['blocked', 'feeOverride', 'pixChangedAt', 'rejectionReason'])
           || (changed.hasAny(['accountStatus'])
               && !(toPending && (wasPending || crmvChanged)))
           || (crmvChanged && !toPending);
@@ -36,7 +36,7 @@ service cloud.firestore {
                     && !touchesAdminFields();
       allow delete: if request.auth != null && request.auth.uid == userId;
       // (Fase 3) Removida a leitura cruzada de perfis de profissionais: a busca
-      // dos tutores/portal agora usa professionals_public. Aqui só dono e admin.
+      // dos tutores/portal usa professionals_public. Aqui só dono e admin.
       // Apps atualizam métricas de avaliação de qualquer vet
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
@@ -107,17 +107,62 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys()
               .hasAny(['paymentStatus', 'paymentAmount', 'paymentId',
                        'paymentMethod', 'paymentDate', 'payoutStatus',
+                       'paymentInstallments', 'paymentTotalPaid',
                        'payoutNet', 'payoutFee', 'tutorId', 'vetId',
-                       'historico_status'])
+                       'historico_status',
+                       // sugestão de horários e orientações: só as Cloud Functions escrevem
+                       'proposalStatus', 'proposals', 'proposalSentAt',
+                       'proposalDeadline', 'originalDate', 'originalTime',
+                       'chosenIndex', 'instructionsText', 'instructionsSentAt',
+                       'canChooseTimes', 'feesDisclosed',
+                       // realocação de profissional: só as Cloud Functions escrevem
+                       'canRelocate', 'addrUf', 'addrCity', 'addrNeighborhood', 'addrCep', 'travelQuoted',
+                       'relocationStatus', 'relocationOptions', 'relocationDeadline',
+                       'relocationRound', 'relocationTried', 'relocationAttempted',
+                       'originalVetId', 'originalVetName', 'originalServiceName',
+                       'originalValue', 'responseDeadline', 'relocationChosenAt',
+                       'relocationRefund', 'relocationRefundedAt', 'relocationRefundPending',
+                       // lembretes de consulta já enviados: só a Cloud Function escreve
+                       'remindersSent',
+                       'relocationLastVetId', 'relocationLastVetName'])
           && (!request.resource.data.diff(resource.data).affectedKeys()
                   .hasAny(['viewedAt']) || canMarkViewed())
           && cancelledByIsHonest();
     }
 
+    // Adicionais durante o atendimento: o profissional do pedido monta o RASCUNHO (itens);
+    // cobrança, PIX, status e pagamento são só das Cloud Functions. O tutor lê só os já pagos.
+    match /appointments/{appointmentId}/extras/{extraId} {
+      function apptData() {
+        return get(/databases/$(database)/documents/appointments/$(appointmentId)).data;
+      }
+      function isThisVet() {
+        return request.auth != null && apptData().vetId == request.auth.uid;
+      }
+      function validItems(d) {
+        return d.items is list && d.items.size() > 0 && d.items.size() <= 20;
+      }
+      allow read, write: if isAdmin();
+      allow read: if isThisVet()
+          || (request.auth != null && apptData().tutorId == request.auth.uid
+              && resource.data.status == 'paid');
+      allow create: if isThisVet()
+          && request.resource.data.status == 'draft'
+          && request.resource.data.vetId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['status', 'vetId', 'items', 'createdAt'])
+          && validItems(request.resource.data);
+      allow update: if isThisVet()
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'draft'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items'])
+          && validItems(request.resource.data);
+      allow delete: if isThisVet() && resource.data.status == 'draft';
+    }
+
     match /notifications/{userId}/pending/{notifId} {
       allow read, write: if isAdmin();
-      // Dono lê e marca como lida as suas
-      allow read, update: if request.auth != null
+      // Dono lê, marca como lida e apaga as suas (botão "Excluir todas")
+      allow read, update, delete: if request.auth != null
           && request.auth.uid == userId;
       // Qualquer autenticado notifica outro (tutor→vet e vice-versa),
       // mas só com os campos esperados e sempre não-lida

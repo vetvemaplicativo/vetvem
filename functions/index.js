@@ -1177,14 +1177,14 @@ exports.appointmentHistorian = onDocumentWritten(
 
 // ─── Expiração de solicitação sem resposta do profissional ───────────────────
 // Roda a cada 5 min. Uma solicitação em pending_confirmation vira "rejected"
-// quando: (a) passou 2h desde a criação (tempo de sobra pro profissional
+// quando: (a) passou 3h desde o pagamento (tempo de sobra pro profissional
 // confirmar depois de já ter recebido o pagamento), ou (b) chegou a hora da
 // consulta sem resposta. Reaproveita o status "rejected" (os dois apps já
 // sabem exibir esse valor — nenhum filtro/UI existente quebra); o evento
 // distinto do funil (ignorado_timeout) fica só no historico_status, via
 // rejectReason.
 
-const RESPONSE_DEADLINE_MINUTES = 120;
+const RESPONSE_DEADLINE_MINUTES = 180;
 
 exports.expireUnanswered = onSchedule(
   { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] },
@@ -1697,6 +1697,10 @@ Object.assign(exports, require("./avaliacao"));
 // Adicionais durante o atendimento (PIX único no fim da consulta)
 Object.assign(exports, require("./adicionais"));
 Object.assign(exports, require("./travel"));
+// E-mail do prontuário para quem agendou pelo portal
+Object.assign(exports, require("./prontuario_email"));
+// Leituras públicas que substituem a leitura ampla de appointments (busyTimes, vetReviews)
+Object.assign(exports, require("./public_reads"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.
 Object.assign(exports, require("./account_review"));

@@ -1925,7 +1925,7 @@ class _SettingsList extends StatelessWidget {
       ('O veterinário vai até minha casa?',
           'Sim! O VetVem é um serviço de atendimento domiciliar. O profissional vai até o endereço informado no agendamento.'),
       ('Como funciona o pagamento?',
-          'Aceitamos Pix e cartão de crédito. O pagamento é feito ao solicitar o agendamento. O profissional tem até 2 horas para confirmar e, se recusar ou não responder, o valor é estornado automaticamente.'),
+          'Aceitamos Pix e cartão de crédito. O pagamento é feito ao solicitar o agendamento. O profissional tem até 3 horas para confirmar e, se recusar ou não responder, o valor é estornado automaticamente.'),
       ('Posso avaliar o veterinário?',
           'Após a conclusão da consulta, você receberá uma notificação para avaliar o atendimento.'),
     ];

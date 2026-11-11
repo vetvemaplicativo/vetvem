@@ -79,7 +79,7 @@ test("rankCandidates: mais baratos primeiro, máximo 5", () => {
 });
 
 test("canRelocate: condições", () => {
-  const now = apptMs - 5 * HOUR;
+  const now = apptMs - 6 * HOUR;
   assert.ok(L.canRelocate(base, now).ok);
   assert.equal(L.canRelocate({ ...base, canRelocate: false }, now).ok, false);
   assert.equal(L.canRelocate({ ...base, bookingOrigin: "portal_web" }, now).ok, false);
@@ -87,14 +87,14 @@ test("canRelocate: condições", () => {
   assert.equal(L.canRelocate({ ...base, addrUf: "" }, now).ok, false);
   assert.equal(L.canRelocate({ ...base, relocationRound: 2 }, now).ok, false);
   assert.ok(L.canRelocate({ ...base, relocationRound: 1 }, now).ok);
-  assert.equal(L.canRelocate(base, apptMs - 3 * HOUR).ok, false); // < 4h
-  assert.ok(L.canRelocate(base, apptMs - 4 * HOUR).ok);
+  assert.equal(L.canRelocate(base, apptMs - 4 * HOUR).ok, false); // < 5h
+  assert.ok(L.canRelocate(base, apptMs - 5 * HOUR).ok);
 });
 
-test("prazos: tutor 1h; profissional min(2h, 1h antes da consulta)", () => {
-  const now = apptMs - 4 * HOUR;
+test("prazos: tutor 1h; profissional min(3h, 1h antes da consulta)", () => {
+  const now = apptMs - 6 * HOUR;
   assert.equal(L.tutorDeadline(now), now + 60 * 60 * 1000);
-  assert.equal(L.vetDeadline(now, apptMs), now + 2 * HOUR); // 2h < 3h
+  assert.equal(L.vetDeadline(now, apptMs), now + 3 * HOUR); // 3h < 5h
   const late = apptMs - 90 * 60 * 1000;
   assert.equal(L.vetDeadline(late, apptMs), apptMs - HOUR); // 1h antes da consulta
 });
@@ -106,13 +106,13 @@ test("paidAmount e moneyString", () => {
   assert.equal(L.moneyString(1000), "1000,00");
 });
 
-test("portal: precisa de e-mail e de 5h; prazo da tutora é 2h", () => {
-  const now = apptMs - 6 * HOUR;
+test("portal: precisa de e-mail e de 6h; prazo da tutora é 2h", () => {
+  const now = apptMs - 7 * HOUR;
   const portal = { ...base, bookingOrigin: "portal_web", email: "t@t.com" };
   assert.ok(L.canRelocate(portal, now).ok);
   assert.equal(L.canRelocate({ ...portal, email: "" }, now).ok, false);
-  assert.equal(L.canRelocate(portal, apptMs - 4 * HOUR).ok, false); // < 5h
-  assert.ok(L.canRelocate(portal, apptMs - 5 * HOUR).ok);
+  assert.equal(L.canRelocate(portal, apptMs - 5 * HOUR).ok, false); // < 6h
+  assert.ok(L.canRelocate(portal, apptMs - 6 * HOUR).ok);
   assert.equal(L.tutorDeadline(now, true), now + 120 * 60 * 1000);
   assert.equal(L.tutorDeadline(now, false), now + 60 * 60 * 1000);
 });

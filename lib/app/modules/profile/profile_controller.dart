@@ -560,66 +560,13 @@ class ProfileController extends GetxController {
       'comment': comment.trim().isEmpty ? null : comment.trim(),
     });
 
-    // Atualiza agregado no profissional — falha silenciosamente para não bloquear o usuário
-    _updateVetRatingAggregate(id).catchError((_) {});
-  }
-
-  Future<void> _updateVetRatingAggregate(String appointmentId) async {
-    final appt = await _firestore.collection('appointments').doc(appointmentId).get();
-    final apptData = appt.data() ?? {};
-    final vetId = apptData['vetId'] as String?;
-    final vetName = apptData['vetName'] as String?;
-    if ((vetId == null || vetId.isEmpty) && (vetName == null || vetName.isEmpty)) return;
-
-    final List<QueryDocumentSnapshot<Map<String, dynamic>>> allDocs = [];
-    if (vetId != null && vetId.isNotEmpty) {
-      final snap = await _firestore.collection('appointments')
-          .where('vetId', isEqualTo: vetId).get();
-      allDocs.addAll(snap.docs);
-    }
-    if (vetName != null && vetName.isNotEmpty) {
-      final snap = await _firestore.collection('appointments')
-          .where('vetName', isEqualTo: vetName).get();
-      for (final doc in snap.docs) {
-        if (!allDocs.any((d) => d.id == doc.id)) allDocs.add(doc);
-      }
-    }
-
-    double ratingSum = 0;
-    int ratingCount = 0;
-    int completedCount = 0;
-    for (final doc in allDocs) {
-      final d = doc.data();
-      if (d['status'] == 'completed') completedCount++;
-      final r = d['rating'];
-      if (r != null) {
-        ratingSum += (r as num).toDouble();
-        ratingCount++;
-      }
-    }
-    final avgRating = ratingCount > 0
-        ? double.parse((ratingSum / ratingCount).toStringAsFixed(1))
-        : 0.0;
-
-    String? targetVetId = (vetId != null && vetId.isNotEmpty) ? vetId : null;
-    if (targetVetId == null && vetName != null && vetName.isNotEmpty) {
-      // Vitrine pública (users/{uid} de terceiros não é legível). O id do doc
-      // é o uid do profissional.
-      final userSnap = await _firestore.collection('professionals_public')
-          .where('name', isEqualTo: vetName).limit(1).get();
-      if (userSnap.docs.isNotEmpty) targetVetId = userSnap.docs.first.id;
-    }
-    if (targetVetId == null) return;
-
-    await _firestore.collection('users').doc(targetVetId).update({
-      'rating': avgRating,
-      'reviewCount': ratingCount,
-      'completedCount': completedCount,
+    // A nota/contagem do profissional é recalculada no servidor (syncVetRating); o app
+    // só recarrega a vitrine depois de um instante.
+    Future.delayed(const Duration(seconds: 4), () {
+      try {
+        Get.find<VetsController>().reloadVets();
+      } catch (_) {}
     });
-
-    try {
-      Get.find<VetsController>().reloadVets();
-    } catch (_) {}
   }
 
   Future<String> pickPetPhoto() async {

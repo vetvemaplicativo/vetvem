@@ -7,6 +7,7 @@ import '../../data/models/service_area_model.dart';
 import '../../data/models/vet_model.dart';
 import '../../utils/brazilian_states.dart';
 import '../../routes/app_routes.dart';
+import '../../services/public_reads_service.dart';
 import '../../services/taxonomy_service.dart';
 
 class VetsController extends GetxController {
@@ -144,29 +145,8 @@ class VetsController extends GetxController {
 
   Future<void> _onVetsSnapshot(QuerySnapshot<Map<String, dynamic>> snap) async {
     try {
-      // Busca todos os appointments com status completed para calcular ratings
-      final apptSnap = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('status', isEqualTo: 'completed')
-          .get();
-
-      // Agrupa ratings por vetId e vetName
-      final Map<String, List<int>> ratingsByVetId = {};
-      final Map<String, List<int>> ratingsByVetName = {};
-      for (final doc in apptSnap.docs) {
-        final d = doc.data();
-        final r = (d['rating'] as num?)?.toInt() ?? 0;
-        if (r <= 0) continue;
-        final vid = d['vetId'] as String?;
-        final vname = d['vetName'] as String?;
-        if (vid != null && vid.isNotEmpty) {
-          ratingsByVetId.putIfAbsent(vid, () => []).add(r);
-        }
-        if (vname != null && vname.isNotEmpty) {
-          ratingsByVetName.putIfAbsent(vname, () => []).add(r);
-        }
-      }
-
+      // A nota e a contagem vêm da vitrine (professionals_public), mantidas pelo
+      // servidor — o app não baixa mais os agendamentos de todo mundo.
       // professionals_public só contém profissionais aprovados e não bloqueados
       // (a function remove o doc quando deixam de ser) — não há o que filtrar.
       final firestoreVets = snap.docs.map((doc) {
@@ -191,20 +171,9 @@ class VetsController extends GetxController {
           );
         }).toList();
 
-        // Calcula rating a partir dos appointments (fonte verdadeira)
         final vetName = d['name'] as String? ?? '';
-        final byId = ratingsByVetId[doc.id] ?? [];
-        final byName = ratingsByVetName[vetName] ?? [];
-        // Se byId não está vazio, usa só byId para evitar duplicatas de outros vets com mesmo nome
-        final ratings = byId.isNotEmpty
-            ? byId
-            : byName;
-        final reviewCount = ratings.length;
-        final rating = reviewCount > 0
-            ? double.parse(
-                (ratings.reduce((a, b) => a + b) / reviewCount)
-                    .toStringAsFixed(1))
-            : 0.0;
+        final reviewCount = (d['reviewCount'] as num?)?.toInt() ?? 0;
+        final rating = (d['rating'] as num?)?.toDouble() ?? 0.0;
         final completedCount = (d['completedCount'] as num?)?.toInt() ?? 0;
 
         // Bairros para exibição a partir da área de atuação do profissional
@@ -329,53 +298,20 @@ class VetsController extends GetxController {
       final vet = selectedVet.value;
       final vetName = vet?.name ?? '';
 
-      final List<QueryDocumentSnapshot<Map<String, dynamic>>> allDocs = [];
-
-      final byId = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('vetId', isEqualTo: vetId)
-          .get();
-      allDocs.addAll(byId.docs);
-
-      if (vetName.isNotEmpty) {
-        final byName = await FirebaseFirestore.instance
-            .collection('appointments')
-            .where('vetName', isEqualTo: vetName)
-            .get();
-        for (final doc in byName.docs) {
-          if (!allDocs.any((d) => d.id == doc.id)) allDocs.add(doc);
-        }
-      }
-
-      final reviewed = allDocs
-          .where((d) {
-            final r = d.data()['rating'];
-            return r != null && (r as num) > 0;
-          })
-          .map((d) => {
-                'rating': (d.data()['rating'] as num).toInt(),
-                'comment': d.data()['comment'] ?? '',
-                'tutorName': d.data()['tutorName'] ?? 'Anônimo',
-                'petName': d.data()['petName'] ?? '',
-                'date': d.data()['date'] ?? '',
-              })
+      // Pelo servidor: avaliações já filtradas (primeiro nome do tutor) e média.
+      final r = await PublicReadsService.vetReviews(vetId: vetId, vetName: vetName);
+      final reviewed = (r['reviews'] as List? ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
-
-      reviewed.sort((a, b) => (b['date'] as String).compareTo(a['date'] as String));
       vetReviews.assignAll(reviewed);
 
-      // Corrige o documento do profissional se o rating agregado estiver errado
+      // Mantém em memória a nota/contagem coerentes com as avaliações exibidas.
       if (reviewed.isNotEmpty) {
-        final count = reviewed.length;
-        final avg = reviewed
-                .map((r) => (r['rating'] as int))
-                .reduce((a, b) => a + b) /
-            count;
-        final avgRounded = double.parse(avg.toStringAsFixed(1));
+        final count = (r['reviewCount'] as num?)?.toInt() ?? reviewed.length;
+        final avgRounded = (r['rating'] as num?)?.toDouble() ?? 0.0;
         final vet = selectedVet.value;
         if (vet != null &&
             (vet.rating != avgRounded || vet.reviewCount != count)) {
-          // Atualiza em memória imediatamente (independente do Firestore)
           final idx = allVets.indexWhere((v) => v.id == vetId);
           if (idx >= 0) {
             final updated = VetModel(
@@ -410,12 +346,6 @@ class VetsController extends GetxController {
             selectedVet.value = updated;
             _filter();
           }
-          // Persiste no Firestore em background (falha silenciosa)
-          FirebaseFirestore.instance
-              .collection('users')
-              .doc(vetId)
-              .update({'rating': avgRounded, 'reviewCount': count})
-              .catchError((_) {});
         }
       }
     } catch (_) {

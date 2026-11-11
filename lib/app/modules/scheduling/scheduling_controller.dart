@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
+import '../../services/public_reads_service.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
@@ -209,20 +210,9 @@ class SchedulingController extends GetxController {
     if (vet == null || selectedDate.value == null) return;
     final dateStr = formattedDate;
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('vetName', isEqualTo: vet.name)
-          .get();
-      final occupied = snap.docs
-          .where((doc) {
-            final d = doc.data();
-            final status = d['status'] as String? ?? '';
-            return d['date'] == dateStr &&
-                (status == 'confirmed' || status == 'pending_confirmation');
-          })
-          .map((doc) => doc.data()['time'] as String? ?? '')
-          .where((t) => t.isNotEmpty)
-          .toSet();
+      // Pelo servidor: só os horários ocupados, sem dados de outros tutores.
+      final occupied = await PublicReadsService.busyTimes(
+          vetId: vet.id, vetName: vet.name, date: dateStr);
       bookedTimes.assignAll(occupied);
     } catch (_) {
       bookedTimes.clear();
@@ -245,10 +235,10 @@ class SchedulingController extends GetxController {
     final h = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? 0;
     final m = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0;
     final slot = DateTime(date.year, date.month, date.day, h, m);
-    // Buffer de 3h: o profissional tem até 2h pra responder (ver
+    // Buffer de 4h: o profissional tem até 3h pra responder (ver
     // RESPONSE_DEADLINE_MINUTES em functions/index.js) e ainda sobra 1h pra se
     // preparar/deslocar.
-    return slot.isBefore(now.add(const Duration(hours: 3)));
+    return slot.isBefore(now.add(const Duration(hours: 4)));
   }
 
   bool isTimeBooked(String time) => bookedTimes.contains(time) || _isPastOrTooSoon(time);
