@@ -56,7 +56,7 @@ async function updateVetAggregate(appt) {
   });
 }
 
-exports.adminCreateReviewLink = onRequest(OPTS, async (req, res) => {
+exports.adminCreateReviewLink = onRequest({ ...OPTS, cpu: "gcf_gen1" }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!(await adminOnly(req, res))) return;
   const id = String((req.body || {}).appointmentId || "");
@@ -175,7 +175,7 @@ async function sendReviewEmail(resendKey, to, appt, link) {
   );
 }
 
-exports.adminSendReviewEmail = onRequest({ ...OPTS, secrets: [RESEND_SECRET] }, async (req, res) => {
+exports.adminSendReviewEmail = onRequest({ ...OPTS, cpu: "gcf_gen1", secrets: [RESEND_SECRET] }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!(await adminOnly(req, res))) return;
   const id = String((req.body || {}).appointmentId || "");
@@ -199,7 +199,7 @@ exports.adminSendReviewEmail = onRequest({ ...OPTS, secrets: [RESEND_SECRET] }, 
 
 // Automático: a cada 15 min envia os e-mails vencidos (marcados ao concluir, ~45 min depois).
 exports.sendReviewEmails = onSchedule(
-  { region: "southamerica-east1", schedule: "every 15 minutes", timeZone: "America/Sao_Paulo", secrets: [RESEND_SECRET] },
+  { cpu: "gcf_gen1", region: "southamerica-east1", schedule: "every 15 minutes", timeZone: "America/Sao_Paulo", secrets: [RESEND_SECRET] },
   async () => {
     const db = admin.firestore();
     const snap = await db.collection("appointments").where("reviewEmailDueAt", "<=", Date.now()).limit(50).get();

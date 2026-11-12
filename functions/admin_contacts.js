@@ -16,7 +16,7 @@ async function contactOf(uid, appt, fallbackName) {
   return { name: String(user.name || fallbackName || ""), ...c };
 }
 
-exports.adminAppointmentContacts = onRequest({ region: "southamerica-east1", cors: true }, async (req, res) => {
+exports.adminAppointmentContacts = onRequest({ region: "southamerica-east1", cors: true, cpu: "gcf_gen1" }, async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const h = req.headers.authorization || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : null;

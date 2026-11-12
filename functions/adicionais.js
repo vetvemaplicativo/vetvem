@@ -49,7 +49,7 @@ exports.extraCharge = onRequest(OPTS, handler((a) => core.createCharge(a)));
 exports.extraCancel = onRequest(OPTS, handler((a) => core.cancelExtra(a)));
 
 exports.dailyExtraPayouts = onSchedule(
-  { schedule: "10 8 * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  { cpu: "gcf_gen1", schedule: "10 8 * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
   async () => {
     const r = await core.processExtraPayouts();
     if (!r.count && !r.held) { console.log("dailyExtraPayouts: nada devido hoje."); return; }

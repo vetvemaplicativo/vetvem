@@ -36,7 +36,7 @@ async function adminOnly(req, res) {
 }
 
 exports.adminResendProntuarioEmail = onRequest(
-  { region: "southamerica-east1", cors: true, secrets: [RESEND_SECRET] },
+  { region: "southamerica-east1", cors: true, cpu: "gcf_gen1", secrets: [RESEND_SECRET] },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     if (!(await adminOnly(req, res))) return;

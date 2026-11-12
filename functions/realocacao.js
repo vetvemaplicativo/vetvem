@@ -67,7 +67,7 @@ exports.cancelRelocation = onRequest({ region: "southamerica-east1", cors: false
 });
 
 exports.expireRelocations = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
+  { cpu: "gcf_gen1", schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = Date.now();

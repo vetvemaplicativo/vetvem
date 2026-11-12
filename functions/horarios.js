@@ -188,7 +188,7 @@ exports.respondToProposal = onRequest({ region: "southamerica-east1", cors: fals
 
 // ── Prazo do tutor terminou sem resposta: encerra e estorna ──────────────────
 exports.expireProposals = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  { cpu: "gcf_gen1", schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
   async () => {
     const db = admin.firestore();
     const now = Date.now();

@@ -755,7 +755,7 @@ exports.saveCard = onRequest(
 // Só concede ao ADMIN_EMAIL (constante acima). O painel web chama no primeiro
 // login; a claim viaja no token e é verificada pelas regras do Firestore.
 exports.grantAdmin = onRequest(
-  { region: "southamerica-east1", cors: true },
+  { region: "southamerica-east1", cors: true, cpu: "gcf_gen1" },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -791,7 +791,7 @@ exports.grantAdmin = onRequest(
 const PAYMENT_DEADLINE_HOURS = 24;
 
 exports.cancelUnpaid = onSchedule(
-  { schedule: "*/30 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
+  { cpu: "gcf_gen1", schedule: "*/30 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1" },
   async () => {
     const db = admin.firestore();
     const now = new Date();
@@ -1187,7 +1187,7 @@ exports.appointmentHistorian = onDocumentWritten(
 const RESPONSE_DEADLINE_MINUTES = 180;
 
 exports.expireUnanswered = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] },
+  { cpu: "gcf_gen1", schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] },
   async () => {
     const db = admin.firestore();
     const now = new Date();
@@ -1269,7 +1269,7 @@ exports.expireUnanswered = onSchedule(
 // pedido do usuário via suporte). Cancela, estorna se já pago e notifica as
 // duas partes — a mesma lógica que os cancelamentos automáticos já usam.
 exports.adminCancelAppointment = onRequest(
-  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2], cors: true },
+  { region: "southamerica-east1", secrets: [MP_SECRET, MP_SECRET_V2], cors: true, cpu: "gcf_gen1" },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -1344,7 +1344,7 @@ exports.adminCancelAppointment = onRequest(
 // troca data/hora, encerra a realocação e mantém o pagamento intacto (sem estorno/cobrança).
 // Com confirm=true já o deixa "confirmed" (o historian manda o e-mail ao tutor do portal).
 exports.adminRescheduleAppointment = onRequest(
-  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true, cpu: "gcf_gen1" },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     const adminUid = await verifyAdmin(req, res);
@@ -1411,7 +1411,7 @@ exports.adminRescheduleAppointment = onRequest(
 
 // Reenvia o e-mail de confirmação (pedido do portal) com a data/hora ATUAIS do pedido.
 exports.adminResendConfirmationEmail = onRequest(
-  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true },
+  { region: "southamerica-east1", secrets: [RESEND_SECRET], cors: true, cpu: "gcf_gen1" },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     if (!(await verifyAdmin(req, res))) return;
@@ -1477,7 +1477,7 @@ const DEFAULT_SPECIES = [
 ];
 
 exports.seedTaxonomies = onRequest(
-  { region: "southamerica-east1", cors: true },
+  { region: "southamerica-east1", cors: true, cpu: "gcf_gen1" },
   async (req, res) => {
     const db = admin.firestore();
     const result = {};
@@ -1701,6 +1701,8 @@ Object.assign(exports, require("./travel"));
 Object.assign(exports, require("./prontuario_email"));
 // Leituras públicas que substituem a leitura ampla de appointments (busyTimes, vetReviews)
 Object.assign(exports, require("./public_reads"));
+// Transição portal -> app: traz as consultas concluídas do login por celular para a conta do app
+Object.assign(exports, require("./claim_portal"));
 
 // Cadastro rejeitado que reenvia documentos volta para a fila de análise.
 Object.assign(exports, require("./account_review"));

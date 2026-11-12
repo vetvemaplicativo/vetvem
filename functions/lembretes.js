@@ -62,7 +62,7 @@ async function sendDueReminders(doc, now, resendKey) {
 }
 
 exports.consultaLembretes = onSchedule(
-  { schedule: "*/15 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
+  { cpu: "gcf_gen1", schedule: "*/15 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET] },
   async () => {
     const now = new Date();
     const snap = await admin.firestore().collection("appointments")
