@@ -31,7 +31,7 @@ Versão 2.0 · Outubro de 2026
 
 3.2. O pagamento é ANTECIPADO: você paga no momento da solicitação, por Pix ou cartão de crédito. A solicitação só é enviada ao profissional depois da aprovação do pagamento. Solicitações sem pagamento aprovado não são enviadas e o horário é liberado.
 
-3.3. Depois de aprovado o pagamento, o profissional tem até 1 (uma) hora para confirmar ou recusar a solicitação e, em qualquer caso, deve responder antes do horário marcado. Se ele recusar ou não responder nesse prazo, a solicitação é encerrada e o valor pago é ESTORNADO AUTOMATICAMENTE.
+3.3. Depois de aprovado o pagamento, o profissional tem até 3 (três) horas para confirmar ou recusar a solicitação e, em qualquer caso, deve responder antes do horário marcado. Se ele recusar ou não responder nesse prazo, a solicitação é encerrada e o valor pago é ESTORNADO AUTOMATICAMENTE.
 
 3.4. Os pagamentos são processados por instituição de pagamento parceira. O VetVem não armazena os dados completos do seu cartão — eles são guardados de forma segura pelo processador de pagamentos, conforme os padrões de segurança do setor (PCI-DSS).
 

@@ -1,3 +1,4 @@
+import '../../../utils/cpf.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -99,7 +100,7 @@ class RegisterController extends GetxController {
   String? validateCpf(String? v) {
     if (v == null || v.isEmpty) return 'Informe seu CPF';
     final digits = v.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 11) return 'CPF inválido';
+    if (!isValidCpf(digits)) return 'CPF inválido';
     return null;
   }
 

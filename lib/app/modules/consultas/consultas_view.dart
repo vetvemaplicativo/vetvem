@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
+import 'claim_portal_sheet.dart';
 
 class ConsultasView extends StatelessWidget {
   const ConsultasView({super.key});
@@ -60,8 +61,10 @@ class ConsultasView extends StatelessWidget {
               if (all.isEmpty) return const _EmptyState();
               return ListView.builder(
                 padding: const EdgeInsets.all(20),
-                itemCount: all.length,
-                itemBuilder: (context, i) => _ConsultaCard(item: all[i]),
+                itemCount: all.length + 1,
+                itemBuilder: (context, i) => i == all.length
+                    ? const ClaimPortalCard()
+                    : _ConsultaCard(item: all[i]),
               );
             }),
           ),
@@ -445,6 +448,11 @@ class _EmptyState extends StatelessWidget {
             'Busque um veterinário e agende\nsua primeira consulta',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: AppColors.textLight),
+          ),
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: ClaimPortalCard(),
           ),
         ],
       ),

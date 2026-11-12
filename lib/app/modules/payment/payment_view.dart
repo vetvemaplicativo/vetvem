@@ -1,3 +1,4 @@
+import '../../utils/cpf.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -803,6 +804,8 @@ class _CardFormView extends GetView<PaymentController> {
                 controller: controller.cpfController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [_CpfFormatter()],
+                // CPF continua opcional; se preenchido, precisa ser válido (evita recusa por dado errado).
+                validator: (v) => (v == null || v.trim().isEmpty || isValidCpf(v)) ? null : 'CPF inválido',
                 decoration: const InputDecoration(
                   hintText: '000.000.000-00',
                   labelText: 'CPF do titular',

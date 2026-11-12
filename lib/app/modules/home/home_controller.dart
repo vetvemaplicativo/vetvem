@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import '../../routes/app_routes.dart';
 import '../../data/models/appointment_model.dart';
 import '../../services/analytics_service.dart';
 import '../profile/profile_controller.dart';
@@ -49,6 +52,7 @@ class HomeController extends GetxController {
         .listen((snap) {
       hasAnyAppointment.value = snap.docs.isNotEmpty;
       appointmentsLoaded.value = true;
+      _maybePromptRating(snap.docs);
       final active = snap.docs.where((doc) {
         final s = doc.data()['status'];
         return s == 'pending_confirmation' || s == 'confirmed';
@@ -95,6 +99,80 @@ class HomeController extends GetxController {
         );
       }).toList();
     });
+  }
+
+  // ── Convite para avaliar ──────────────────────────────────────────────────
+  // Uma vez por abertura do app: consulta CONCLUÍDA nos últimos 45 dias e ainda sem nota.
+  // "Agora não" conta como adiamento; após 2 adiamentos da mesma consulta, para de perguntar.
+  // No máximo um convite a cada 20 horas.
+  static const _ratingBox = 'rating_prompt';
+  bool _ratingPromptHandled = false;
+
+  DateTime? _parseApptDate(String? s) {
+    final p = (s ?? '').split('/');
+    if (p.length != 3) return null;
+    final d = int.tryParse(p[0]), m = int.tryParse(p[1]), y = int.tryParse(p[2]);
+    if (d == null || m == null || y == null) return null;
+    return DateTime(y, m, d);
+  }
+
+  Future<void> _maybePromptRating(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+    if (_ratingPromptHandled) return;
+    final now = DateTime.now();
+    final pending = <MapEntry<DateTime, QueryDocumentSnapshot<Map<String, dynamic>>>>[];
+    for (final doc in docs) {
+      final d = doc.data();
+      if (d['status'] != 'completed' || d['rating'] != null) continue;
+      final when = _parseApptDate(d['date'] as String?);
+      if (when == null || now.difference(when).inDays > 45) continue;
+      pending.add(MapEntry(when, doc));
+    }
+    if (pending.isEmpty) return;
+    _ratingPromptHandled = true;
+    try {
+      await GetStorage.init(_ratingBox);
+      final box = GetStorage(_ratingBox);
+      final last = box.read<int>('last') ?? 0;
+      if (now.millisecondsSinceEpoch - last < 20 * 3600 * 1000) return;
+      pending.sort((a, b) => b.key.compareTo(a.key));
+      final pick = pending.where((e) => (box.read<int>('skip_${e.value.id}') ?? 0) < 2).toList();
+      if (pick.isEmpty) return;
+      final doc = pick.first.value;
+      final d = doc.data();
+      await Future.delayed(const Duration(seconds: 2));
+      if (Get.isDialogOpen == true) return;
+      box.write('last', DateTime.now().millisecondsSinceEpoch);
+      final vet = (d['vetName'] as String?)?.trim() ?? '';
+      final go = await Get.dialog<bool>(
+        AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Text('Como foi o atendimento?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          content: Text(
+            vet.isEmpty
+                ? 'Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.'
+                : 'Conte como foi a consulta com $vet. Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.',
+            style: const TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            TextButton(onPressed: () => Get.back(result: false), child: const Text('Agora não')),
+            ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('Avaliar agora')),
+          ],
+        ),
+      );
+      if (go == true) {
+        Get.toNamed(Routes.rating, arguments: {
+          'consultationId': doc.id,
+          'vetName': vet.isEmpty ? 'Veterinário' : vet,
+          'petName': d['petName'] ?? 'Pet',
+          'date': d['date'] ?? '',
+          'specialty': d['serviceName'] ?? '',
+        });
+      } else {
+        box.write('skip_${doc.id}', (box.read<int>('skip_${doc.id}') ?? 0) + 1);
+      }
+    } catch (_) {
+      // convite é só um lembrete: nunca atrapalha o app
+    }
   }
 
   void changeTab(int index) {
