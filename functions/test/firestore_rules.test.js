@@ -72,7 +72,10 @@ test("vitrine: qualquer autenticado lê (inclusive anônimo); ninguém escreve",
 });
 
 test("portal continua funcionando: agendamentos legíveis, lista de espera, criar agendamento após SMS", async () => {
-  await assertSucceeds(anon().collection("appointments").where("vetName", "==", "Dra. Ana").get());
+  // provisório: leitura ampla; fase 3: anônimo/telefone não leem pedidos de ninguém
+  await (FASE3
+    ? assertFails(anon().collection("appointments").where("vetName", "==", "Dra. Ana").get())
+    : assertSucceeds(anon().collection("appointments").where("vetName", "==", "Dra. Ana").get()));
   await assertSucceeds(anon().doc("config/app_version_tutor").get());
   await assertSucceeds(anon().collection("waitlist_regiao").add({
     uf: "RJ", cidade: "Niteroi", contato: "tutor@x.com", origem: "portal_web", createdAt: serverTimestamp(),
@@ -165,4 +168,82 @@ test("adicionais: profissional lê tudo; tutor lê só o pago; estranho e anôni
   await assertFails(extra(otherVet(), "paid1").get());
   await assertFails(extra(anon(), "paid1").get());
   await assertSucceeds(extra(admin(), "pend1").get());
+});
+
+// ── Fase 3: appointments só para dono, profissional e admin ─────────────────
+const appt = (db, id = "a1") => db.doc(`appointments/${id}`);
+const outroTutor = () => as("tutor2", "password");
+const outroVet = () => as("vet2", "password", { name: "Dr. Bruno" });
+const vetNamed = () => as(VET, "password", { name: "Dra. Ana" });
+
+test("FASE 3 appointments: dono, profissional e admin leem; terceiros não", { skip: !FASE3 }, async () => {
+  await assertSucceeds(appt(tutorPwd()).get());
+  await assertSucceeds(appt(vet()).get());
+  await assertSucceeds(appt(admin()).get());
+  await assertFails(appt(outroTutor()).get());
+  await assertFails(appt(outroVet()).get());
+  await assertFails(appt(anon()).get());
+  await assertFails(appt(phone()).get()); // outro uid de celular
+  await assertFails(appt(env.unauthenticatedContext().firestore()).get());
+});
+
+test("FASE 3 appointments: queries dos apps passam só se filtradas pelo próprio uid", { skip: !FASE3 }, async () => {
+  const col = (db) => db.collection("appointments");
+  await assertSucceeds(col(tutorPwd()).where("tutorId", "==", TUTOR).get());      // Tutor: Minhas Consultas / home
+  await assertSucceeds(col(vet()).where("vetId", "==", VET).get());               // Pro (build que filtrar por vetId)
+  await assertSucceeds(col(admin()).get());                                        // painel
+  await assertFails(col(tutorPwd()).get());                                        // listar tudo: nunca
+  await assertFails(col(tutorPwd()).where("tutorId", "==", "tutor2").get());       // pedidos de outro tutor
+  await assertFails(col(tutorPwd()).where("vetId", "==", VET).get());              // horários ocupados por vetId: agora é busyTimes
+  await assertFails(col(outroVet()).where("vetId", "==", VET).get());
+  await assertFails(col(anon()).where("vetName", "==", "Dra. Ana").get());
+});
+
+test("FASE 3 appointments: Pro atual (where vetName == displayName) segue funcionando só para o próprio nome", { skip: !FASE3 }, async () => {
+  await assertSucceeds(vetNamed().collection("appointments").where("vetName", "==", "Dra. Ana").get());
+  // nome diferente do token: negado (o app só consulta com o displayName da conta)
+  await assertFails(outroVet().collection("appointments").where("vetName", "==", "Dra. Ana").get());
+  // login por celular/anônimo não usam a cláusula transitória
+  await assertFails(as("p9", "phone", { name: "Dra. Ana" }).collection("appointments").where("vetName", "==", "Dra. Ana").get());
+});
+
+test("FASE 3 appointments: portal (login por celular) lê e acompanha só o próprio pedido", { skip: !FASE3 }, async () => {
+  const ref = await assertSucceeds(phone().collection("appointments").add({
+    tutorId: "phone1", vetId: VET, vetName: "Dra. Ana", status: "pending_confirmation",
+  }));
+  await assertSucceeds(phone().doc(`appointments/${ref.id}`).get());               // StepPix onSnapshot
+  await assertFails(as("phone2", "phone").doc(`appointments/${ref.id}`).get());
+});
+
+test("FASE 3 appointments: pedido legado sem vetId não é mais editável por qualquer um", { skip: !FASE3 }, async () => {
+  await env.withSecurityRulesDisabled((ctx) => ctx.firestore().doc("appointments/legado").set({ tutorId: TUTOR, vetName: "Ronald", status: "completed" }));
+  await assertFails(outroVet().doc("appointments/legado").update({ complementos: ["x"] }));
+  await assertFails(outroTutor().doc("appointments/legado").update({ complementos: ["x"] }));
+  await assertSucceeds(tutorPwd().doc("appointments/legado").update({ rating: 5, comment: "ok" })); // dono avalia
+});
+
+test("FASE 3 appointments: escritas legítimas preservadas (tutor avalia/cancela, vet confirma, viewedAt só do vet, uma vez)", { skip: !FASE3 }, async () => {
+  await assertSucceeds(tutorPwd().doc("appointments/a1").update({ rating: 4, comment: "bom" }));
+  await assertSucceeds(tutorPwd().doc("appointments/a1").update({ status: "cancelled", cancelledBy: "tutor" }));
+  await assertFails(tutorPwd().doc("appointments/a1").update({ cancelledBy: "profissional" })); // não mente
+  await assertFails(tutorPwd().doc("appointments/a1").update({ paymentStatus: "approved" }));   // campo do servidor
+  await assertFails(tutorPwd().doc("appointments/a1").update({ vetId: "vet2" }));
+  await assertSucceeds(vet().doc("appointments/a1").update({ status: "confirmed", confirmedAt: new Date() }));
+  await assertFails(tutorPwd().doc("appointments/a1").update({ viewedAt: new Date() }));
+  await assertSucceeds(vet().doc("appointments/a1").update({ viewedAt: new Date() }));
+  await assertFails(vet().doc("appointments/a1").update({ viewedAt: new Date() })); // só uma vez
+  await assertFails(outroVet().doc("appointments/a1").update({ status: "confirmed" }));
+});
+
+test("FASE 3 appointments: criar só em nome próprio e sem campos do servidor; admin tudo", { skip: !FASE3 }, async () => {
+  await assertSucceeds(tutorPwd().collection("appointments").add({ tutorId: TUTOR, vetId: VET, status: "pending_payment" }));
+  await assertFails(tutorPwd().collection("appointments").add({ tutorId: "tutor2", vetId: VET }));
+  await assertFails(tutorPwd().collection("appointments").add({ tutorId: TUTOR, vetId: VET, historico_status: [] }));
+  await assertSucceeds(admin().doc("appointments/a1").update({ status: "cancelled", cancelledBy: "sistema" }));
+});
+
+test("FASE 3 appointments/extras: continuam como antes (vet vê tudo, tutor só pagos)", { skip: !FASE3 }, async () => {
+  await assertSucceeds(vet().collection("appointments/a1/extras").get());
+  await assertFails(outroVet().collection("appointments/a1/extras").get());
+  await assertSucceeds(tutorPwd().collection("appointments/a1/extras").where("status", "==", "paid").get());
 });
