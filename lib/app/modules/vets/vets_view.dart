@@ -582,24 +582,50 @@ class _EmptyStateState extends State<_EmptyState> {
         ),
       );
     }
-    final city = '${_c.tutorCity}/${_c.tutorUf}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Get.find<AnalyticsService>().logRegionAction('see_other_cities', _c.tutorUf, _c.tutorCity);
+                _c.showAllCities();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(50),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                elevation: 2,
+                shadowColor: Colors.black.withValues(alpha: 0.18),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/icone_proximos.png', width: 22, height: 22),
+                  const SizedBox(width: 10),
+                  const Flexible(
+                    child: Text(
+                      'Ver veterinários próximos da sua região',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(height: 1.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           const Icon(Icons.location_off_outlined, size: 56, color: AppColors.textLight),
           const SizedBox(height: 14),
-          Text(
-            'Ainda não encontramos veterinários em $city.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-          ),
-          const SizedBox(height: 6),
           const Text(
-            'Estamos chegando em novas regiões. Conte para a gente o que você precisa e vamos ajudar.',
+            'Estamos chegando em novas regiões.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4),
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
           const SizedBox(height: 18),
           SizedBox(
@@ -621,6 +647,8 @@ class _EmptyStateState extends State<_EmptyState> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
+                      elevation: 2,
+                      shadowColor: Colors.black.withValues(alpha: 0.18),
                     ),
                     child: Text(_joining ? 'Enviando…' : 'Avise-me quando chegar'),
                   ),
@@ -632,16 +660,13 @@ class _EmptyStateState extends State<_EmptyState> {
               onPressed: _openWhatsapp,
               icon: const Icon(Icons.chat_outlined, size: 18),
               label: const Text('Falar com o VetVem no WhatsApp'),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                backgroundColor: Colors.white,
+                elevation: 2,
+                shadowColor: Colors.black.withValues(alpha: 0.18),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: () {
-              Get.find<AnalyticsService>().logRegionAction('see_other_cities', _c.tutorUf, _c.tutorCity);
-              _c.showAllCities();
-            },
-            child: const Text('Ver veterinários de outras cidades'),
           ),
         ],
       ),
