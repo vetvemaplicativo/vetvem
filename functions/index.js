@@ -1476,31 +1476,8 @@ const DEFAULT_SPECIES = [
   { key: "exotic", emoji: "🦜", label: "Exótico" },
 ];
 
-exports.seedTaxonomies = onRequest(
-  { region: "southamerica-east1", cors: true, cpu: "gcf_gen1" },
-  async (req, res) => {
-    const db = admin.firestore();
-    const result = {};
-
-    const specialtiesRef = db.collection("config").doc("specialties");
-    if (!(await specialtiesRef.get()).exists) {
-      await specialtiesRef.set({ items: DEFAULT_SPECIALTIES });
-      result.specialties = "seeded";
-    } else {
-      result.specialties = "already exists, skipped";
-    }
-
-    const speciesRef = db.collection("config").doc("species");
-    if (!(await speciesRef.get()).exists) {
-      await speciesRef.set({ items: DEFAULT_SPECIES });
-      result.species = "seeded";
-    } else {
-      result.species = "already exists, skipped";
-    }
-
-    return res.json({ result });
-  }
-);
+// (Endpoint público seedTaxonomies removido em 16/11/2026: config/specialties e
+// config/species já existem; as listas acima ficam só como referência.)
 
 // ─── Encerrar conta (LGPD + Apple Guideline 5.1.1(v)) ─────────────────────────
 // Exclusão self-service dentro do app (tutor e Pro). Não é hard delete puro:

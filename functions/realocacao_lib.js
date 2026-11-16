@@ -170,7 +170,7 @@ function tutorDeadline(nowMs, portal = false) {
   return nowMs + (portal ? PORTAL_TUTOR_WINDOW_MIN : TUTOR_WINDOW_MIN) * MIN;
 }
 
-// Prazo do novo profissional (ms): 2h, mas nunca depois de 1h antes da consulta.
+// Prazo do novo profissional (ms): 3h, mas nunca depois de 1h antes da consulta.
 function vetDeadline(nowMs, apptMs) {
   return Math.min(nowMs + VET_RESPONSE_MIN * MIN, apptMs - VET_END_MARGIN_MIN * MIN);
 }
