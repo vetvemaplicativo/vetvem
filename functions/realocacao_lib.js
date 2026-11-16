@@ -116,7 +116,10 @@ function pickService(services, originalServiceName, appt, maxAmount, travelFee) 
     const sim = serviceSimilarity(originalServiceName, s.name);
     if (sim < MIN_SIMILARITY) continue;
     // O preço é calculado como no pagamento (inclui deslocamento e vários animais).
-    const priced = priceForService(s, { ...appt, feesDisclosed: true },
+    // O nº de animais do serviço original vale também para o serviço equivalente do candidato.
+    const orig = Array.isArray(appt.serviceAnimals)
+      ? appt.serviceAnimals.find((x) => x && normText(x.name) === normText(originalServiceName)) : null;
+    const priced = priceForService(s, { ...appt, feesDisclosed: true, ...(orig ? { serviceAnimals: [{ name: s.name, pets: orig.pets }] } : {}) },
       typeof travelFee === "number" ? { travelFee: s.travelByKm === true ? travelFee : 0 } : undefined); // por km: só serviços marcados (travelByKm) cobram
     if (!priced || !(priced.amount > 0)) continue;
     if (priced.amount > maxAmount + 0.009) continue; // nunca mais caro que o valor pago

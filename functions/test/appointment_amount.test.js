@@ -110,3 +110,28 @@ test("deslocamento por km: valor calculado uma vez só", () => {
 test("serviço sem preço válido invalida o conjunto", () => {
   assert.equal(priceForServices([cons, { name: "x" }], {}, undefined), null);
 });
+
+// ── Animais por serviço (serviceAnimals) ──────────────────────────────────────
+test("serviceAnimals: vacina só em 1 dos 2 animais paga 1×; sem a marca, paga os 2", () => {
+  const { animalsForService } = require("../appointment_amount");
+  const v4 = { name: "V4", price: 80 };
+  const pedido = { petCount: 2, pets: [{ name: "Mimi" }, { name: "Tom" }] };
+  assert.equal(priceForService(v4, pedido).amount, 160);
+  assert.equal(priceForService(v4, { ...pedido, serviceAnimals: [{ name: "V4", pets: ["Tom"] }] }).amount, 80);
+  assert.equal(animalsForService({ ...pedido, serviceAnimals: [{ name: "V4", pets: ["Tom"] }] }, "V4"), 1);
+  assert.equal(animalsForService({ ...pedido, serviceAnimals: [{ name: "V4", pets: ["Tom"] }] }, "Outra"), 2);
+});
+
+test("serviceAnimals: nunca passa do total do pedido nem fica abaixo de 1", () => {
+  const { animalsForService } = require("../appointment_amount");
+  const pedido = { petCount: 2, pets: [{ name: "A" }, { name: "B" }] };
+  assert.equal(animalsForService({ ...pedido, serviceAnimals: [{ name: "X", pets: ["A", "B", "C", "D"] }] }, "X"), 2);
+  assert.equal(animalsForService({ ...pedido, serviceAnimals: [{ name: "X", pets: [] }] }, "X"), 1);
+});
+
+test("serviceAnimals: consulta para 2 + V4 em 1 = 160 + 80", () => {
+  const cons = { name: "Consulta", price: 100, perAnimal: true, additionalPrice: 60 };
+  const v4 = { name: "V4", price: 80 };
+  const pedido = { petCount: 2, pets: [{ name: "Mimi" }, { name: "Tom" }], serviceAnimals: [{ name: "V4", pets: ["Tom"] }] };
+  assert.equal(priceForServices([cons, v4], pedido, undefined).amount, 240);
+});

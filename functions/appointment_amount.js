@@ -24,13 +24,25 @@ function animalsOf(appt) {
   return Math.min(Math.max(declared, listed, 1), MAX_ANIMALS);
 }
 
+// Nº de animais que fazem ESTE serviço. O pedido pode trazer
+// appt.serviceAnimals = [{name, pets:[nomes]}] (só quando algum serviço é para menos animais
+// que o pedido todo, ex.: 2 gatos, vacina V4 só em 1). Sem a marca (apps antigos) vale o
+// pedido inteiro. Nunca passa do nº de animais do pedido e nunca é menor que 1.
+function animalsForService(appt, svcName) {
+  const all = animalsOf(appt);
+  const list = appt && Array.isArray(appt.serviceAnimals) ? appt.serviceAnimals : [];
+  const hit = list.find((x) => x && String(x.name || "").trim() === String(svcName || "").trim());
+  if (!hit || !Array.isArray(hit.pets)) return all;
+  return Math.min(Math.max(hit.pets.length, 1), all);
+}
+
 // svc: item de users/{vetId}.services; appt: documento do agendamento.
 // Retorna { amount, count } ou null se o serviço não tem preço válido.
 // opts.travelFee (número >= 0): deslocamento já calculado por km; substitui a taxa fixa do serviço.
 function priceForService(svc, appt, opts) {
   const base = toNum(svc.price);
   if (!(base > 0)) return null;
-  const n = animalsOf(appt);
+  const n = animalsForService(appt, svc.name);
   const count = svc.perAnimal === true || n > 1 ? n : 1;
   const extraRaw = svc.additionalPrice;
   // additionalPrice só vale em serviço "por animal"; no serviço comum o
@@ -103,4 +115,4 @@ function petLabel(appt, fallback) {
   return first ? `${first} +${n - 1}` : `${n} animais`;
 }
 
-module.exports = { priceForService, priceForServices, serviceNamesOf, MAX_SERVICES, animalsOf, petLabel, toNum, MAX_ANIMALS };
+module.exports = { animalsForService, priceForService, priceForServices, serviceNamesOf, MAX_SERVICES, animalsOf, petLabel, toNum, MAX_ANIMALS };
