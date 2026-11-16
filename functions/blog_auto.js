@@ -33,7 +33,8 @@ const SITE_SECRET = defineSecret("WP_SYNC_SECRET");
 
 const SITE = "https://vetvem.com.br";
 const API = `${SITE}/wp-json/vetvem/v1`;
-const MODEL = "claude-opus-5-5";
+// Sonnet 5.5: metade do preço do Opus 5.5 por token (US$2/US$10 por milhão). Trocado em 10/11/2026 para baratear o blog.
+const MODEL = "claude-sonnet-5-5";
 const REGION = "southamerica-east1";
 
 // Páginas do próprio site que a IA pode linkar (o plugin remove qualquer outro link).
