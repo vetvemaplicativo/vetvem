@@ -237,6 +237,7 @@ class MultiPriceSummary extends StatelessWidget {
         return const SizedBox.shrink();
       }
       String lineOf(VetService s) {
+        final n = c.animalsFor(s);
         final extra = s.perAnimal ? (s.additionalPrice ?? s.price) : s.price;
         final body = n <= 1
             ? _money(s.price)
@@ -258,8 +259,6 @@ class MultiPriceSummary extends StatelessWidget {
           children: [
             for (final s in list)
               Text(lineOf(s), style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
-            if (list.length > 1 && n > 1)
-              Text('$n animais', style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
             if (!byKm && fixed > 0)
               Text('Deslocamento (taxa fixa por visita): ${_money(fixed)}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),

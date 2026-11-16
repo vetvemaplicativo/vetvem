@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'multi_pet_picker.dart';
 import 'package:get/get.dart';
+import '../../data/models/vet_model.dart';
 import '../../theme/app_theme.dart';
 import '../profile/profile_controller.dart';
 import '../profile/profile_view.dart' show AddAddressSheet;
+import '../../data/models/service_area_model.dart' show normalizeSearchText;
 import '../vets/vets_controller.dart';
 import 'scheduling_controller.dart';
 
@@ -470,7 +472,22 @@ class _SectionTitle extends StatelessWidget {
 
 // ─── Service Selector ─────────────────────────────────────────────────────────
 
-class _ServiceSelector extends GetView<SchedulingController> {
+class _ServiceSelector extends StatefulWidget {
+  @override
+  State<_ServiceSelector> createState() => _ServiceSelectorState();
+}
+
+class _ServiceSelectorState extends State<_ServiceSelector> {
+  final SchedulingController controller = Get.find<SchedulingController>();
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vet = Get.find<VetsController>().selectedVet.value;
@@ -489,16 +506,70 @@ class _ServiceSelector extends GetView<SchedulingController> {
       );
     }
 
+    final showSearch = services.length > 5;
     return Obx(() {
       final selected = controller.selectedServices.map((x) => x.name).toSet();
+      final q = normalizeSearchText(_query);
+      final visible = (!showSearch || q.isEmpty)
+          ? services
+          : services
+              .where((s) => normalizeSearchText('${s.name} ${s.description}').contains(q))
+              .toList();
       return Column(
-        children: services.map((s) {
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showSearch)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextField(
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Buscar serviço (ex.: vacina)',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+          if (visible.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: Text('Nenhum serviço encontrado para essa busca.',
+                    style: TextStyle(color: AppColors.textMedium, fontSize: 13)),
+              ),
+            ),
+          ...visible.map((s) {
           final isSelected = selected.contains(s.name);
-          return GestureDetector(
+          final card = GestureDetector(
             onTap: () => controller.toggleService(s),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(bottom: 10),
+              margin: EdgeInsets.only(bottom: isSelected && controller.animalCount > 1 ? 6 : 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -631,9 +702,125 @@ class _ServiceSelector extends GetView<SchedulingController> {
               ),
             ),
           );
-        }).toList(),
+          if (!isSelected || controller.animalCount <= 1) return card;
+          return Column(children: [card, _ServiceAnimalsPicker(service: s)]);
+          }),
+        ],
       );
     });
+  }
+}
+
+/// "Para quais animais?" — aparece abaixo do serviço marcado quando o pedido tem mais de um animal.
+/// Todos vêm marcados; o tutor tira quem não vai fazer aquele serviço.
+class _ServiceAnimalsPicker extends StatelessWidget {
+  final VetService service;
+  const _ServiceAnimalsPicker({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<SchedulingController>();
+    final profile = Get.find<ProfileController>();
+    return Obx(() {
+      final pets = profile.pets;
+      final all = (c.selectedPetIndexes.toList()..sort()).where((i) => i < pets.length).toList();
+      final mine = c.petsFor(service).toSet();
+      final extras = c.extraAnimals.value;
+      final k = c.animalsFor(service);
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Para quais animais? ($k de ${c.animalCount})',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final i in all)
+                  _AnimalToggle(
+                    emoji: pets[i].species == 'cat' ? '🐱' : pets[i].species == 'dog' ? '🐶' : '🐾',
+                    label: pets[i].name,
+                    selected: mine.contains(i),
+                    onTap: () => c.togglePetForService(service, i),
+                  ),
+              ],
+            ),
+            if (extras > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Animais sem cadastro neste serviço',
+                        style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => c.setExtrasForService(service, c.extrasFor(service) - 1),
+                    icon: const Icon(Icons.remove_circle_outline, size: 22),
+                  ),
+                  Text('${c.extrasFor(service)}',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => c.setExtrasForService(service, c.extrasFor(service) + 1),
+                    icon: const Icon(Icons.add_circle_outline, size: 22, color: AppColors.primary),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _AnimalToggle extends StatelessWidget {
+  final String emoji, label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _AnimalToggle({required this.emoji, required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: selected ? AppColors.primary : const Color(0xFFE5E7EB), width: selected ? 2 : 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 15)),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColors.primary : AppColors.textMedium)),
+            const SizedBox(width: 4),
+            Icon(selected ? Icons.check_circle : Icons.circle_outlined,
+                size: 16, color: selected ? AppColors.primary : AppColors.textLight),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -76,8 +76,7 @@ class SchedulingController extends GetxController {
 
   /// Soma dos serviços escolhidos (cada um com a sua regra de animais), sem deslocamento.
   double get servicesTotal {
-    final n = animalCount;
-    return selectedServices.fold<double>(0, (a, s) => a + s.totalFor(n));
+    return selectedServices.fold<double>(0, (a, s) => a + s.totalFor(animalsFor(s)));
   }
 
   /// Taxa fixa de deslocamento: uma vez por visita (a maior entre os serviços escolhidos).
@@ -93,12 +92,66 @@ class SchedulingController extends GetxController {
     return ((servicesTotal + travel) * 100).round() / 100;
   }
 
+  // ── Animais de cada serviço ───────────────────────────────────────
+  // Por padrão cada serviço vale para TODOS os animais do pedido; o tutor pode tirar
+  // animais de um serviço (ex.: 2 gatos, vacina V4 só no Tom).
+  final excludedPets = <String, Set<int>>{}.obs; // nome do serviço -> pets do perfil fora dele
+  final extraFor = <String, int>{}.obs; // nome do serviço -> animais sem cadastro nele
+
+  /// Pets do perfil (índices) que fazem este serviço.
+  List<int> petsFor(VetService s) {
+    final out = (excludedPets[s.name] ?? const <int>{});
+    return (selectedPetIndexes.toList()..sort()).where((i) => !out.contains(i)).toList();
+  }
+
+  /// Animais sem cadastro que fazem este serviço (padrão: todos).
+  int extrasFor(VetService s) {
+    final all = extraAnimals.value;
+    final v = extraFor[s.name] ?? all;
+    return v < 0 ? 0 : (v > all ? all : v);
+  }
+
+  /// Nº de animais neste serviço (1 até o total do pedido).
+  int animalsFor(VetService s) {
+    final n = petsFor(s).length + extrasFor(s);
+    final all = animalCount;
+    return n < 1 ? 1 : (n > all ? all : n);
+  }
+
+  /// Algum serviço vale para menos animais que o pedido todo?
+  bool get hasPartialServices => selectedServices.any((s) => animalsFor(s) < animalCount);
+
+  /// Marca/desmarca um animal num serviço (o serviço precisa ficar com ao menos um animal).
+  void togglePetForService(VetService s, int petIndex) {
+    final out = {...(excludedPets[s.name] ?? const <int>{})};
+    if (out.contains(petIndex)) {
+      out.remove(petIndex);
+    } else {
+      if (animalsFor(s) <= 1) return;
+      out.add(petIndex);
+    }
+    excludedPets[s.name] = out;
+  }
+
+  void setExtrasForService(VetService s, int n) {
+    final all = extraAnimals.value;
+    final v = n < 0 ? 0 : (n > all ? all : n);
+    if (v < extrasFor(s) && animalsFor(s) <= 1) return;
+    extraFor[s.name] = v;
+  }
+
+  void _resetServiceAnimals() {
+    excludedPets.clear();
+    extraFor.clear();
+  }
+
   void togglePet(int i) {
     if (selectedPetIndexes.contains(i)) {
       selectedPetIndexes.remove(i);
     } else {
       selectedPetIndexes.add(i);
     }
+    _resetServiceAnimals();
   }
 
   /// Marca todos os pets do filtro atual (ou desmarca se já estiverem todos).
@@ -114,9 +167,13 @@ class SchedulingController extends GetxController {
     } else {
       selectedPetIndexes.addAll(idx);
     }
+    _resetServiceAnimals();
   }
 
-  void setExtraAnimals(int n) => extraAnimals.value = n.clamp(0, 50);
+  void setExtraAnimals(int n) {
+    extraAnimals.value = n.clamp(0, 50);
+    _resetServiceAnimals();
+  }
   final selectedServices = <VetService>[].obs; // 1 ou mais serviços na mesma consulta
   final selectedDate = Rx<DateTime?>(null);
   final selectedTime = Rx<String?>(null);
@@ -167,6 +224,8 @@ class SchedulingController extends GetxController {
     final i = selectedServices.indexWhere((s) => s.name == service.name);
     if (i >= 0) {
       selectedServices.removeAt(i);
+      excludedPets.remove(service.name);
+      extraFor.remove(service.name);
     } else {
       selectedServices.add(service);
     }
@@ -350,6 +409,7 @@ class SchedulingController extends GetxController {
         (selectedPetIndexes.toList()..sort()).map((i) => profile.pets[i]).toList();
     final count = animalCount;
     final multi = services.any((s) => s.perAnimal) || count > 1;
+    final partial = hasPartialServices;
     final kmFee = _kmFee;
     final kmDistance = usesTravelByKm ? travelQuote.value.km : 0.0;
     final total = totalPrice;
@@ -402,6 +462,19 @@ class SchedulingController extends GetxController {
           if (kmFee > 0) 'travelFee': kmFee,
           if (kmFee > 0) 'travelKm': kmDistance,
         },
+        // Animais de cada serviço, só quando algum serviço vale para menos animais que o pedido
+        // todo (o servidor cobra por esses animais; app/servidor antigos ignoram e cobram todos).
+        if (partial)
+          'serviceAnimals': [
+            for (final s in services)
+              {
+                'name': s.name,
+                'pets': [
+                  for (final i in petsFor(s)) profile.pets[i].name,
+                  for (var k = 0; k < extrasFor(s); k++) 'Animal sem cadastro',
+                ],
+              }
+          ],
         if (multi) ...{
           'petCount': count,
           'pets': [
