@@ -384,6 +384,8 @@ exports.mpWebhook = onRequest(
               // O vet só é avisado depois do pagamento aprovado (portal e app).
               // Feito aqui e não no app do tutor: quem paga o PIX pelo app do
               // banco fecha o VetVem e o aviso do cliente nunca sairia.
+              // Prazo do profissional (menor que 3h em pedido próximo, ver responseWindowMinutes).
+              const winMin = responseWindowMinutes(current, Date.now());
               await admin
                 .firestore()
                 .collection("notifications")
@@ -391,7 +393,7 @@ exports.mpWebhook = onRequest(
                 .collection("pending")
                 .add({
                   title: "🗓️ Novo agendamento pago!",
-                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${formatWindow(responseWindowMinutes(current, Date.now()))} ou a solicitação expira.`,
+                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${formatWindow(winMin)} ou a solicitação expira.`,
                   read: false,
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   tipo: "novo_agendamento",
@@ -399,6 +401,11 @@ exports.mpWebhook = onRequest(
                 });
               await ref.update({
                 vetNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+                // Grava o prazo exato só quando é menor que o padrão: o contador do app Pro e o
+                // verificador de expiração já seguem responseDeadline (pedido com prazo próprio).
+                ...(winMin < RESPONSE_DEADLINE_MINUTES && !current.responseDeadline
+                  ? { responseDeadline: Date.now() + winMin * 60 * 1000 }
+                  : {}),
               });
             }
           }
