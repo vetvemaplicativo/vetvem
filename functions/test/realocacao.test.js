@@ -116,3 +116,45 @@ test("portal: precisa de e-mail e de 6h; prazo da tutora é 2h", () => {
   assert.equal(L.tutorDeadline(now, true), now + 120 * 60 * 1000);
   assert.equal(L.tutorDeadline(now, false), now + 60 * 60 * 1000);
 });
+
+// ── Prazo do profissional (encolhe em pedido próximo, para a realocação caber) ──
+const MINUTE = 60 * 1000;
+const hoje = {
+  ...base, date: "18/11/2026", time: "14:00", // 14:00 BRT = 17:00Z
+};
+const pagoEm = Date.UTC(2026, 10, 18, 10, 35, 0); // 07:35 BRT
+
+test("responseWindowMinutes: caso real (pedido 07:35 p/ 14:00) vira 1h15", () => {
+  assert.strictEqual(L.responseWindowMinutes(hoje, pagoEm), 75);
+  // com esse prazo, na hora de expirar ainda restam >= 5h e o pedido é realocável
+  const expira = pagoEm + 75 * MINUTE;
+  assert.strictEqual(L.canRelocate(hoje, expira + 5 * MINUTE).ok, true);
+});
+
+test("responseWindowMinutes: consulta distante mantém 3h", () => {
+  assert.strictEqual(L.responseWindowMinutes({ ...hoje, date: "20/11/2026" }, pagoEm), 180);
+});
+
+test("responseWindowMinutes: consulta muito próxima (sem como realocar) mantém 3h", () => {
+  // paga 11:00 BRT para 14:00: sobra < 1h útil
+  assert.strictEqual(L.responseWindowMinutes(hoje, Date.UTC(2026, 10, 18, 14, 0, 0)), 180);
+});
+
+test("responseWindowMinutes: pedido que não pode ser realocado mantém 3h", () => {
+  assert.strictEqual(L.responseWindowMinutes({ ...hoje, canRelocate: false }, pagoEm), 180);
+});
+
+test("responseWindowMinutes: portal exige 6h, então a janela é outra", () => {
+  const portal = { ...hoje, bookingOrigin: "portal_web", email: "t@e.com" };
+  // 385 - 360 - 10 = 15 min (< 1h) -> mantém 3h (não dá para realocar de qualquer jeito)
+  assert.strictEqual(L.responseWindowMinutes(portal, pagoEm), 180);
+  // 8h antes: 480 - 360 - 10 = 110 (já múltiplo de 5)
+  assert.strictEqual(L.responseWindowMinutes(portal, Date.UTC(2026, 10, 18, 9, 0, 0)), 110);
+});
+
+test("formatWindow", () => {
+  assert.strictEqual(L.formatWindow(180), "3 horas");
+  assert.strictEqual(L.formatWindow(60), "1 hora");
+  assert.strictEqual(L.formatWindow(75), "1h15");
+  assert.strictEqual(L.formatWindow(45), "45 minutos");
+});

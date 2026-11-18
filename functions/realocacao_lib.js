@@ -160,6 +160,36 @@ function canRelocate(appt, nowMs) {
   return { ok: true };
 }
 
+// ── Prazo do profissional para responder ─────────────────────────────────────
+// Padrão: 3h. Mas se o pedido é para daqui a poucas horas, 3h de espera comem o tempo da
+// realocação (que exige >= 5h/6h até a consulta DEPOIS do prazo) e o tutor acaba só estornado.
+// Então, quando o pedido PODERIA ser realocado se o prazo fosse menor, o prazo encolhe para
+// o que sobra (mínimo 1h, em múltiplos de 5 min, com 10 min de folga para o verificador de
+// 5 em 5 min). Pedido que não pode ser realocado de jeito nenhum mantém as 3h de sempre.
+const VET_DEFAULT_WINDOW_MIN = 180;
+const VET_MIN_WINDOW_MIN = 60;
+const WINDOW_SAFETY_MIN = 10;
+
+// paidMs: quando o prazo começa a contar (pagamento aprovado). Retorna minutos.
+function responseWindowMinutes(appt, paidMs) {
+  const ms = appt ? parseDateTimeMs(appt.date, appt.time) : null;
+  if (ms === null || !Number.isFinite(paidMs)) return VET_DEFAULT_WINDOW_MIN;
+  const minHours = isPortal(appt) ? PORTAL_MIN_REMAINING_HOURS : MIN_REMAINING_HOURS;
+  const spare = Math.floor((ms - paidMs) / MIN) - minHours * 60 - WINDOW_SAFETY_MIN;
+  if (spare >= VET_DEFAULT_WINDOW_MIN) return VET_DEFAULT_WINDOW_MIN;
+  if (spare < VET_MIN_WINDOW_MIN) return VET_DEFAULT_WINDOW_MIN;
+  const w = spare - (spare % 5);
+  // Só encolhe se, com esse prazo, o pedido de fato entraria em realocação.
+  return canRelocate(appt, paidMs + w * MIN).ok ? w : VET_DEFAULT_WINDOW_MIN;
+}
+
+// 180 -> "3 horas"; 75 -> "1h15"; 60 -> "1 hora".
+function formatWindow(min) {
+  if (min % 60 === 0) return min === 60 ? "1 hora" : `${min / 60} horas`;
+  if (min < 60) return `${min} minutos`;
+  return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
+}
+
 // Valor pago (número) de um pedido.
 function paidAmount(appt) {
   const p = toNum(appt.paymentAmount);
@@ -193,5 +223,5 @@ function moneyString(n) {
 module.exports = {
   MAX_OPTIONS, MAX_ROUNDS, TUTOR_WINDOW_MIN, VET_RESPONSE_MIN, VET_END_MARGIN_MIN, MIN_REMAINING_HOURS,
   normText, serviceSimilarity, coversAddress, weekdayLabel, worksAt, sharesCategory,
-  isPortal, pickService, rankCandidates, canRelocate, paidAmount, tutorDeadline, vetDeadline, formatDeadline, moneyString,
+  isPortal, pickService, rankCandidates, canRelocate, responseWindowMinutes, formatWindow, paidAmount, tutorDeadline, vetDeadline, formatDeadline, moneyString,
 };

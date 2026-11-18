@@ -21,6 +21,7 @@ const {
 } = require("./mp_accounts");
 const RESEND_SECRET = defineSecret("RESEND_API_KEY");
 const { startRelocation, settleRelocation } = require("./realocacao_core");
+const { responseWindowMinutes, formatWindow, canRelocate } = require("./realocacao_lib");
 const { settleExtraPayment } = require("./adicionais_core");
 const { parseRef: parseExtraRef } = require("./adicionais_lib");
 
@@ -390,7 +391,7 @@ exports.mpWebhook = onRequest(
                 .collection("pending")
                 .add({
                   title: "🗓️ Novo agendamento pago!",
-                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${RESPONSE_DEADLINE_MINUTES / 60} horas ou a solicitação expira.`,
+                  body: `${current.tutorName || "Um tutor"} agendou ${current.serviceName || "uma consulta"} para ${petLabel(current, "o pet")} em ${current.date} às ${current.time}. Confirme em até ${formatWindow(responseWindowMinutes(current, Date.now()))} ou a solicitação expira.`,
                   read: false,
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   tipo: "novo_agendamento",
@@ -1186,6 +1187,49 @@ exports.appointmentHistorian = onDocumentWritten(
 
 const RESPONSE_DEADLINE_MINUTES = 180;
 
+
+// Pedido pago que expirou sem resposta e NÃO entrou em realocação (estorno automático):
+// avisa o admin por notificação (app) e e-mail, com o motivo, para ele falar com o tutor
+// e tentar achar outro profissional a tempo. Nunca derruba o verificador.
+async function alertAdminUnanswered(db, apptId, d, nowMs, resendKey) {
+  try {
+    const chk = canRelocate(d, nowMs) || {};
+    const why = chk.ok ? "nenhum profissional compatível estava disponível" : (chk.why || "não elegível");
+    const pet = petLabel(d, "o pet");
+    const when = `${d.date || ""} às ${d.time || ""}`;
+    const where = [d.addrNeighborhood, d.addrCity].filter(Boolean).join(", ") || d.address || "—";
+    const title = `⏰ Consulta sem resposta: ${d.tutorName || "tutor"} (${when})`;
+    const body = `${d.vetName || "O profissional"} não respondeu; estorno automático de R$ ${d.paymentAmount || d.value || "?"}. ${pet} em ${where}. Vale falar com o tutor.`;
+    try {
+      const adminUser = await admin.auth().getUserByEmail(ADMIN_EMAIL);
+      await db.collection("notifications").doc(adminUser.uid).collection("pending").add({
+        title, body, read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        tipo: "admin_consulta_sem_resposta",
+      });
+    } catch (e) {
+      console.error("alertAdminUnanswered push:", e.message);
+    }
+    await sendEmail(
+      resendKey,
+      ADMIN_EMAIL,
+      `⏰ Consulta sem resposta — ${d.tutorName || "tutor"} · ${when}`,
+      `<p><b>${escapeHtml(d.tutorName || "Tutor")}</b> ficou sem consulta: o profissional não respondeu no prazo e o valor está sendo estornado automaticamente.</p>
+       <ul>
+         <li>Profissional: ${escapeHtml(d.vetName || "—")}</li>
+         <li>Pet: ${escapeHtml(pet)} · Serviço: ${escapeHtml(d.serviceName || "—")}</li>
+         <li>Data/hora: ${escapeHtml(when)} · Valor: R$ ${escapeHtml(String(d.paymentAmount || d.value || "?"))}</li>
+         <li>Local: ${escapeHtml(where)}</li>
+         <li>Outros profissionais não foram oferecidos porque: ${escapeHtml(why)}</li>
+         <li>Pedido: ${escapeHtml(apptId)}</li>
+       </ul>
+       <p>Sugestão: falar com o tutor agora e oferecer outro profissional da região (painel &gt; Contas, filtros de cidade/bairro).</p>`
+    );
+  } catch (e) {
+    console.error("alertAdminUnanswered:", e.response?.data || e.message);
+  }
+}
+
 exports.expireUnanswered = onSchedule(
   { cpu: "gcf_gen1", schedule: "*/5 * * * *", timeZone: "America/Sao_Paulo", region: "southamerica-east1", secrets: [RESEND_SECRET, ORS_SECRET, AWESOME_SECRET] },
   async () => {
@@ -1215,7 +1259,7 @@ exports.expireUnanswered = onSchedule(
       // Pedido realocado: o novo profissional tem prazo próprio (responseDeadline, em ms).
       const deadlineExpired = d.responseDeadline
         ? Number(d.responseDeadline) <= now.getTime()
-        : deadlineStart && (now - deadlineStart) > RESPONSE_DEADLINE_MINUTES * 60 * 1000;
+        : deadlineStart && (now - deadlineStart) > responseWindowMinutes(d, deadlineStart.getTime()) * 60 * 1000;
 
       const apptDateTime = parseApptDateTime(d.date, d.time);
       const apptStarted = apptDateTime ? apptDateTime <= now : false;
@@ -1241,6 +1285,9 @@ exports.expireUnanswered = onSchedule(
       // algo que ele mesmo deixou de fazer (não pagar). Silencioso: só libera
       // o horário. O reembolso (quando pago) é tratado pelo appointmentHistorian.
       if (d.paymentStatus !== "approved") continue;
+
+      // Avisa o admin: o tutor ficou sem consulta e precisa de ajuda humana para não perdê-la.
+      await alertAdminUnanswered(db, doc.id, d, now.getTime(), RESEND_SECRET.value());
 
       const pet = petLabel(d, "seu pet");
       const when = `${d.date || ""} às ${d.time || ""}`;
