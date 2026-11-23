@@ -35,16 +35,8 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == userId
                     && !touchesAdminFields();
       allow delete: if request.auth != null && request.auth.uid == userId;
-      // Tutores leem perfis de profissionais (busca) — PROVISÓRIO, até a fase 3
-      // (a busca já usa professionals_public; versões antigas do app tutor ainda
-      // leem aqui). Só quem entrou com e-mail/senha, Google ou Apple — os logins
-      // dos apps e do painel. O login ANÔNIMO e o de TELEFONE (só o portal de
-      // agendamento os usa, e ele não lê mais users) ficam de fora: era por onde
-      // qualquer pessoa raspava telefone/e-mail/PIX dos profissionais sem cadastro.
-      allow read: if request.auth != null
-                  && request.auth.token.firebase.sign_in_provider
-                     in ['password', 'google.com', 'apple.com']
-                  && resource.data.role == 'professional';
+      // (Fase 3) Removida a leitura cruzada de perfis de profissionais: a busca
+      // dos tutores/portal usa professionals_public. Aqui só dono e admin.
       // Apps atualizam métricas de avaliação de qualquer vet
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
@@ -81,9 +73,7 @@ service cloud.firestore {
       // uma vez — depois de gravado, o campo nunca pode ser reescrito.
       function canMarkViewed() {
         return !('viewedAt' in resource.data)
-            && (resource.data.vetId == request.auth.uid
-                || !('vetId' in resource.data)
-                || resource.data.vetId == '');
+            && resource.data.vetId == request.auth.uid;
       }
       // Ninguém pode mentir sobre quem cancelou (campo ainda não usado por
       // nenhuma UI hoje, mas o contrato já fica protegido).
@@ -97,10 +87,17 @@ service cloud.firestore {
       }
 
       allow read, write: if isAdmin();
-      // Leitura ampla é exigida pelas queries dos apps (horários ocupados
-      // por vetName, ratings agregados no cliente). Restringir = refatorar
-      // essas features para Cloud Functions (dívida pós-lançamento).
-      allow read: if request.auth != null;
+      // (Fase 3) Leitura só do tutor dono, do profissional do atendimento e do admin.
+      // Horários ocupados e avaliações agora vêm das Cloud Functions busyTimes/vetReviews.
+      // Obrigatório que as queries dos apps filtrem por tutorId ou vetId (ou doc direto).
+      allow read: if request.auth != null
+          && (resource.data.tutorId == request.auth.uid
+              || resource.data.vetId == request.auth.uid
+              // TRANSITÓRIO: o Pro até a build atual lista os pedidos por
+              // where('vetName' == displayName). Vale só para login dos apps. REMOVER este
+              // bloco quando a mínima do Pro exigir a versão que filtra por vetId.
+              || (request.auth.token.firebase.sign_in_provider in ['password', 'google.com', 'apple.com']
+                  && resource.data.vetName == request.auth.token.name));
       // Tutor só cria consulta em nome próprio. historico_status e viewedAt
       // nascem no servidor (Cloud Function), nunca no cliente.
       allow create: if request.auth != null
@@ -110,8 +107,7 @@ service cloud.firestore {
       // de pagamento/repasse/histórico (exclusivos das functions via Admin SDK)
       allow update: if request.auth != null
           && (resource.data.tutorId == request.auth.uid
-              || resource.data.vetId == request.auth.uid
-              || !('vetId' in resource.data)) // legado sem vetId
+              || resource.data.vetId == request.auth.uid)
           && !request.resource.data.diff(resource.data).affectedKeys()
               .hasAny(['paymentStatus', 'paymentAmount', 'paymentId',
                        'paymentMethod', 'paymentDate', 'payoutStatus',
