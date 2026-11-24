@@ -14,6 +14,7 @@ import '../consultas/consultas_view.dart';
 import '../profile/profile_view.dart';
 import '../../services/taxonomy_service.dart';
 import 'home_controller.dart';
+import '../../widgets/guest_widgets.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -23,8 +24,24 @@ class HomeView extends GetView<HomeController> {
     final pages = [
       const _HomeTab(),
       const Material(child: VetsView()),
-      const Material(child: ConsultasView()),
-      const Material(child: ProfileView()),
+      controller.isGuest
+          ? const GuestGate(
+              icon: Icons.receipt_long_outlined,
+              title: 'Suas consultas ficam aqui',
+              message:
+                  'Crie sua conta ou entre para agendar e acompanhar suas consultas, '
+                  'receber o prontuário e avaliar o atendimento.',
+            )
+          : const Material(child: ConsultasView()),
+      controller.isGuest
+          ? const GuestGate(
+              icon: Icons.person_outline,
+              title: 'Seu perfil e seus pets',
+              message:
+                  'Crie sua conta ou entre para cadastrar seus pets, endereços e '
+                  'dados de contato.',
+            )
+          : const Material(child: ProfileView()),
     ];
 
     return Obx(() => AnnotatedRegion<SystemUiOverlayStyle>(
@@ -103,9 +120,11 @@ class _HomeTab extends GetView<HomeController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                const RelocationBanner(),
-                const ProposalsBanner(),
-                const FirstConsultGuide(),
+                if (!controller.isGuest) ...const [
+                  RelocationBanner(),
+                  ProposalsBanner(),
+                  FirstConsultGuide(),
+                ],
                 _buildCategories(context),
                 const SizedBox(height: 28),
                 _buildUpcomingAppointment(context),
@@ -136,7 +155,9 @@ class _HomeTab extends GetView<HomeController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Obx(() => Text(
-                            'Olá, ${controller.userName.value}!',
+                            controller.isGuest
+                                ? 'Olá!'
+                                : 'Olá, ${controller.userName.value}!',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -145,26 +166,32 @@ class _HomeTab extends GetView<HomeController> {
                             ),
                           )),
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_outlined,
-                              color: Colors.white70, size: 14),
-                          const SizedBox(width: 4),
-                          Obx(() => Text(
-                                controller.userCity.value.isEmpty
-                                    ? 'Informe seu endereço no Perfil'
-                                    : controller.userCity.value,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                  fontFamily: 'Poppins',
-                                ),
-                              )),
-                        ],
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: controller.isGuest ? controller.pickRegion : null,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined,
+                                color: Colors.white70, size: 14),
+                            const SizedBox(width: 4),
+                            Obx(() => Text(
+                                  controller.locationLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                )),
+                            if (controller.isGuest)
+                              const Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.white70, size: 16),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  // Notification bell
+                  // Notification bell (visitante não tem notificações)
+                  if (!controller.isGuest)
                   GestureDetector(
                     onTap: () {
                       controller.markNotificationsSeen();
@@ -208,37 +235,6 @@ class _HomeTab extends GetView<HomeController> {
                   color: Colors.white70,
                   fontSize: 14,
                   fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Search bar
-              GestureDetector(
-                onTap: () {
-                  Get.find<VetsController>().selectSpecialty('Todos');
-                  controller.changeTab(1);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.search, color: AppColors.textLight, size: 20),
-                      SizedBox(width: 10),
-                      Text(
-                        'Buscar profissional...',
-                        style: TextStyle(
-                          color: AppColors.textLight,
-                          fontSize: 14,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],

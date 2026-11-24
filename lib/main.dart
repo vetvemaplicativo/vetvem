@@ -8,6 +8,7 @@ import 'app/routes/app_pages.dart';
 import 'app/services/analytics_service.dart';
 import 'app/services/auth_service.dart';
 import 'app/services/ibge_service.dart';
+import 'app/services/region_service.dart';
 import 'app/services/taxonomy_service.dart';
 import 'app/theme/app_theme.dart';
 import 'app/widgets/force_update_gate.dart';
@@ -19,6 +20,7 @@ void main() async {
   await Get.putAsync(() async => AnalyticsService());
   await Get.putAsync(() async => AuthService());
   await Get.putAsync(() => IbgeService().init());
+  await Get.putAsync(() => RegionService().init());
   await Get.putAsync(() => TaxonomyService().init());
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(

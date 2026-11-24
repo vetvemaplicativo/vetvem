@@ -1,7 +1,10 @@
-﻿import 'dart:async';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
+import '../../services/analytics_service.dart';
 import '../../services/auth_service.dart';
 import '../phone/phone_gate.dart';
 import '../terms/terms_view.dart';
@@ -19,7 +22,28 @@ class _SplashViewState extends State<SplashView> {
     super.initState();
     Timer(const Duration(seconds: 3), () async {
       final authService = Get.find<AuthService>();
-      if (!authService.isLoggedIn) {
+      final fbUser = FirebaseAuth.instance.currentUser;
+      // Visitante (login anônimo) já existente: segue direto para a Home.
+      if (fbUser != null && fbUser.isAnonymous) {
+        if (await _guestModeEnabled()) {
+          Get.offAllNamed(Routes.home);
+        } else {
+          await authService.signOut();
+          Get.offAllNamed(Routes.login);
+        }
+        return;
+      }
+      if (fbUser == null) {
+        // Primeira abertura: deixa explorar antes de criar conta. Qualquer falha
+        // (sem rede, interruptor desligado) cai no login de sempre.
+        if (await authService.startGuestSession()) {
+          if (await _guestModeEnabled()) {
+            Get.find<AnalyticsService>().logGuestStart();
+            Get.offAllNamed(Routes.home);
+            return;
+          }
+          await authService.signOut();
+        }
         Get.offAllNamed(Routes.login);
         return;
       }
@@ -30,6 +54,21 @@ class _SplashViewState extends State<SplashView> {
       if (!ok) await authService.signOut();
       Get.offAllNamed(ok ? Routes.home : Routes.login);
     });
+  }
+
+  /// Interruptor remoto: config/tutor_flags.guestMode == false desliga o modo
+  /// visitante sem precisar de nova versão. Ausente/erro = ligado.
+  Future<bool> _guestModeEnabled() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('tutor_flags')
+          .get()
+          .timeout(const Duration(seconds: 4));
+      return doc.data()?['guestMode'] != false;
+    } catch (_) {
+      return true;
+    }
   }
 
   @override

@@ -17,13 +17,22 @@ class AuthService extends GetxService {
   final _firestore = FirebaseFirestore.instance;
   final Rx<UserModel?> currentUser = Rx(null);
 
-  bool get isLoggedIn => currentUser.value != null;
+  /// Visitante: navega sem conta (login anônimo do Firebase). Não é "logado".
+  final isGuestRx = false.obs;
+  bool get isGuest => isGuestRx.value;
+
+  /// Profissional que o visitante queria agendar quando foi pedida a conta;
+  /// a Home retoma o agendamento depois do login/cadastro.
+  String? pendingVetId;
+
+  bool get isLoggedIn => currentUser.value != null && !isGuest;
 
   @override
   void onInit() {
     super.onInit();
     // Mantém o estado de login entre sessões
     _firebase.authStateChanges().listen((user) {
+      isGuestRx.value = user?.isAnonymous ?? false;
       if (user != null) {
         currentUser.value = UserModel(
           id: user.uid,
@@ -31,12 +40,26 @@ class AuthService extends GetxService {
           email: user.email ?? '',
           photoUrl: user.photoURL,
         );
-        Future.delayed(const Duration(seconds: 2), () => NotificationService.init());
+        if (!user.isAnonymous) {
+          Future.delayed(const Duration(seconds: 2), () => NotificationService.init());
+        }
       } else {
         currentUser.value = null;
         NotificationService.dispose();
       }
     });
+  }
+
+  /// Abre uma sessão de visitante (login anônimo). Devolve false se não deu
+  /// (sem rede etc.) — o chamador cai no fluxo normal de login.
+  Future<bool> startGuestSession() async {
+    try {
+      if (_firebase.currentUser != null) return true;
+      await _firebase.signInAnonymously().timeout(const Duration(seconds: 8));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> signInWithEmailAndPassword(String email, String password) async {

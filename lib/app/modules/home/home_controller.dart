@@ -6,10 +6,16 @@ import 'package:get_storage/get_storage.dart';
 import '../../routes/app_routes.dart';
 import '../../data/models/appointment_model.dart';
 import '../../services/analytics_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/region_service.dart';
+import '../vets/vets_controller.dart';
+import 'region_picker_sheet.dart';
 import '../profile/profile_controller.dart';
 
 class HomeController extends GetxController {
   final currentIndex = 0.obs;
+
+  bool get isGuest => Get.find<AuthService>().isGuest;
 
   final upcomingAppointments = <AppointmentModel>[].obs;
   final userName = ''.obs;
@@ -42,9 +48,46 @@ class HomeController extends GetxController {
     _listenNotifications();
   }
 
+  @override
+  void onReady() {
+    super.onReady();
+    _resumePendingBooking();
+  }
+
+  /// Visitante que pediu para agendar, criou a conta/entrou e voltou à Home:
+  /// reabre o profissional e segue para o agendamento.
+  Future<void> _resumePendingBooking() async {
+    final auth = Get.find<AuthService>();
+    final vetId = auth.pendingVetId;
+    if (vetId == null || auth.isGuest) return;
+    auth.pendingVetId = null;
+    final vets = Get.find<VetsController>();
+    for (var i = 0; i < 40 && (vets.isLoading.value || vets.allVets.isEmpty); i++) {
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    final idx = vets.allVets.indexWhere((v) => v.id == vetId);
+    if (idx < 0) return;
+    final vet = vets.allVets[idx];
+    vets.openVetDetail(vet);
+    vets.scheduleVet(vet);
+  }
+
+  /// Texto da linha de local do cabeçalho.
+  String get locationLabel {
+    if (isGuest) {
+      final r = Get.find<RegionService>();
+      return r.hasRegion ? r.label : 'Escolha sua cidade';
+    }
+    return userCity.value.isEmpty
+        ? 'Informe seu endereço no Perfil'
+        : userCity.value;
+  }
+
+  Future<void> pickRegion() => RegionPickerSheet.show();
+
   void _listenUpcoming() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || isGuest) return;
     FirebaseFirestore.instance
         .collection('appointments')
         .where('tutorId', isEqualTo: uid)
@@ -180,6 +223,10 @@ class HomeController extends GetxController {
       Get.find<AnalyticsService>().logViewVetList();
     }
     currentIndex.value = index;
+    // Visitante que ainda não disse onde mora: pergunta antes de listar.
+    if (index == 1 && isGuest && !Get.find<RegionService>().hasRegion) {
+      RegionPickerSheet.show();
+    }
   }
 
   void _syncCity(ProfileController profile) {
@@ -189,7 +236,7 @@ class HomeController extends GetxController {
 
   void _listenNotifications() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || isGuest) return;
     final db = FirebaseFirestore.instance;
     db.collection('users').doc(uid).get().then((s) {
       final t = s.data()?['lastNotifSeenAt'];

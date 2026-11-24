@@ -45,4 +45,21 @@ class AnalyticsService extends GetxService {
       analytics.logEvent(
           name: 'region_empty_action',
           parameters: {'action': action, 'uf': uf, 'city': city});
+
+  // ── Modo visitante ──────────────────────────────────────────────────────
+  Future<void> logGuestStart() => analytics.logEvent(name: 'guest_start');
+
+  /// origem: 'lista' (cidade com profissional) ou 'fora_da_lista'.
+  Future<void> logRegionSelected(String uf, String city, String origem) =>
+      analytics.logEvent(
+          name: 'region_selected',
+          parameters: {'uf': uf, 'city': city, 'origem': origem});
+
+  /// Pedido de conta ao tentar agendar. motivo: 'agendar'.
+  Future<void> logWallShown(String motivo, String vetId) => analytics.logEvent(
+      name: 'wall_shown', parameters: {'motivo': motivo, 'vet_id': vetId});
+
+  /// acao: 'criar_conta' | 'entrar' | 'dispensou'.
+  Future<void> logWallAction(String acao) =>
+      analytics.logEvent(name: 'wall_action', parameters: {'acao': acao});
 }

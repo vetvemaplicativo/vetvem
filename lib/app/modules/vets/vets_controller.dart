@@ -7,7 +7,10 @@ import '../../data/models/service_area_model.dart';
 import '../../data/models/vet_model.dart';
 import '../../utils/brazilian_states.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../services/public_reads_service.dart';
+import '../../services/region_service.dart';
+import '../../widgets/guest_widgets.dart';
 import '../../services/taxonomy_service.dart';
 
 class VetsController extends GetxController {
@@ -58,13 +61,22 @@ class VetsController extends GetxController {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
+      // Visitante: não há perfil; usa a cidade que ele escolheu.
+      if (Get.find<AuthService>().isGuest) {
+        applyRegion();
+        return;
+      }
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .get();
       final addrs =
           List<Map<String, dynamic>>.from(doc.data()?['addresses'] ?? []);
-      if (addrs.isEmpty) return;
+      if (addrs.isEmpty) {
+        // Conta sem endereço ainda: usa a cidade escolhida como visitante, se houver.
+        applyRegion();
+        return;
+      }
       final a = addrs.first;
       _tutorUf = _toUfSigla((a['state'] ?? '').toString());
       _tutorCity = (a['city'] ?? '').toString().trim();
@@ -82,6 +94,45 @@ class VetsController extends GetxController {
     } catch (_) {
       // Sem endereço: o filtro simplesmente fica indisponível.
     }
+  }
+
+  bool get isGuest => Get.find<AuthService>().isGuest;
+
+  /// Aplica a cidade escolhida no seletor (visitante, ou conta sem endereço):
+  /// filtra a busca por quem atende a cidade, igual a um endereço sem bairro.
+  void applyRegion() {
+    final r = Get.find<RegionService>();
+    if (!r.hasRegion) {
+      _tutorUf = '';
+      _tutorCity = '';
+      _tutorBairro = '';
+      tutorAddressLabel.value = '';
+      filterByArea.value = false;
+    } else {
+      _tutorUf = r.uf.value;
+      _tutorCity = r.city.value;
+      _tutorBairro = '';
+      tutorAddressLabel.value = r.label;
+      filterByArea.value = true;
+      showOtherCities.value = false;
+    }
+    _filter();
+    update();
+  }
+
+  /// UF → (cidade → nº de profissionais que atendem), a partir da vitrine.
+  Map<String, Map<String, int>> coverageByState() {
+    final out = <String, Map<String, int>>{};
+    for (final v in allVets) {
+      final a = v.areaAtuacao;
+      if (a == null) continue;
+      for (final c in a.cidades) {
+        if (c.nome.trim().isEmpty) continue;
+        final m = out.putIfAbsent(a.estado, () => <String, int>{});
+        m[c.nome] = (m[c.nome] ?? 0) + 1;
+      }
+    }
+    return out;
   }
 
   /// Aceita sigla ("RJ") ou nome completo ("Rio de Janeiro") — endereços
@@ -357,6 +408,11 @@ class VetsController extends GetxController {
 
   void scheduleVet(VetModel vet) {
     selectedVet.value = vet;
+    // Visitante: a conta é pedida aqui, depois de ver profissional e preços.
+    if (Get.find<AuthService>().isGuest) {
+      showGuestWall(vetId: vet.id);
+      return;
+    }
     Get.toNamed(Routes.scheduling);
   }
 

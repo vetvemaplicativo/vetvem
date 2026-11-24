@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../services/analytics_service.dart';
+import '../../services/ibge_service.dart';
+import '../../services/region_service.dart';
+import '../../theme/app_theme.dart';
+import '../../data/models/service_area_model.dart' show normalizeSearchText;
+import '../../utils/brazilian_states.dart';
+import '../vets/vets_controller.dart';
+
+/// "Onde você quer o atendimento?" — escolha de Estado → Cidade do visitante,
+/// sem GPS. Lista só cidades onde há profissional (vindas da vitrine pública);
+/// "Minha cidade não aparece" deixa escolher qualquer cidade (a busca vazia
+/// então registra a demanda e oferece a lista de espera).
+class RegionPickerSheet extends StatefulWidget {
+  const RegionPickerSheet({super.key});
+
+  /// Abre o seletor. Devolve true se a pessoa escolheu uma cidade.
+  static Future<bool> show() async {
+    final ok = await Get.bottomSheet<bool>(
+      const RegionPickerSheet(),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+    );
+    return ok == true;
+  }
+
+  @override
+  State<RegionPickerSheet> createState() => _RegionPickerSheetState();
+}
+
+class _RegionPickerSheetState extends State<RegionPickerSheet> {
+  final _vets = Get.find<VetsController>();
+  final _region = Get.find<RegionService>();
+
+  bool _other = false; // modo "minha cidade não aparece"
+  String _uf = '';
+  List<IbgeMunicipio> _municipios = const [];
+  bool _loadingMunicipios = false;
+  String _filter = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _uf = _region.uf.value;
+  }
+
+  Future<void> _choose(String uf, String city, String origem) async {
+    await _region.set(uf, city);
+    Get.find<AnalyticsService>().logRegionSelected(uf, city, origem);
+    _vets.applyRegion();
+    Get.back(result: true);
+  }
+
+  Future<void> _loadMunicipios(String uf) async {
+    setState(() {
+      _loadingMunicipios = true;
+      _municipios = const [];
+    });
+    try {
+      final list = await Get.find<IbgeService>().getMunicipios(uf);
+      if (!mounted) return;
+      setState(() => _municipios = list);
+    } catch (_) {
+      // sem rede: a lista fica vazia e a pessoa pode tentar de novo
+    } finally {
+      if (mounted) setState(() => _loadingMunicipios = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.of(context).size.height * 0.85;
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxH),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          24, 12, 24, 20 + MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Onde você quer o atendimento?',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'O veterinário vai até você. Escolha a cidade para ver quem atende por lá.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.textMedium,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 14),
+            Flexible(child: _other ? _buildOther() : _buildCovered()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Cidades com profissional ────────────────────────────────────────────
+
+  Widget _buildCovered() {
+    return Obx(() {
+      final coverage = _vets.coverageByState();
+      if (_vets.isLoading.value && coverage.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (coverage.isEmpty) {
+        return _OtherButton(onTap: () => setState(() => _other = true));
+      }
+      final ufs = coverage.keys.toList()
+        ..sort((a, b) => _stateName(a).compareTo(_stateName(b)));
+      final uf = coverage.containsKey(_uf) ? _uf : ufs.first;
+      final cities = coverage[uf]!.entries.toList()
+        ..sort((a, b) {
+          final c = b.value.compareTo(a.value);
+          return c != 0 ? c : a.key.compareTo(b.key);
+        });
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: uf,
+            decoration: const InputDecoration(labelText: 'Estado'),
+            items: [
+              for (final u in ufs)
+                DropdownMenuItem(value: u, child: Text(_stateName(u))),
+            ],
+            onChanged: (v) => setState(() => _uf = v ?? uf),
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final c in cities)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(c.key,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      '${c.value} ${c.value == 1 ? 'profissional' : 'profissionais'}',
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _choose(uf, c.key, 'lista'),
+                  ),
+                const SizedBox(height: 4),
+                _OtherButton(onTap: () => setState(() => _other = true)),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  // ── Minha cidade não aparece ────────────────────────────────────────────
+
+  Widget _buildOther() {
+    final shown = _municipios
+        .where((m) =>
+            _filter.isEmpty ||
+            normalizeSearchText(m.nome).contains(normalizeSearchText(_filter)))
+        .take(60)
+        .toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'Ainda não temos profissional cadastrado em todas as cidades. '
+            'Escolha a sua: vamos avisar você quando chegar.',
+            style: TextStyle(fontSize: 12.5, height: 1.4, fontFamily: 'Poppins'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _uf.isEmpty ? null : _uf,
+          decoration: const InputDecoration(labelText: 'Estado'),
+          items: [
+            for (final s in brazilianStates)
+              DropdownMenuItem(value: s.sigla, child: Text(s.nome)),
+          ],
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() {
+              _uf = v;
+              _filter = '';
+            });
+            _loadMunicipios(v);
+          },
+        ),
+        const SizedBox(height: 8),
+        if (_uf.isNotEmpty)
+          TextField(
+            decoration: const InputDecoration(
+                labelText: 'Buscar cidade', prefixIcon: Icon(Icons.search)),
+            onChanged: (v) => setState(() => _filter = v),
+          ),
+        if (_loadingMunicipios)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        if (!_loadingMunicipios && _uf.isNotEmpty)
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final m in shown)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(m.nome,
+                        style: const TextStyle(fontFamily: 'Poppins')),
+                    onTap: () => _choose(_uf, m.nome, 'fora_da_lista'),
+                  ),
+              ],
+            ),
+          ),
+        TextButton(
+          onPressed: () => setState(() => _other = false),
+          child: const Text('Voltar para as cidades atendidas'),
+        ),
+      ],
+    );
+  }
+
+  String _stateName(String uf) {
+    for (final s in brazilianStates) {
+      if (s.sigla == uf) return s.nome;
+    }
+    return uf;
+  }
+}
+
+class _OtherButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _OtherButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.location_off_outlined, size: 18),
+      label: const Text('Minha cidade não aparece'),
+    );
+  }
+}

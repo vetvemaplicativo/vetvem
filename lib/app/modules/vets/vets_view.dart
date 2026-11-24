@@ -1,3 +1,4 @@
+import '../home/region_picker_sheet.dart';
 import 'dart:convert';
 import '../../services/analytics_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,7 +48,9 @@ class VetsView extends GetView<VetsController> {
                     alignment: Alignment.centerLeft,
                     child: FilterChip(
                       selected: filterActive,
-                      onSelected: (_) => controller.toggleAreaFilter(),
+                      onSelected: (_) => controller.isGuest
+                          ? RegionPickerSheet.show()
+                          : controller.toggleAreaFilter(),
                       avatar: filterActive
                           ? null
                           : const Icon(Icons.location_on_outlined,
@@ -55,7 +58,9 @@ class VetsView extends GetView<VetsController> {
                       label: Text(
                         filterActive
                             ? 'Atendem: ${controller.tutorAddressLabel.value}'
-                            : 'Atendem meu endereço',
+                            : (controller.isGuest
+                                ? 'Escolher minha cidade'
+                                : 'Atendem meu endereço'),
                         style: TextStyle(
                           fontSize: 12,
                           fontFamily: 'Poppins',
