@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../../data/models/vet_model.dart';
 import '../../widgets/shimmer.dart';
 import '../home/home_controller.dart';
@@ -22,17 +24,16 @@ class VetsView extends GetView<VetsController> {
           _VetsHeader(),
           Expanded(
             child: ColoredBox(
-              color: AppColors.background,
+              color: Vv2Pastel.cream,
               child: DefaultTextStyle(
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.textDark,
+                style: Vv2.bodyLarge.copyWith(
                   decoration: TextDecoration.none,
                 ),
                 child: Obx(() {
               if (controller.isLoading.value) {
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(
+                      Vv2.gutter, Vv2.gutter, Vv2.gutter, 20),
                   itemCount: 4,
                   separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (_, __) => const VetCardSkeleton(),
@@ -41,84 +42,47 @@ class VetsView extends GetView<VetsController> {
               final vets = controller.filteredVets;
               final filterActive = controller.filterByArea.value;
               return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: const EdgeInsets.fromLTRB(
+                    Vv2.gutter, 0, Vv2.gutter, 20),
                 children: [
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilterChip(
-                      selected: filterActive,
-                      onSelected: (_) => controller.isGuest
-                          ? RegionPickerSheet.show()
-                          : controller.toggleAreaFilter(),
-                      avatar: filterActive
-                          ? null
-                          : const Icon(Icons.location_on_outlined,
-                              size: 16, color: AppColors.textMedium),
-                      label: Text(
-                        filterActive
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _AreaPill(
+                        active: filterActive,
+                        label: filterActive
                             ? 'Atendem: ${controller.tutorAddressLabel.value}'
                             : (controller.isGuest
                                 ? 'Escolher minha cidade'
                                 : 'Atendem meu endereço'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'Poppins',
-                          fontWeight:
-                              filterActive ? FontWeight.w600 : FontWeight.w500,
-                          color: filterActive
-                              ? AppColors.primary
-                              : AppColors.textMedium,
+                        onTap: () => controller.isGuest
+                            ? RegionPickerSheet.show()
+                            : controller.toggleAreaFilter(),
+                      ),
+                      if (vets.isNotEmpty)
+                        GetBuilder<VetsController>(
+                          builder: (c) => _SortPill(
+                            label: _sortLabel(c.sortIndex.value),
+                            onTap: () => _showSortSheet(context, c),
+                          ),
                         ),
-                      ),
-                      backgroundColor: Colors.white,
-                      selectedColor: AppColors.primary.withValues(alpha: 0.12),
-                      checkmarkColor: AppColors.primary,
-                      side: BorderSide(
-                        color: filterActive
-                            ? AppColors.primary
-                            : const Color(0xFFE5E7EB),
-                      ),
-                    ),
+                    ],
                   ),
                   if (vets.isEmpty) ...[
                     const SizedBox(height: 24),
                     _EmptyState(filterActive: filterActive),
                   ] else ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${vets.length} ${vets.length != 1 ? 'profissionais disponíveis' : 'profissional disponível'}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMedium,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      GetBuilder<VetsController>(
-                        builder: (c) => GestureDetector(
-                          onTap: () => _showSortSheet(context, c),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.sort_rounded,
-                                  size: 16, color: AppColors.primary),
-                              const SizedBox(width: 4),
-                              Text(
-                                _sortLabel(c.sortIndex.value),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      '${vets.length} ${vets.length != 1 ? 'profissionais disponíveis' : 'profissional disponível'}',
+                      style: Vv2.bodyMedium,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ...vets.map((v) => Padding(
@@ -137,137 +101,223 @@ class VetsView extends GetView<VetsController> {
   }
 }
 
+class _AreaPill extends StatelessWidget {
+  final bool active;
+  final String label;
+  final VoidCallback onTap;
+  const _AreaPill(
+      {required this.active, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: Vv2.pressedSurface,
+        borderRadius: BorderRadius.circular(Vv2.rPill),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Vv2.rPill),
+          onTap: onTap,
+          child: Container(
+            constraints: BoxConstraints(
+                minHeight: Vv2.tapMin,
+                maxWidth: MediaQuery.sizeOf(context).width - 2 * Vv2.gutter),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Vv2Icon(Ph.mapPin, size: 20, color: Vv2.onBrand),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Vv2.t(14, 20, 700)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortPill extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _SortPill({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Ordenar por: $label',
+      excludeSemantics: true,
+      child: Material(
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(Vv2.rPill),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Vv2.rPill),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: Vv2.tapMin),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Vv2Icon(Ph.sortAscending, size: 20, color: Vv2.onBrand),
+                const SizedBox(width: 8),
+                Text(label, style: Vv2.t(14, 20, 700)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 class _VetsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<VetsController>();
-    return Material(
-      color: AppColors.primary,
-      textStyle: const TextStyle(
-        fontFamily: 'Poppins',
-        decoration: TextDecoration.none,
-        color: Colors.white,
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Título + botão mapa
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                    onPressed: () => Get.find<HomeController>().changeTab(0),
-                  ),
-                  Expanded(
-                    child: GetBuilder<VetsController>(
-                      builder: (c) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            c.selectedSpecialty.value.isEmpty
-                                ? 'Buscar profissional'
-                                : c.selectedSpecialty.value,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                          const Text(
-                            'Profissionais perto de você',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+      child: Material(
+        type: MaterialType.transparency,
+        textStyle: Vv2.bodyLarge.copyWith(decoration: TextDecoration.none),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                Vv2.gutter, 12, Vv2.gutter, Vv2.gutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Semantics(
+                      button: true,
+                      label: 'Voltar',
+                      excludeSemantics: true,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => Get.find<HomeController>().changeTab(0),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                              color: Vv2.surface, shape: BoxShape.circle),
+                          child: const Vv2Icon(Ph.caretLeft,
+                              size: 24, color: Vv2.onBrand),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Search + filtros
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: c.searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nome ou especialidade...',
-                      hintStyle: const TextStyle(
-                          color: AppColors.textLight, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search,
-                          color: AppColors.textLight, size: 20),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GetBuilder<VetsController>(
+                        builder: (c) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.selectedSpecialty.value.isEmpty
+                                  ? 'Buscar profissional'
+                                  : c.selectedSpecialty.value,
+                              style: Vv2.t(26, 32, 700),
+                            ),
+                            Text('Profissionais perto de você',
+                                style: Vv2.bodyMedium
+                                    .copyWith(color: Vv2.onBrand)),
+                          ],
+                        ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: c.searchController,
+                  style: Vv2.bodyLarge,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por nome ou especialidade...',
+                    hintStyle: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary),
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Vv2Icon(Ph.search, size: 24, color: Vv2.onBrand),
+                    ),
+                    filled: true,
+                    fillColor: Vv2.surface,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    constraints:
+                        const BoxConstraints(minHeight: Vv2.fieldMin),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(Vv2.rPill),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  GetBuilder<VetsController>(
-                    builder: (c) => SizedBox(
-                      height: 32,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: c.specialties.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 8),
-                        itemBuilder: (_, i) {
-                          final s = c.specialties[i];
-                          final selected =
-                              (s == 'Todos' && c.selectedSpecialty.value.isEmpty) ||
-                              s == c.selectedSpecialty.value;
-                          return GestureDetector(
+                ),
+                const SizedBox(height: 4),
+                GetBuilder<VetsController>(
+                  builder: (c) => SizedBox(
+                    height: Vv2.tapMin,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: c.specialties.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final s = c.specialties[i];
+                        final selected =
+                            (s == 'Todos' && c.selectedSpecialty.value.isEmpty) ||
+                            s == c.selectedSpecialty.value;
+                        return Semantics(
+                          button: true,
+                          selected: selected,
+                          label: s,
+                          excludeSemantics: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () => c.selectSpecialty(s),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  s,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: selected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: selected
-                                        ? AppColors.primary
-                                        : Colors.white,
-                                    fontFamily: 'Poppins',
-                                  ),
+                            child: Center(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                constraints:
+                                    const BoxConstraints(minHeight: 32),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? Vv2.pressedSurface
+                                      : Colors.transparent,
+                                  borderRadius:
+                                      BorderRadius.circular(Vv2.rPill),
+                                  border: Border.all(
+                                      color: selected
+                                          ? Colors.transparent
+                                          : Vv2.onBrand,
+                                      width: 1),
                                 ),
+                                child: Text(s,
+                                    style:
+                                        Vv2.t(14, 20, selected ? 700 : 600)),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -286,75 +336,60 @@ String _sortLabel(int index) {
 void _showSortSheet(BuildContext context, VetsController c) {
   showModalBottomSheet(
     context: context,
+    backgroundColor: Vv2.surface,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
     ),
-    builder: (_) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Ordenar por',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...[
-            (0, Icons.auto_awesome_rounded, 'Relevância', 'Score combinado: avaliação + atendimentos + cancelamentos'),
-            (1, Icons.star_rounded, 'Melhor avaliados', 'Ordenado pela nota média dos clientes'),
-            (2, Icons.check_circle_outline_rounded, 'Mais atendimentos', 'Profissionais com mais consultas concluídas'),
-            (3, Icons.attach_money_rounded, 'Menor preço', 'Do serviço mais acessível para o mais caro'),
-          ].map((item) {
-            final (idx, icon, label, sub) = item;
-            final selected = c.sortIndex.value == idx;
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(icon,
-                color: selected ? AppColors.primary : AppColors.textMedium,
-                size: 22,
-              ),
-              title: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? AppColors.primary : AppColors.textDark,
+    builder: (_) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Vv2.brand,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              subtitle: Text(sub,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  color: AppColors.textMedium,
-                ),
-              ),
-              trailing: selected
-                ? const Icon(Icons.check_rounded, color: AppColors.primary, size: 20)
-                : null,
-              onTap: () {
-                c.setSort(idx);
-                Navigator.pop(context);
-              },
-            );
-          }),
-        ],
+            ),
+            const SizedBox(height: 16),
+            Text('Ordenar por', style: Vv2.titleLarge),
+            const SizedBox(height: 8),
+            ...[
+              (0, Icons.auto_awesome_rounded, 'Relevância', 'Score combinado: avaliação + atendimentos + cancelamentos'),
+              (1, Icons.star_rounded, 'Melhor avaliados', 'Ordenado pela nota média dos clientes'),
+              (2, Icons.check_circle_outline_rounded, 'Mais atendimentos', 'Profissionais com mais consultas concluídas'),
+              (3, Icons.attach_money_rounded, 'Menor preço', 'Do serviço mais acessível para o mais caro'),
+            ].map((item) {
+              final (idx, icon, label, sub) = item;
+              final selected = c.sortIndex.value == idx;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                minVerticalPadding: 8,
+                leading: Icon(icon,
+                    color: selected ? Vv2.primary : Vv2.textSecondary,
+                    size: 24),
+                title: Text(label,
+                    style: Vv2.t(16, 24, selected ? 700 : 600,
+                        color: selected ? Vv2.primary : Vv2.text)),
+                subtitle: Text(sub, style: Vv2.bodySmall),
+                trailing: selected
+                    ? const Vv2Icon(Ph.check, size: 20, color: Vv2.primary)
+                    : null,
+                onTap: () {
+                  c.setSort(idx);
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
       ),
     ),
   );
@@ -369,115 +404,120 @@ class VetCard extends GetView<VetsController> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => controller.openVetDetail(vet),
-      child: Opacity(
-        opacity: vet.isAvailable ? 1.0 : 0.55,
-        child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 12,
-                offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Row(
-          children: [
-            _VetAvatar(vet: vet, size: 56),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          vet.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            color: AppColors.textDark,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (!vet.isAvailable) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.textLight.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Pausado',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMedium),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded,
-                          color: AppColors.warning, size: 14),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${vet.rating}',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textDark),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          vet.specialty,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textMedium),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: () => controller.openVetDetail(vet),
+        child: Opacity(
+          opacity: vet.isAvailable ? 1.0 : 0.55,
+          child: Container(
+            padding: const EdgeInsets.all(Vv2.gutter),
+            decoration: BoxDecoration(
+              color: Vv2.surface,
+              borderRadius: BorderRadius.circular(Vv2.rOverlay),
+              boxShadow: Vv2.cardShadow,
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (vet.hasMultipleServices)
-                  const Text(
-                    'a partir de',
-                    style: TextStyle(fontSize: 10, color: AppColors.textLight),
+                _VetAvatar(vet: vet, size: 56),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(vet.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Vv2.t(17, 24, 700)),
+                          ),
+                          if (!vet.isAvailable) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Vv2.secondaryContainer,
+                                borderRadius: BorderRadius.circular(Vv2.rPill),
+                              ),
+                              child: Text('Pausado',
+                                  style: Vv2.t(12, 18, 600,
+                                      color: Vv2.textSecondary)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(vet.specialty,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Vv2.bodyMedium),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBC2),
+                              borderRadius: BorderRadius.circular(Vv2.rPill),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Vv2Icon(Ph.star,
+                                    size: 16, color: Vv2.onBrand),
+                                const SizedBox(width: 4),
+                                Text('${vet.rating}',
+                                    style: Vv2.t(14, 20, 700)),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (vet.hasMultipleServices) ...[
+                                Text('a partir de', style: Vv2.bodySmall),
+                                const SizedBox(width: 8),
+                              ],
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Vv2.pressedSurface,
+                                  borderRadius:
+                                      BorderRadius.circular(Vv2.rCard + 4),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                        'R\$ ${vet.startingPrice.toStringAsFixed(0)}',
+                                        style: Vv2.price),
+                                    Text(
+                                        vet.hasMultipleServices
+                                            ? 'por serviço'
+                                            : 'por visita',
+                                        style: Vv2.t(12, 16, 600)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                Text(
-                  'R\$ ${vet.startingPrice.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  vet.hasMultipleServices ? 'por serviço' : 'por visita',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textLight),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
         ),
       ),
     );
@@ -698,14 +738,16 @@ class _VetAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: Vv2.pressedSurface,
         shape: BoxShape.circle,
         image: image != null
             ? DecorationImage(image: image, fit: BoxFit.cover)
             : null,
       ),
       child: image == null
-          ? Icon(Icons.person, color: AppColors.primary, size: size * 0.5)
+          ? Center(
+              child: Vv2Icon(Ph.userCircle,
+                  color: Vv2.onBrand, size: size * 0.55))
           : null,
     );
   }
