@@ -54,8 +54,12 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/icons/phosphor/
     - assets/fonts/
   fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-Thin.ttf
