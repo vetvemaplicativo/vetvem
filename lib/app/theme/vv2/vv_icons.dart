@@ -98,6 +98,33 @@ class VvIcon extends StatelessWidget {
           {double size = 24, required Color color}) =>
       Vv2SpecialtyIcon(fallback, size: size, color: color);
 
+  /// Ícone de uma espécie atendida (Phosphor Duotone). Espécie sem
+  /// correspondência usa a patinha genérica; o nome sempre aparece ao lado.
+  static Widget species(String key, String label,
+      {double size = 20, required Color color}) {
+    String norm(String v) => v.toLowerCase().trim();
+    final k = norm(key);
+    final l = norm(label);
+    String name = 'paw_print';
+    bool has(List<String> w) => w.contains(k) || w.contains(l);
+    if (has(['dog', 'cao', 'cão', 'cachorro'])) {
+      name = 'dog';
+    } else if (has(['cat', 'gato'])) {
+      name = 'cat';
+    } else if (has(['bird', 'ave', 'aves', 'passaro', 'pássaro'])) {
+      name = 'bird';
+    } else if (has(['rabbit', 'coelho'])) {
+      name = 'rabbit';
+    } else if (has(['fish', 'peixe'])) {
+      name = 'fish';
+    } else if (has(['horse', 'cavalo', 'equino'])) {
+      name = 'horse';
+    } else if (has(['cow', 'vaca', 'bovino'])) {
+      name = 'cow';
+    }
+    return Vv2Icon(name, size: size, color: color, duotone: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final src = _map[fn]!;

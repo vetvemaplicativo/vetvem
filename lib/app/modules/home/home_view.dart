@@ -17,6 +17,7 @@ import '../../widgets/guest_widgets.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import '../../theme/vv2/vv_icons.dart';
 import 'home_nav_v2.dart';
+import '../../theme/vv2/status_bar_shield.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -46,20 +47,22 @@ class HomeView extends GetView<HomeController> {
           : const Material(child: ProfileView()),
     ];
 
-    return Obx(() => AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle.dark,
-          child: Scaffold(
-            backgroundColor: Vv2Pastel.cream,
-            body: IndexedStack(
-              index: controller.currentIndex.value,
-              children: pages,
-            ),
-            bottomNavigationBar: HomeNavV2(
-              currentIndex: controller.currentIndex.value,
-              onTap: controller.changeTab,
-            ),
+    return Obx(
+      () => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: Vv2Pastel.cream,
+          body: IndexedStack(
+            index: controller.currentIndex.value,
+            children: pages,
           ),
-        ));
+          bottomNavigationBar: HomeNavV2(
+            currentIndex: controller.currentIndex.value,
+            onTap: controller.changeTab,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -70,31 +73,33 @@ class _HomeTab extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Orange header
-          _buildHeader(context),
-          // Body
-          Padding(
-            padding: const EdgeInsets.all(Vv2.gutter),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                if (!controller.isGuest) ...const [
-                  RelocationBanner(),
-                  ProposalsBanner(),
-                  FirstConsultGuide(),
+    return StatusBarShield(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Orange header
+            _buildHeader(context),
+            // Body
+            Padding(
+              padding: const EdgeInsets.all(Vv2.gutter),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  if (!controller.isGuest) ...const [
+                    RelocationBanner(),
+                    ProposalsBanner(),
+                    FirstConsultGuide(),
+                  ],
+                  _buildCategories(context),
+                  const SizedBox(height: 28),
+                  _buildUpcomingAppointment(context),
                 ],
-                _buildCategories(context),
-                const SizedBox(height: 28),
-                _buildUpcomingAppointment(context),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -110,9 +115,11 @@ class _HomeTab extends GetView<HomeController> {
           child: Column(
             children: [
               const Expanded(
-                  child: DecoratedBox(
-                      decoration: BoxDecoration(gradient: Vv2.headerGradient),
-                      child: SizedBox.expand())),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: Vv2.headerGradient),
+                  child: SizedBox.expand(),
+                ),
+              ),
               SizedBox(height: photoH / 2),
             ],
           ),
@@ -129,11 +136,13 @@ class _HomeTab extends GetView<HomeController> {
                     Semantics(
                       label: 'VetVem',
                       image: true,
-                      child: Image.asset('assets/images/logo_light.png',
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.contain,
-                          excludeFromSemantics: true),
+                      child: Image.asset(
+                        'assets/images/logo_light.png',
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.contain,
+                        excludeFromSemantics: true,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -149,22 +158,26 @@ class _HomeTab extends GetView<HomeController> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Obx(() => Text(
-                      controller.isGuest
-                          ? 'Olá!'
-                          : 'Olá, ${controller.userName.value}!',
-                      style: Vv2.t(26, 31, 700),
-                    )),
+                Obx(
+                  () => Text(
+                    controller.isGuest
+                        ? 'Olá!'
+                        : 'Olá, ${controller.userName.value}!',
+                    style: Vv2.t(26, 31, 700),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text('O que seu pet precisa hoje?', style: Vv2.t(22, 29, 700)),
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(Vv2.rCard),
-                  child: Image.asset('assets/images/tutor_home_hero_pets.webp',
-                      width: double.infinity,
-                      height: photoH,
-                      fit: BoxFit.cover,
-                      excludeFromSemantics: true),
+                  child: Image.asset(
+                    'assets/images/tutor_home_hero_pets.webp',
+                    width: double.infinity,
+                    height: photoH,
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
+                  ),
                 ),
               ],
             ),
@@ -189,10 +202,14 @@ class _HomeTab extends GetView<HomeController> {
           const VvIcon(VvFn.location, size: 20, color: Vv2.onBrand),
           const SizedBox(width: 8),
           Flexible(
-            child: Obx(() => Text(controller.locationLabel,
+            child: Obx(
+              () => Text(
+                controller.locationLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Vv2.t(15, 20, 700))),
+                style: Vv2.t(15, 20, 700),
+              ),
+            ),
           ),
           if (guest) ...[
             const SizedBox(width: 8),
@@ -207,9 +224,10 @@ class _HomeTab extends GetView<HomeController> {
       label: 'Escolher cidade',
       excludeSemantics: true,
       child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: controller.pickRegion,
-          child: pill),
+        behavior: HitTestBehavior.opaque,
+        onTap: controller.pickRegion,
+        child: pill,
+      ),
     );
   }
 
@@ -235,22 +253,27 @@ class _HomeTab extends GetView<HomeController> {
                   color: Vv2.surface.withValues(alpha: 0.85),
                   shape: BoxShape.circle,
                 ),
-                child: const VvIcon(VvFn.notifications,
-                    color: Vv2.onBrand, size: 22),
+                child: const VvIcon(
+                  VvFn.notifications,
+                  color: Vv2.onBrand,
+                  size: 22,
+                ),
               ),
               Positioned(
                 right: 8,
                 top: 8,
-                child: Obx(() => controller.unreadNotifications.value > 0
-                    ? Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Vv2.brand,
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    : const SizedBox.shrink()),
+                child: Obx(
+                  () => controller.unreadNotifications.value > 0
+                      ? Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Vv2.brand,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ),
             ],
           ),
@@ -287,13 +310,23 @@ class _HomeTab extends GetView<HomeController> {
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 16),
-              const Text('Notificações',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                      color: AppColors.textDark)),
+              const Text(
+                'Notificações',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
               const SizedBox(height: 12),
               Expanded(
                 child: Obx(() {
@@ -305,7 +338,10 @@ class _HomeTab extends GetView<HomeController> {
                         child: Text(
                           'Você ainda não tem notificações.\nQuando um veterinário responder ao seu pedido, você vê aqui.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 13, color: AppColors.textMedium),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMedium,
+                          ),
                         ),
                       ),
                     );
@@ -313,50 +349,80 @@ class _HomeTab extends GetView<HomeController> {
                   return ListView(
                     controller: scroll,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: items.map((n) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: AppColors.cardShadow,
-                            blurRadius: 6, offset: const Offset(0, 2))],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 38, height: 38,
+                    children: items
+                        .map(
+                          (n) => Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cardShadow,
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            child: const VvIcon(VvFn.notifications,
-                                color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${n['title']}', style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13,
-                                    color: AppColors.textDark)),
-                                if ('${n['body']}'.isNotEmpty) ...[
-                                  const SizedBox(height: 3),
-                                  Text('${n['body']}', style: const TextStyle(
-                                      fontSize: 12, color: AppColors.textMedium)),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(ago(n['createdAt'] as DateTime?),
-                                    style: const TextStyle(
-                                        fontSize: 11, color: AppColors.textLight)),
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const VvIcon(
+                                    VvFn.notifications,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${n['title']}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                      if ('${n['body']}'.isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${n['body']}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMedium,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        ago(n['createdAt'] as DateTime?),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    )).toList(),
+                        )
+                        .toList(),
                   );
                 }),
               ),
@@ -392,30 +458,38 @@ class _HomeTab extends GetView<HomeController> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)),
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 24),
             Row(
               children: [
                 Container(
-                  width: 52, height: 52,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(resolveSpecialtyIcon(cat.icon),
-                      color: AppColors.primary, size: 26),
+                  child: Icon(
+                    resolveSpecialtyIcon(cat.icon),
+                    color: AppColors.primary,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Text(
                   cat.label,
                   style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold,
-                    color: AppColors.textDark, fontFamily: 'Poppins',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                    fontFamily: 'Poppins',
                   ),
                 ),
               ],
@@ -424,8 +498,10 @@ class _HomeTab extends GetView<HomeController> {
             Text(
               cat.description,
               style: const TextStyle(
-                fontSize: 14, color: AppColors.textMedium,
-                height: 1.65, fontFamily: 'Poppins',
+                fontSize: 14,
+                color: AppColors.textMedium,
+                height: 1.65,
+                fontFamily: 'Poppins',
               ),
             ),
             const SizedBox(height: 28),
@@ -444,7 +520,9 @@ class _HomeTab extends GetView<HomeController> {
   }
 
   Widget _buildCategories(BuildContext context) {
-    return _CategoriesSection(onTapCategory: (cat) => _showCategoryModal(context, cat));
+    return _CategoriesSection(
+      onTapCategory: (cat) => _showCategoryModal(context, cat),
+    );
   }
 
   // ── Próximo agendamento ──────────────────────────────────────────
@@ -459,17 +537,21 @@ class _HomeTab extends GetView<HomeController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Próximo agendamento',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Próximo agendamento',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               TextButton(
                 onPressed: () => Get.find<HomeController>().changeTab(2),
                 style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                child: const Text('Ver todos',
-                    style: TextStyle(
-                        color: AppColors.primary, fontSize: 13)),
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Ver todos',
+                  style: TextStyle(color: AppColors.primary, fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -512,9 +594,7 @@ class _CategoriesSectionState extends State<_CategoriesSection> {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text('Categorias', style: Vv2.t(24, 32, 700)),
-              ),
+              Expanded(child: Text('Categorias', style: Vv2.t(24, 32, 700))),
               if (all.length > _collapsedCount)
                 TextButton(
                   onPressed: () => setState(() => _expanded = !_expanded),
@@ -524,8 +604,9 @@ class _CategoriesSectionState extends State<_CategoriesSection> {
                     foregroundColor: Vv2.primary,
                   ),
                   child: Text(
-                      showAll ? 'Ver menos' : 'Ver todas (${all.length})',
-                      style: Vv2.t(14, 20, 700, color: Vv2.primary)),
+                    showAll ? 'Ver menos' : 'Ver todas (${all.length})',
+                    style: Vv2.t(14, 20, 700, color: Vv2.primary),
+                  ),
                 ),
             ],
           ),
@@ -562,11 +643,12 @@ class _CategoryCard extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _CategoryCard(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+  const _CategoryCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -590,7 +672,9 @@ class _CategoryCard extends StatelessWidget {
                   height: 44,
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
-                      color: Vv2.surface, shape: BoxShape.circle),
+                    color: Vv2.surface,
+                    shape: BoxShape.circle,
+                  ),
                   child: VvIcon.specialty(icon, size: 24, color: Vv2.onBrand),
                 ),
                 const SizedBox(height: 10),
@@ -629,9 +713,10 @@ class _AppointmentCard extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE5E7EB)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Row(
@@ -645,15 +730,18 @@ class _AppointmentCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 image: hasPhoto
                     ? DecorationImage(
-                        image: MemoryImage(
-                            base64Decode(photo.split(',').last)),
-                        fit: BoxFit.cover)
+                        image: MemoryImage(base64Decode(photo.split(',').last)),
+                        fit: BoxFit.cover,
+                      )
                     : null,
               ),
               child: hasPhoto
                   ? null
-                  : const VvIcon(VvFn.petFallback,
-                      color: AppColors.primary, size: 26),
+                  : const VvIcon(
+                      VvFn.petFallback,
+                      color: AppColors.primary,
+                      size: 26,
+                    ),
             ),
             const SizedBox(width: 12),
             // Info
@@ -673,14 +761,18 @@ class _AppointmentCard extends StatelessWidget {
                   Text(
                     appointment.petName,
                     style: const TextStyle(
-                        fontSize: 12, color: AppColors.primary,
-                        fontWeight: FontWeight.w500),
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${_weekday(appointment.dateTime)} · ${appointment.dateTime.hour.toString().padLeft(2, '0')}:${appointment.dateTime.minute.toString().padLeft(2, '0')}',
                     style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMedium),
+                      fontSize: 12,
+                      color: AppColors.textMedium,
+                    ),
                   ),
                 ],
               ),
@@ -689,10 +781,11 @@ class _AppointmentCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: (appointment.status == AppointmentStatus.confirmed
-                        ? AppColors.success
-                        : AppColors.warning)
-                    .withValues(alpha: 0.12),
+                color:
+                    (appointment.status == AppointmentStatus.confirmed
+                            ? AppColors.success
+                            : AppColors.warning)
+                        .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

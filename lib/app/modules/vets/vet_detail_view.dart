@@ -6,6 +6,7 @@ import '../../services/analytics_service.dart';
 import '../../services/taxonomy_service.dart';
 import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
+import '../../theme/vv2/status_bar_shield.dart';
 import 'vets_controller.dart';
 
 class VetDetailView extends StatefulWidget {
@@ -47,59 +48,61 @@ class _VetDetailBody extends GetView<VetsController> {
 
     return Scaffold(
       backgroundColor: Vv2Pastel.cream,
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: 56 + 32 + bottomInset + 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context, vet),
-                Padding(
-                  padding: const EdgeInsets.all(Vv2.gutter),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (stack) ...[
-                        _buildSpecialties(vet),
-                        if (vet.animalSpecies.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _buildAnimalSpecies(vet),
-                        ],
-                      ] else
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(child: _buildSpecialties(vet)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildAnimalSpecies(vet)),
-                            ],
+      body: StatusBarShield(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.only(bottom: 56 + 32 + bottomInset + 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context, vet),
+                  Padding(
+                    padding: const EdgeInsets.all(Vv2.gutter),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (stack) ...[
+                          _buildSpecialties(vet),
+                          if (vet.animalSpecies.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildAnimalSpecies(vet),
+                          ],
+                        ] else
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: _buildSpecialties(vet)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildAnimalSpecies(vet)),
+                              ],
+                            ),
                           ),
-                        ),
-                      const SizedBox(height: 12),
-                      _buildNeighborhoods(vet),
-                      const SizedBox(height: 12),
-                      _buildBio(vet),
-                      const SizedBox(height: 12),
-                      _buildSchedule(vet),
-                      const SizedBox(height: 12),
-                      _buildPriceRow(vet),
-                      const SizedBox(height: 12),
-                      _buildReviews(),
-                    ],
+                        const SizedBox(height: 12),
+                        _buildNeighborhoods(vet),
+                        const SizedBox(height: 12),
+                        _buildBio(vet),
+                        const SizedBox(height: 12),
+                        _buildSchedule(vet),
+                        const SizedBox(height: 12),
+                        _buildPriceRow(vet),
+                        const SizedBox(height: 12),
+                        _buildReviews(),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildCta(vet, bottomInset),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildCta(vet, bottomInset),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -121,9 +124,11 @@ class _VetDetailBody extends GetView<VetsController> {
           child: Column(
             children: [
               Expanded(
-                  child: DecoratedBox(
-                      decoration: BoxDecoration(gradient: Vv2.headerGradient),
-                      child: SizedBox.expand())),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: Vv2.headerGradient),
+                  child: SizedBox.expand(),
+                ),
+              ),
               SizedBox(height: 70),
             ],
           ),
@@ -148,16 +153,23 @@ class _VetDetailBody extends GetView<VetsController> {
                           height: 56,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                              color: Vv2.surface, shape: BoxShape.circle),
-                          child: const VvIcon(VvFn.back,
-                              size: 24, color: Vv2.onBrand),
+                            color: Vv2.surface,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const VvIcon(
+                            VvFn.back,
+                            size: 24,
+                            color: Vv2.onBrand,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text('Perfil do profissional',
-                          style: Vv2.t(22, 28, 700)),
+                      child: Text(
+                        'Perfil do profissional',
+                        style: Vv2.t(22, 28, 700),
+                      ),
                     ),
                   ],
                 ),
@@ -180,8 +192,12 @@ class _VetDetailBody extends GetView<VetsController> {
                     ),
                     child: image == null
                         ? const Center(
-                            child: VvIcon(VvFn.userFallback,
-                                size: 44, color: Vv2.onBrand))
+                            child: VvIcon(
+                              VvFn.userFallback,
+                              size: 44,
+                              color: Vv2.onBrand,
+                            ),
+                          )
                         : null,
                   ),
                 ),
@@ -196,13 +212,17 @@ class _VetDetailBody extends GetView<VetsController> {
                   ),
                   child: Column(
                     children: [
-                      Text(vet.name,
-                          textAlign: TextAlign.center,
-                          style: Vv2.t(26, 32, 700)),
+                      Text(
+                        vet.name,
+                        textAlign: TextAlign.center,
+                        style: Vv2.t(26, 32, 700),
+                      ),
                       const SizedBox(height: 4),
-                      Text('${vet.crmv} · ${vet.specialty}',
-                          textAlign: TextAlign.center,
-                          style: Vv2.bodyMedium),
+                      Text(
+                        '${vet.crmv} · ${vet.specialty}',
+                        textAlign: TextAlign.center,
+                        style: Vv2.bodyMedium,
+                      ),
                       const SizedBox(height: 12),
                       // Avaliação — calculada em tempo real das reviews carregadas
                       Obx(() {
@@ -210,13 +230,15 @@ class _VetDetailBody extends GetView<VetsController> {
                         final count = reviews.length;
                         final avg = count > 0
                             ? reviews
-                                    .map((r) => (r['rating'] as int))
-                                    .reduce((a, b) => a + b) /
-                                count
+                                      .map((r) => (r['rating'] as int))
+                                      .reduce((a, b) => a + b) /
+                                  count
                             : 0.0;
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFEBC2),
                             borderRadius: BorderRadius.circular(Vv2.rPill),
@@ -224,8 +246,11 @@ class _VetDetailBody extends GetView<VetsController> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const VvIcon(VvFn.ratingFilled,
-                                  size: 20, color: _kStar),
+                              const VvIcon(
+                                VvFn.ratingFilled,
+                                size: 20,
+                                color: _kStar,
+                              ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
@@ -253,13 +278,13 @@ class _VetDetailBody extends GetView<VetsController> {
   // ── Blocos ───────────────────────────────────────────────────────
 
   Widget _chip(String text, {Color? bg, Color? fg}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: bg ?? Vv2.surface,
-          borderRadius: BorderRadius.circular(Vv2.rPill),
-        ),
-        child: Text(text, style: Vv2.t(14, 20, 600, color: fg ?? Vv2.text)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    decoration: BoxDecoration(
+      color: bg ?? Vv2.surface,
+      borderRadius: BorderRadius.circular(Vv2.rPill),
+    ),
+    child: Text(text, style: Vv2.t(14, 20, 600, color: fg ?? Vv2.text)),
+  );
 
   Widget _buildSpecialties(VetModel vet) {
     return _Section(
@@ -274,10 +299,9 @@ class _VetDetailBody extends GetView<VetsController> {
   }
 
   Widget _buildAnimalSpecies(VetModel vet) {
-    // Vem do TaxonomyService (config/species no Firestore).
-    final speciesLabels = {
-      for (final sp in Get.find<TaxonomyService>().species)
-        sp.key: '${sp.emoji} ${sp.label}',
+    // Lista completa recebida do app (TaxonomyService, config/species).
+    final defs = {
+      for (final sp in Get.find<TaxonomyService>().species) sp.key: sp.label,
     };
     return _Section(
       title: 'Espécies atendidas',
@@ -285,8 +309,24 @@ class _VetDetailBody extends GetView<VetsController> {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children:
-            vet.animalSpecies.map((s) => _chip(speciesLabels[s] ?? s)).toList(),
+        children: vet.animalSpecies.map((key) {
+          final label = defs[key] ?? key;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Vv2.surface,
+              borderRadius: BorderRadius.circular(Vv2.rControl + 8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                VvIcon.species(key, label, size: 20, color: Vv2.speciesGreen),
+                const SizedBox(width: 6),
+                Flexible(child: Text(label, style: Vv2.t(14, 20, 600))),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -295,7 +335,10 @@ class _VetDetailBody extends GetView<VetsController> {
     return _Section(
       title: 'Regiões atendidas',
       outlined: true,
-      child: Text(vet.neighborhoods.join(' · '), style: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary)),
+      child: Text(
+        vet.neighborhoods.join(' · '),
+        style: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary),
+      ),
     );
   }
 
@@ -303,16 +346,37 @@ class _VetDetailBody extends GetView<VetsController> {
     return _Section(
       title: 'Sobre',
       outlined: true,
-      child: Text(vet.bio, style: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary)),
+      child: Text(
+        vet.bio,
+        style: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary),
+      ),
     );
   }
 
   // ── Períodos de atendimento ──────────────────────────────────────
 
   static const _periodDefs = [
-    (label: 'Manhã',  icon: VvFn.periodMorning,   hours: '08h–12h', min: 0,  max: 11),
-    (label: 'Tarde',  icon: VvFn.periodAfternoon,  hours: '12h–18h', min: 12, max: 17),
-    (label: 'Noite',  icon: VvFn.periodNight, hours: '18h–21h', min: 18, max: 23),
+    (
+      label: 'Manhã',
+      icon: VvFn.periodMorning,
+      hours: '08h–12h',
+      min: 0,
+      max: 11,
+    ),
+    (
+      label: 'Tarde',
+      icon: VvFn.periodAfternoon,
+      hours: '12h–18h',
+      min: 12,
+      max: 17,
+    ),
+    (
+      label: 'Noite',
+      icon: VvFn.periodNight,
+      hours: '18h–21h',
+      min: 18,
+      max: 23,
+    ),
   ];
 
   Widget _buildSchedule(VetModel vet) {
@@ -333,24 +397,34 @@ class _VetDetailBody extends GetView<VetsController> {
             spacing: 8,
             runSpacing: 8,
             children: activePeriods
-                .map((p) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Vv2.primaryContainer,
-                        borderRadius: BorderRadius.circular(Vv2.rControl),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          VvIcon(p.icon, size: 20, color: Vv2.onPrimaryContainer),
-                          const SizedBox(width: 8),
-                          Text('${p.label} · ${p.hours}',
-                              style: Vv2.t(14, 20, 600,
-                                  color: Vv2.onPrimaryContainer)),
-                        ],
-                      ),
-                    ))
+                .map(
+                  (p) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Vv2.primaryContainer,
+                      borderRadius: BorderRadius.circular(Vv2.rControl),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        VvIcon(p.icon, size: 20, color: Vv2.onPrimaryContainer),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${p.label} · ${p.hours}',
+                          style: Vv2.t(
+                            14,
+                            20,
+                            600,
+                            color: Vv2.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 12),
@@ -401,8 +475,12 @@ class _VetDetailBody extends GetView<VetsController> {
             ),
             child: Text(
               vet.isAvailable ? 'Hoje disponível' : 'Indisponível',
-              style: Vv2.t(13, 18, 700,
-                  color: vet.isAvailable ? Vv2.successFg : Vv2.textSecondary),
+              style: Vv2.t(
+                13,
+                18,
+                700,
+                color: vet.isAvailable ? Vv2.successFg : Vv2.textSecondary,
+              ),
             ),
           ),
         ],
@@ -423,15 +501,16 @@ class _VetDetailBody extends GetView<VetsController> {
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(),
-                ))
+                ),
+              )
             : reviews.isEmpty
-                ? Text('Nenhuma avaliação ainda.', style: Vv2.bodyMedium)
-                : Column(
-                    children: reviews
-                        .take(5)
-                        .map((r) => _ReviewCard(review: r))
-                        .toList(),
-                  ),
+            ? Text('Nenhuma avaliação ainda.', style: Vv2.bodyMedium)
+            : Column(
+                children: reviews
+                    .take(5)
+                    .map((r) => _ReviewCard(review: r))
+                    .toList(),
+              ),
       );
     });
   }
@@ -451,7 +530,11 @@ class _VetDetailBody extends GetView<VetsController> {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            Vv2.gutter, 16, Vv2.gutter, 12 + bottomInset),
+          Vv2.gutter,
+          16,
+          Vv2.gutter,
+          12 + bottomInset,
+        ),
         child: Semantics(
           button: true,
           enabled: enabled,
@@ -473,8 +556,12 @@ class _VetDetailBody extends GetView<VetsController> {
                     child: Text(
                       enabled ? 'Agendar consulta' : 'Veterinário indisponível',
                       textAlign: TextAlign.center,
-                      style: Vv2.t(17, 24, 700,
-                          color: enabled ? Vv2.onBrand : Vv2.textSecondary),
+                      style: Vv2.t(
+                        17,
+                        24,
+                        700,
+                        color: enabled ? Vv2.onBrand : Vv2.textSecondary,
+                      ),
                     ),
                   ),
                   Container(
@@ -485,9 +572,11 @@ class _VetDetailBody extends GetView<VetsController> {
                       color: Vv2.surface.withValues(alpha: enabled ? 0.7 : 0.5),
                       shape: BoxShape.circle,
                     ),
-                    child: VvIcon(VvFn.forward,
-                        size: 20,
-                        color: enabled ? Vv2.onBrand : Vv2.textSecondary),
+                    child: VvIcon(
+                      VvFn.forward,
+                      size: 20,
+                      color: enabled ? Vv2.onBrand : Vv2.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -562,9 +651,13 @@ class _ReviewCard extends StatelessWidget {
           if (comment.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 6, left: 48),
-              child: Text('"$comment"',
-                  style: Vv2.bodyMedium.copyWith(
-                      fontStyle: FontStyle.italic, color: Vv2.text)),
+              child: Text(
+                '"$comment"',
+                style: Vv2.bodyMedium.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: Vv2.text,
+                ),
+              ),
             ),
           const Divider(height: 20, color: Vv2.divider),
         ],
@@ -579,11 +672,12 @@ class _Section extends StatelessWidget {
   final Color? color;
   final bool outlined;
 
-  const _Section(
-      {required this.title,
-      required this.child,
-      this.color,
-      this.outlined = false});
+  const _Section({
+    required this.title,
+    required this.child,
+    this.color,
+    this.outlined = false,
+  });
 
   @override
   Widget build(BuildContext context) {

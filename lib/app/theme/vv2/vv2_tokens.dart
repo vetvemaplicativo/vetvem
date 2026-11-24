@@ -25,17 +25,23 @@ class Vv2 {
   static const successBg = Color(0xFFE9F7EF);
   static const successFg = Color(0xFF145C39);
 
-  // Degradês
+  // Degradês: mais claro à esquerda, mais forte à direita
   static const headerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFFA574), Color(0xFFFFD3BA)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFF8548), Color(0xFFFF6B2B)],
+  );
+  static const searchGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFF995F), Color(0xFFFF7738)],
   );
   static const ctaGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [Color(0xFFFF6B2B), Color(0xFFFF9A63)],
+    colors: [Color(0xFFFF8548), Color(0xFFFF6B2B)],
   );
+  static const speciesGreen = Color(0xFF145C39);
 
   // Espaço, raios, medidas
   static const gutter = 16.0;

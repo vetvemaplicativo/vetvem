@@ -188,7 +188,7 @@ class _VetsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<VetsController>();
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+      decoration: const BoxDecoration(gradient: Vv2.searchGradient),
       child: Material(
         type: MaterialType.transparency,
         textStyle: Vv2.bodyLarge.copyWith(decoration: TextDecoration.none),
@@ -404,6 +404,7 @@ class VetCard extends GetView<VetsController> {
 
   @override
   Widget build(BuildContext context) {
+    final price = 'R\$ ${vet.startingPrice.toStringAsFixed(0)}';
     return Semantics(
       button: true,
       child: GestureDetector(
@@ -420,7 +421,30 @@ class VetCard extends GetView<VetsController> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _VetAvatar(vet: vet, size: 56),
+                // Avatar com a nota logo abaixo
+                Column(
+                  children: [
+                    _VetAvatar(vet: vet, size: 56),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBC2),
+                        borderRadius: BorderRadius.circular(Vv2.rPill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const VvIcon(VvFn.ratingBadge,
+                              size: 14, color: Vv2.onBrand),
+                          const SizedBox(width: 3),
+                          Text('${vet.rating}', style: Vv2.t(13, 18, 700)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -454,63 +478,31 @@ class VetCard extends GetView<VetsController> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Vv2.bodyMedium),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFEBC2),
-                              borderRadius: BorderRadius.circular(Vv2.rPill),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const VvIcon(VvFn.ratingBadge,
-                                    size: 16, color: Vv2.onBrand),
-                                const SizedBox(width: 4),
-                                Text('${vet.rating}',
-                                    style: Vv2.t(14, 20, 700)),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (vet.hasMultipleServices) ...[
-                                Text('a partir de', style: Vv2.bodySmall),
-                                const SizedBox(width: 8),
-                              ],
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Vv2.pressedSurface,
-                                  borderRadius:
-                                      BorderRadius.circular(Vv2.rCard + 4),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                        'R\$ ${vet.startingPrice.toStringAsFixed(0)}',
-                                        style: Vv2.price),
-                                    Text(
-                                        vet.hasMultipleServices
-                                            ? 'por serviço'
-                                            : 'por visita',
-                                        style: Vv2.t(12, 16, 600)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Vv2.pressedSurface,
+                          borderRadius: BorderRadius.circular(Vv2.rCard),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                vet.hasMultipleServices
+                                    ? 'A partir de $price'
+                                    : price,
+                                style: Vv2.price),
+                            Text(
+                                vet.hasMultipleServices
+                                    ? 'por serviço'
+                                    : 'por visita',
+                                style: Vv2.t(12, 16, 600,
+                                    color: Vv2.textSecondary)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
