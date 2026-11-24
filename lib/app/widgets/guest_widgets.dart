@@ -87,7 +87,7 @@ class _GuestWallSheet extends StatelessWidget {
     // Recorte largo: ~92% da largura da tela, proporção 749x480 preservada.
     final imgW = mq.size.width * 0.92;
     final imgH = imgW * 480 / 749;
-    const overlap = 12.0; // patas avançam sobre a borda branca
+    const overlap = 24.0; // patas cobrem a borda branca, sem fresta
     final maxSheet = mq.size.height * 0.9 - (imgH - overlap);
     return Stack(
       children: [
@@ -101,7 +101,7 @@ class _GuestWallSheet extends StatelessWidget {
                   BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
             ),
             padding:
-                const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 12),
+                const EdgeInsets.fromLTRB(Vv2.gutter, 28, Vv2.gutter, 12),
             child: SafeArea(
               top: false,
               child: SingleChildScrollView(
@@ -147,7 +147,7 @@ class _GuestWallSheet extends StatelessWidget {
         ),
         // Sombra suave de contato sob as patas (sobre a borda branca).
         Positioned(
-          top: imgH - overlap - 2,
+          top: imgH - 12,
           left: 0,
           right: 0,
           child: IgnorePointer(
