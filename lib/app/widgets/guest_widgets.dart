@@ -77,6 +77,37 @@ class _PillCta extends StatelessWidget {
   }
 }
 
+/// Recorta o pé da imagem pela curva dos cantos da folha: o corpo dos bichos
+/// não passa da curva; só as patas (no meio) avançam sobre a borda.
+class _SheetCornerClipper extends CustomClipper<Path> {
+  final double sheetTop;
+  final double sideMargin;
+  final double radius;
+  const _SheetCornerClipper(
+      {required this.sheetTop, required this.sideMargin, required this.radius});
+
+  @override
+  Path getClip(Size size) {
+    final above = Path()..addRect(Rect.fromLTRB(0, 0, size.width, sheetTop));
+    final sheet = Path()
+      ..addRRect(RRect.fromLTRBAndCorners(
+        -sideMargin,
+        sheetTop,
+        size.width + sideMargin,
+        size.height + 100,
+        topLeft: Radius.circular(radius),
+        topRight: Radius.circular(radius),
+      ));
+    return Path.combine(PathOperation.union, above, sheet);
+  }
+
+  @override
+  bool shouldReclip(_SheetCornerClipper old) =>
+      old.sheetTop != sheetTop ||
+      old.sideMargin != sideMargin ||
+      old.radius != radius;
+}
+
 class _GuestWallSheet extends StatelessWidget {
   const _GuestWallSheet();
 
@@ -87,7 +118,7 @@ class _GuestWallSheet extends StatelessWidget {
     // Recorte largo: ~92% da largura da tela, proporção 749x480 preservada.
     final imgW = mq.size.width * 0.92;
     final imgH = imgW * 480 / 749;
-    const overlap = 24.0; // patas cobrem a borda branca, sem fresta
+    const overlap = 20.0; // patas cobrem a borda branca, sem fresta
     final maxSheet = mq.size.height * 0.9 - (imgH - overlap);
     return Stack(
       children: [
@@ -175,10 +206,17 @@ class _GuestWallSheet extends StatelessWidget {
           right: 0,
           child: IgnorePointer(
             child: Center(
-              child: Image.asset(
-                  'assets/images/tutor_pedido_conta_patinhas_largo.webp',
-                  width: imgW,
-                  excludeFromSemantics: true),
+              child: ClipPath(
+                clipper: _SheetCornerClipper(
+                  sheetTop: imgH - overlap,
+                  sideMargin: (mq.size.width - imgW) / 2,
+                  radius: Vv2.rOverlay,
+                ),
+                child: Image.asset(
+                    'assets/images/tutor_pedido_conta_patinhas_largo.webp',
+                    width: imgW,
+                    excludeFromSemantics: true),
+              ),
             ),
           ),
         ),
