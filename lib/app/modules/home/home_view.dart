@@ -331,7 +331,7 @@ class _HomeTab extends GetView<HomeController> {
                               color: AppColors.primary.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.notifications_outlined,
+                            child: const VvIcon(VvFn.notifications,
                                 color: AppColors.primary, size: 20),
                           ),
                           const SizedBox(width: 12),
@@ -434,7 +434,7 @@ class _HomeTab extends GetView<HomeController> {
                 Navigator.pop(context);
                 _goToVetsWithCategory(cat.specialty);
               },
-              icon: const Icon(Icons.search, size: 18),
+              icon: const VvIcon(VvFn.search, size: 18, color: Colors.white),
               label: Text('Buscar profissionais de ${cat.label}'),
             ),
           ],
@@ -651,7 +651,7 @@ class _AppointmentCard extends StatelessWidget {
               ),
               child: hasPhoto
                   ? null
-                  : const Icon(Icons.pets,
+                  : const VvIcon(VvFn.petFallback,
                       color: AppColors.primary, size: 26),
             ),
             const SizedBox(width: 12),
