@@ -20,7 +20,7 @@ Future<void> showGuestWall({required String vetId}) async {
   if (action == 'register') {
     analytics.logWallAction('criar_conta');
     auth.pendingVetId = vetId;
-    Get.toNamed(Routes.register);
+    Get.toNamed(Routes.createAccount);
   } else if (action == 'login') {
     analytics.logWallAction('entrar');
     auth.pendingVetId = vetId;
@@ -276,7 +276,7 @@ class GuestGate extends StatelessWidget {
               const SizedBox(height: 28),
               _PillCta(
                   label: 'Criar conta',
-                  onTap: () => Get.toNamed(Routes.register)),
+                  onTap: () => Get.toNamed(Routes.createAccount)),
               const SizedBox(height: 4),
               TextButton(
                 onPressed: () => Get.toNamed(Routes.login),

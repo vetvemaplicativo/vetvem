@@ -130,7 +130,7 @@ class LoginController extends GetxController {
     return false;
   }
 
-  void goToRegister() => Get.toNamed(Routes.register);
+  void goToRegister() => Get.offNamed(Routes.createAccount);
 
   void goToForgotPassword() {
     final ctrl = TextEditingController(text: emailController.text.trim());
@@ -218,19 +218,6 @@ class LoginController extends GetxController {
         borderRadius: 12,
         duration: const Duration(seconds: 4),
         icon: const Icon(Icons.check_circle_outline, color: Colors.white));
-  }
-
-  void _showInfo(String message) {
-    Get.snackbar(
-      'Em breve',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.textDark,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      duration: const Duration(seconds: 2),
-    );
   }
 
   @override

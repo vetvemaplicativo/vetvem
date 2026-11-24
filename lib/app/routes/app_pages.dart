@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
+import '../modules/auth/create_account/create_account_binding.dart';
+import '../modules/auth/create_account/create_account_view.dart';
 import '../modules/auth/login/login_binding.dart';
 import '../modules/auth/login/login_view.dart';
 import '../modules/auth/register/register_binding.dart';
@@ -37,6 +39,11 @@ class AppPages {
       name: Routes.login,
       page: () => const LoginView(),
       binding: LoginBinding(),
+    ),
+    GetPage(
+      name: Routes.createAccount,
+      page: () => const CreateAccountView(),
+      binding: CreateAccountBinding(),
     ),
     GetPage(
       name: Routes.register,
