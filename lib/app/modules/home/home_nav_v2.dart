@@ -61,6 +61,7 @@ class HomeNavV2 extends StatelessWidget {
             borderRadius: BorderRadius.circular(Vv2.rPill),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Vv2Icon(icon, size: 24, color: color),
