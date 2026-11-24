@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
-import '../../routes/app_routes.dart';
 import '../../data/models/appointment_model.dart';
 import '../vets/vets_view.dart';
 import '../vets/vets_controller.dart';
@@ -15,6 +14,9 @@ import '../profile/profile_view.dart';
 import '../../services/taxonomy_service.dart';
 import 'home_controller.dart';
 import '../../widgets/guest_widgets.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../theme/vv2/vv2_icon.dart';
+import 'home_nav_v2.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -45,55 +47,16 @@ class HomeView extends GetView<HomeController> {
     ];
 
     return Obx(() => AnnotatedRegion<SystemUiOverlayStyle>(
-          value: controller.currentIndex.value == 0
-              ? SystemUiOverlayStyle.light
-              : SystemUiOverlayStyle.dark,
+          value: SystemUiOverlayStyle.dark,
           child: Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: Vv2Pastel.cream,
             body: IndexedStack(
               index: controller.currentIndex.value,
               children: pages,
             ),
-            bottomNavigationBar: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border:
-                    Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
-              ),
-              child: BottomNavigationBar(
-                currentIndex: controller.currentIndex.value,
-                onTap: controller.changeTab,
-                backgroundColor: Colors.white,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.textLight,
-                selectedLabelStyle: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontSize: 11),
-                type: BottomNavigationBarType.fixed,
-                elevation: 0,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home_outlined),
-                    activeIcon: Icon(Icons.home),
-                    label: 'Início',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.search_outlined),
-                    activeIcon: Icon(Icons.search),
-                    label: 'Buscar',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    activeIcon: Icon(Icons.receipt_long),
-                    label: 'Consultas',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline),
-                    activeIcon: Icon(Icons.person),
-                    label: 'Perfil',
-                  ),
-                ],
-              ),
+            bottomNavigationBar: HomeNavV2(
+              currentIndex: controller.currentIndex.value,
+              onTap: controller.changeTab,
             ),
           ),
         ));
@@ -115,7 +78,7 @@ class _HomeTab extends GetView<HomeController> {
           _buildHeader(context),
           // Body
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(Vv2.gutter),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -136,106 +99,158 @@ class _HomeTab extends GetView<HomeController> {
     );
   }
 
-  // ── Header laranja ───────────────────────────────────────────────
+  // ── Cabeçalho (redesign 2.0) ─────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+    final compact = MediaQuery.sizeOf(context).width <= 360;
+    final photoH = compact ? 112.0 : 136.0;
+    return Stack(
+      children: [
+        Positioned.fill(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Obx(() => Text(
-                            controller.isGuest
-                                ? 'Olá!'
-                                : 'Olá, ${controller.userName.value}!',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          )),
-                      const SizedBox(height: 2),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: controller.isGuest ? controller.pickRegion : null,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined,
-                                color: Colors.white70, size: 14),
-                            const SizedBox(width: 4),
-                            Obx(() => Text(
-                                  controller.locationLabel,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13,
-                                    fontFamily: 'Poppins',
-                                  ),
-                                )),
-                            if (controller.isGuest)
-                              const Icon(Icons.keyboard_arrow_down,
-                                  color: Colors.white70, size: 16),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Notification bell (visitante não tem notificações)
-                  if (!controller.isGuest)
-                  GestureDetector(
-                    onTap: () {
-                      controller.markNotificationsSeen();
-                      _showNotifications(context);
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.notifications_outlined,
-                              color: Colors.white, size: 22),
-                        ),
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Obx(() => controller.unreadNotifications.value > 0
-                              ? Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFBBC05),
-                                    shape: BoxShape.circle,
-                                  ),
-                                )
-                              : const SizedBox.shrink()),
-                        ),
-                      ],
+              const Expanded(
+                  child: DecoratedBox(
+                      decoration: BoxDecoration(gradient: Vv2.headerGradient),
+                      child: SizedBox.expand())),
+              SizedBox(height: photoH / 2),
+            ],
+          ),
+        ),
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Semantics(
+                      label: 'VetVem',
+                      image: true,
+                      child: Image.asset('assets/images/logo_light.png',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.contain,
+                          excludeFromSemantics: true),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'O que seu pet precisa hoje?',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  fontFamily: 'Poppins',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _locationPill(),
+                      ),
+                    ),
+                    if (!controller.isGuest) ...[
+                      const SizedBox(width: 8),
+                      _bell(context),
+                    ],
+                  ],
                 ),
+                const SizedBox(height: 12),
+                Obx(() => Text(
+                      controller.isGuest
+                          ? 'Olá!'
+                          : 'Olá, ${controller.userName.value}!',
+                      style: Vv2.t(26, 31, 700),
+                    )),
+                const SizedBox(height: 4),
+                Text('O que seu pet precisa hoje?', style: Vv2.t(22, 29, 700)),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Vv2.rCard),
+                  child: Image.asset('assets/images/tutor_home_hero_pets.webp',
+                      width: double.infinity,
+                      height: photoH,
+                      fit: BoxFit.cover,
+                      excludeFromSemantics: true),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _locationPill() {
+    final guest = controller.isGuest;
+    final pill = Container(
+      constraints: const BoxConstraints(minHeight: Vv2.tapMin),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Vv2.surface.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(Vv2.rPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Vv2Icon(Ph.mapPin, size: 20, color: Vv2.onBrand),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Obx(() => Text(controller.locationLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Vv2.t(15, 20, 700))),
+          ),
+          if (guest) ...[
+            const SizedBox(width: 8),
+            const Vv2Icon(Ph.caretDown, size: 16, color: Vv2.onBrand),
+          ],
+        ],
+      ),
+    );
+    if (!guest) return pill;
+    return Semantics(
+      button: true,
+      label: 'Escolher cidade',
+      excludeSemantics: true,
+      child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: controller.pickRegion,
+          child: pill),
+    );
+  }
+
+  Widget _bell(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Notificações',
+      child: GestureDetector(
+        onTap: () {
+          controller.markNotificationsSeen();
+          _showNotifications(context);
+        },
+        child: SizedBox(
+          width: Vv2.tapMin,
+          height: Vv2.tapMin,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Vv2.surface.withValues(alpha: 0.85),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.notifications_outlined,
+                    color: Vv2.onBrand, size: 22),
+              ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Obx(() => controller.unreadNotifications.value > 0
+                    ? Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Vv2.brand,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : const SizedBox.shrink()),
               ),
             ],
           ),
@@ -486,89 +501,108 @@ class _CategoriesSectionState extends State<_CategoriesSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Categorias', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 14),
-        Obx(() {
-          final all = Get.find<TaxonomyService>().specialties;
-          final showAll = _expanded || all.length <= _collapsedCount;
-          final visible = showAll ? all : all.take(_collapsedCount).toList();
-          return Column(
+    final scale = MediaQuery.textScalerOf(context).scale(1.0);
+    final columns = scale > 1.15 ? 2 : 3;
+    return Obx(() {
+      final all = Get.find<TaxonomyService>().specialties;
+      final showAll = _expanded || all.length <= _collapsedCount;
+      final visible = showAll ? all : all.take(_collapsedCount).toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 1.0,
-                children: visible
-                    .map((cat) => _CategoryCard(
-                          icon: resolveSpecialtyIcon(cat.icon),
-                          label: cat.label,
-                          onTap: () => widget.onTapCategory(cat),
-                        ))
-                    .toList(),
+              Expanded(
+                child: Text('Categorias', style: Vv2.t(24, 32, 700)),
               ),
               if (all.length > _collapsedCount)
                 TextButton(
                   onPressed: () => setState(() => _expanded = !_expanded),
-                  child: Text(showAll ? 'Ver menos' : 'Ver todas (${all.length})'),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(Vv2.tapMin, Vv2.tapMin),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: Vv2.primary,
+                  ),
+                  child: Text(
+                      showAll ? 'Ver menos' : 'Ver todas (${all.length})',
+                      style: Vv2.t(14, 20, 700, color: Vv2.primary)),
                 ),
             ],
-          );
-        }),
-      ],
-    );
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: visible.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 116 * (scale < 1 ? 1 : scale),
+            ),
+            itemBuilder: (_, i) {
+              final cat = visible[i];
+              return _CategoryCard(
+                icon: resolveSpecialtyIcon(cat.icon),
+                label: cat.label,
+                color: Vv2Pastel.at(i),
+                onTap: () => widget.onTapCategory(cat),
+              );
+            },
+          ),
+        ],
+      );
+    });
   }
 }
 
 class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Color color;
   final VoidCallback onTap;
-  const _CategoryCard({required this.icon, required this.label, required this.onTap});
+  const _CategoryCard(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6, offset: const Offset(0, 2))
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 24),
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(Vv2.rCard + 8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Vv2.rCard + 8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                      color: Vv2.surface, shape: BoxShape.circle),
+                  child: Vv2SpecialtyIcon(icon, size: 24, color: Vv2.onBrand),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Vv2.t(13, 18, 700),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

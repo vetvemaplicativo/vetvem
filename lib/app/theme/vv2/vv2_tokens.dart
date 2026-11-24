@@ -80,3 +80,18 @@ class Vv2 {
   static TextStyle get labelMedium => t(12, 18, 600);
   static TextStyle get price => t(18, 24, 700);
 }
+
+/// Cores de apoio do piloto (fundo creme e pastéis das categorias).
+class Vv2Pastel {
+  Vv2Pastel._();
+  static const cream = Color(0xFFFDF4EE);
+  static const cycle = <Color>[
+    Color(0xFFFFD9C7),
+    Color(0xFFF1E4D3),
+    Color(0xFFE3EBDD),
+    Color(0xFFFFEBC2),
+    Color(0xFFF4DCD8),
+    Color(0xFFE5EBDC),
+  ];
+  static Color at(int i) => cycle[i % cycle.length];
+}
