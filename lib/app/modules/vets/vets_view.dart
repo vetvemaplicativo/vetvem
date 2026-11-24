@@ -247,9 +247,9 @@ class _VetsHeader extends StatelessWidget {
                   style: Vv2.bodyLarge,
                   decoration: InputDecoration(
                     hintText: 'Buscar por nome ou especialidade...',
-                    hintStyle: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary),
+                    hintStyle: Vv2.t(15, 20, 400, color: Vv2.textSecondary),
                     prefixIcon: const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(14),
                       child: VvIcon(VvFn.search, size: 24, color: Vv2.onBrand),
                     ),
                     filled: true,

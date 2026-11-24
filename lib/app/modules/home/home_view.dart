@@ -531,6 +531,7 @@ class _CategoriesSectionState extends State<_CategoriesSection> {
           ),
           const SizedBox(height: 8),
           GridView.builder(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: visible.length,
