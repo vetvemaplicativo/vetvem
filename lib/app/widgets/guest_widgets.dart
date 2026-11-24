@@ -84,9 +84,10 @@ class _GuestWallSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     // Foto decorativa: dupla apoiada na borda superior da folha.
-    final imgW = (mq.size.width * 0.56).clamp(180.0, 260.0);
-    final imgH = imgW * 410 / 810;
-    const overlap = 14.0; // quanto as patinhas avançam sobre a borda branca
+    // Recorte largo: ~92% da largura da tela, proporção 749x480 preservada.
+    final imgW = mq.size.width * 0.92;
+    final imgH = imgW * 480 / 749;
+    const overlap = 12.0; // patas avançam sobre a borda branca
     final maxSheet = mq.size.height * 0.9 - (imgH - overlap);
     return Stack(
       children: [
@@ -144,14 +145,40 @@ class _GuestWallSheet extends StatelessWidget {
             ),
           ),
         ),
+        // Sombra suave de contato sob as patas (sobre a borda branca).
+        Positioned(
+          top: imgH - overlap - 2,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: Container(
+                width: imgW * 0.86,
+                height: 12,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(60),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.16),
+                        blurRadius: 10,
+                        spreadRadius: -2,
+                        offset: const Offset(0, 4)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           child: IgnorePointer(
             child: Center(
-              child: Image.asset('assets/images/tutor_pedido_conta_patinhas.webp',
-                  width: imgW, excludeFromSemantics: true),
+              child: Image.asset(
+                  'assets/images/tutor_pedido_conta_patinhas_largo.webp',
+                  width: imgW,
+                  excludeFromSemantics: true),
             ),
           ),
         ),
