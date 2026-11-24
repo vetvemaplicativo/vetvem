@@ -320,7 +320,7 @@ class _VetDetailBody extends GetView<VetsController> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                VvIcon.species(key, label, size: 20, color: Vv2.speciesGreen),
+                VvIcon.species(key, label, size: 24, color: Vv2.speciesGreen),
                 const SizedBox(width: 6),
                 Flexible(child: Text(label, style: Vv2.t(14, 20, 600))),
               ],

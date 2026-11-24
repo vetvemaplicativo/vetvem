@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../../services/analytics_service.dart';
 import '../../services/auth_service.dart';
 import '../phone/phone_gate.dart';
@@ -73,40 +74,53 @@ class _SplashViewState extends State<SplashView> {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    // Pets em escala proporcional à largura; cortados nas laterais, com rosto e
+    // orelhas visíveis. Decorativos (sem semântica).
+    final catW = w * 0.50;
+    final dogW = w * 0.63;
     return Scaffold(
       // Mesma cor do logo (o PNG tem cantos transparentes): com AppColors.primary
       // o quadrado do logo aparecia como um bloco de tom diferente no fundo.
       backgroundColor: const Color(0xFFFF590E),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/logo_light.png',
-              width: 180,
-              height: 180,
-              fit: BoxFit.contain,
+      body: Stack(
+        children: [
+          Positioned(
+            left: -w * 0.06,
+            bottom: 0,
+            width: catW,
+            child: Image.asset('assets/images/tutor_splash_gato_esquerda.webp',
+                fit: BoxFit.contain, excludeFromSemantics: true),
+          ),
+          Positioned(
+            right: -w * 0.03,
+            bottom: 0,
+            width: dogW,
+            child: Image.asset(
+                'assets/images/tutor_splash_cachorro_direita.webp',
+                fit: BoxFit.contain,
+                excludeFromSemantics: true),
+          ),
+          Align(
+            alignment: const Alignment(0, -0.42),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/logo_light.png',
+                  width: 112,
+                  height: 112,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
+                Text('VetVem', style: Vv2.t(36, 44, 700, color: Colors.white)),
+                const SizedBox(height: 4),
+                Text('Cuidado veterinário em casa',
+                    style: Vv2.t(16, 24, 500, color: Vv2.onBrand)),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'VetVem',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const Text(
-              'Cuidado veterinario em casa',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

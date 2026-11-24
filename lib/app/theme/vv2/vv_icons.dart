@@ -98,31 +98,58 @@ class VvIcon extends StatelessWidget {
           {double size = 24, required Color color}) =>
       Vv2SpecialtyIcon(fallback, size: size, color: color);
 
-  /// Ícone de uma espécie atendida (Phosphor Duotone). Espécie sem
-  /// correspondência usa a patinha genérica; o nome sempre aparece ao lado.
+  /// Ícone de uma espécie atendida: arte aprovada (colorida) pelo identificador
+  /// da taxonomia ou, na falta, pelo nome. Sem arte aprovada, patinha genérica.
+  /// O nome da espécie sempre aparece ao lado, na tela.
   static Widget species(String key, String label,
-      {double size = 20, required Color color}) {
-    String norm(String v) => v.toLowerCase().trim();
-    final k = norm(key);
-    final l = norm(label);
-    String name = 'paw_print';
-    bool has(List<String> w) => w.contains(k) || w.contains(l);
-    if (has(['dog', 'cao', 'cão', 'cachorro'])) {
-      name = 'dog';
-    } else if (has(['cat', 'gato'])) {
-      name = 'cat';
-    } else if (has(['bird', 'ave', 'aves', 'passaro', 'pássaro'])) {
-      name = 'bird';
-    } else if (has(['rabbit', 'coelho'])) {
-      name = 'rabbit';
-    } else if (has(['fish', 'peixe'])) {
-      name = 'fish';
-    } else if (has(['horse', 'cavalo', 'equino'])) {
-      name = 'horse';
-    } else if (has(['cow', 'vaca', 'bovino'])) {
-      name = 'cow';
+      {double size = 24, required Color color}) {
+    final asset = _speciesArt(key, label);
+    if (asset == null) {
+      return Vv2Icon('paw_print',
+          size: size, color: color, duotone: true);
     }
-    return Vv2Icon(name, size: size, color: color, duotone: true);
+    return Image.asset('assets/icons/species/sp_$asset.png',
+        width: size,
+        height: size,
+        filterQuality: FilterQuality.medium,
+        excludeFromSemantics: true);
+  }
+
+  static String _plain(String v) {
+    const from = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const to = 'aaaaaeeeeiiiiooooouuuucn';
+    var r = v.toLowerCase().trim();
+    for (var i = 0; i < from.length; i++) {
+      r = r.replaceAll(from[i], to[i]);
+    }
+    return r;
+  }
+
+  static const _speciesMap = <String, List<String>>{
+    'dog': ['dog', 'cao', 'caes', 'cachorro', 'canino', 'caninos'],
+    'cat': ['cat', 'gato', 'gatos', 'felino', 'felinos'],
+    'bird': ['bird', 'ave', 'aves', 'passaro', 'passaros'],
+    'rabbit': ['rabbit', 'coelho', 'coelhos'],
+    'rodent': ['rodent', 'roedor', 'roedores'],
+    'reptile': ['reptile', 'reptil', 'repteis'],
+    'fish': ['fish', 'peixe', 'peixes'],
+    'exotic': ['exotic', 'exotico', 'exoticos'],
+    'cavalo': ['cavalo', 'cavalos', 'horse', 'equino', 'equinos'],
+    'bovinos': ['bovinos', 'bovino', 'cattle', 'bovine', 'cow', 'boi', 'vaca'],
+    'caprinos': ['caprinos', 'caprino', 'goat', 'cabra', 'bode'],
+    'ovinos': ['ovinos', 'ovino', 'sheep', 'ovelha', 'carneiro'],
+  };
+
+  static String? _speciesArt(String key, String label) {
+    final k = _plain(key);
+    final l = _plain(label);
+    for (final e in _speciesMap.entries) {
+      if (e.value.contains(k)) return e.key;
+    }
+    for (final e in _speciesMap.entries) {
+      if (e.value.contains(l)) return e.key;
+    }
+    return null;
   }
 
   @override

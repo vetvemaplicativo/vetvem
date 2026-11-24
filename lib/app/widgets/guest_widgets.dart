@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../routes/app_routes.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
 import '../theme/vv2/vv_icons.dart';
 import '../theme/vv2/vv2_tokens.dart';
 
@@ -31,85 +30,44 @@ Future<void> showGuestWall({required String vetId}) async {
   }
 }
 
-class _GuestWallSheet extends StatelessWidget {
-  const _GuestWallSheet();
+/// Botão principal em pílula (degradê) usado nos pedidos de conta.
+class _PillCta extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _PillCta({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Vv2.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
-      ),
-      padding: const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 12),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.fromLTRB(24, 6, 6, 6),
+          decoration: BoxDecoration(
+            gradient: Vv2.ctaGradient,
+            borderRadius: BorderRadius.circular(Vv2.rPill),
+          ),
+          child: Row(
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: Vv2.brand,
-                      borderRadius: BorderRadius.circular(2)),
+              Expanded(
+                child: Text(label,
+                    textAlign: TextAlign.center,
+                    style: Vv2.t(17, 24, 700, color: Vv2.onBrand)),
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Vv2.surface.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text('Crie sua conta para agendar', style: Vv2.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                'É rápido: com a conta você acompanha o pedido, conversa com o '
-                'profissional e recebe o prontuário do seu pet.',
-                style: Vv2.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Semantics(
-                button: true,
-                label: 'Criar conta',
-                excludeSemantics: true,
-                child: GestureDetector(
-                  onTap: () => Get.back(result: 'register'),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 56),
-                    padding: const EdgeInsets.fromLTRB(24, 6, 6, 6),
-                    decoration: BoxDecoration(
-                      gradient: Vv2.ctaGradient,
-                      borderRadius: BorderRadius.circular(Vv2.rPill),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text('Criar conta',
-                              textAlign: TextAlign.center,
-                              style: Vv2.t(17, 24, 700, color: Vv2.onBrand)),
-                        ),
-                        Container(
-                          width: 44,
-                          height: 44,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Vv2.surface.withValues(alpha: 0.7),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const VvIcon(VvFn.forward,
-                              size: 20, color: Vv2.onBrand),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: () => Get.back(result: 'login'),
-                style: TextButton.styleFrom(
-                    minimumSize: const Size.fromHeight(Vv2.tapMin)),
-                child: Text('Já tenho conta',
-                    style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+                child:
+                    const VvIcon(VvFn.forward, size: 20, color: Vv2.onBrand),
               ),
             ],
           ),
@@ -119,14 +77,99 @@ class _GuestWallSheet extends StatelessWidget {
   }
 }
 
+class _GuestWallSheet extends StatelessWidget {
+  const _GuestWallSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    // Foto decorativa: dupla apoiada na borda superior da folha.
+    final imgW = (mq.size.width * 0.56).clamp(180.0, 260.0);
+    final imgH = imgW * 410 / 810;
+    const overlap = 14.0; // quanto as patinhas avançam sobre a borda branca
+    final maxSheet = mq.size.height * 0.9 - (imgH - overlap);
+    return Stack(
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: imgH - overlap),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxSheet),
+            decoration: const BoxDecoration(
+              color: Vv2.surface,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
+            ),
+            padding:
+                const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 12),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: Vv2.brand,
+                            borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Crie sua conta para agendar',
+                        style: Vv2.titleLarge),
+                    const SizedBox(height: 8),
+                    Text(
+                      'É rápido: com a conta você acompanha o pedido, conversa com o '
+                      'profissional e recebe o prontuário do seu pet.',
+                      style: Vv2.bodyMedium,
+                    ),
+                    const SizedBox(height: 20),
+                    _PillCta(
+                        label: 'Criar conta',
+                        onTap: () => Get.back(result: 'register')),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => Get.back(result: 'login'),
+                      style: TextButton.styleFrom(
+                          minimumSize: const Size.fromHeight(Vv2.tapMin)),
+                      child: Text('Já tenho conta',
+                          style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: Image.asset('assets/images/tutor_pedido_conta_patinhas.webp',
+                  width: imgW, excludeFromSemantics: true),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Tela das abas que dependem de conta (Consultas, Perfil) para o visitante.
 class GuestGate extends StatelessWidget {
-  final IconData icon;
+  final String heading;
+  final String imageAsset;
   final String title;
   final String message;
   const GuestGate({
     super.key,
-    required this.icon,
+    required this.heading,
+    required this.imageAsset,
     required this.title,
     required this.message,
   });
@@ -134,57 +177,50 @@ class GuestGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(Vv2.gutter, 16, Vv2.gutter, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(heading, style: Vv2.t(28, 36, 700)),
+              const SizedBox(height: 16),
+              Container(
+                height: 240,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFFFFEDE2), Color(0xFFFFB98A)],
                   ),
-                  child: Icon(icon, color: AppColors.primary, size: 34),
+                  borderRadius: BorderRadius.circular(Vv2.rOverlay + 4),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  title,
+                child: Image.asset('assets/images/$imageAsset',
+                    fit: BoxFit.contain, excludeFromSemantics: true),
+              ),
+              const SizedBox(height: 24),
+              Text(title,
+                  textAlign: TextAlign.center, style: Vv2.t(24, 32, 700)),
+              const SizedBox(height: 8),
+              Text(message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: AppColors.textMedium,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Get.toNamed(Routes.register),
-                  child: const Text('Criar conta'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Get.toNamed(Routes.login),
-                  child: const Text('Já tenho conta'),
-                ),
-              ],
-            ),
+                  style: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary)),
+              const SizedBox(height: 28),
+              _PillCta(
+                  label: 'Criar conta',
+                  onTap: () => Get.toNamed(Routes.register)),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Get.toNamed(Routes.login),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size.fromHeight(Vv2.tapMin)),
+                child: Text('Já tenho conta',
+                    style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+              ),
+            ],
           ),
         ),
       ),

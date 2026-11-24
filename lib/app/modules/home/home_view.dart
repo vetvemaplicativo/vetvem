@@ -29,7 +29,8 @@ class HomeView extends GetView<HomeController> {
       const Material(child: VetsView()),
       controller.isGuest
           ? const GuestGate(
-              icon: Icons.receipt_long_outlined,
+              heading: 'Consultas',
+              imageAsset: 'tutor_visitante_consultas_pet.webp',
               title: 'Suas consultas ficam aqui',
               message:
                   'Crie sua conta ou entre para agendar e acompanhar suas consultas, '
@@ -38,7 +39,8 @@ class HomeView extends GetView<HomeController> {
           : const Material(child: ConsultasView()),
       controller.isGuest
           ? const GuestGate(
-              icon: Icons.person_outline,
+              heading: 'Perfil',
+              imageAsset: 'tutor_visitante_perfil_pet.webp',
               title: 'Seu perfil e seus pets',
               message:
                   'Crie sua conta ou entre para cadastrar seus pets, endereços e '
