@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 import '../../services/analytics_service.dart';
 import '../../services/ibge_service.dart';
 import '../../services/region_service.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../../data/models/service_area_model.dart' show normalizeSearchText;
 import '../../utils/brazilian_states.dart';
 import '../vets/vets_controller.dart';
@@ -74,11 +75,11 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: maxH),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: Vv2.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
       ),
-      padding: EdgeInsets.fromLTRB(
-          24, 12, 24, 20 + MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter,
+          12 + MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         top: false,
         child: Column(
@@ -90,31 +91,18 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
+                    color: Vv2.brand,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const SizedBox(height: 18),
-            const Text(
-              'Onde você quer o atendimento?',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-                fontFamily: 'Poppins',
-              ),
-            ),
+            const SizedBox(height: 16),
+            Text('Onde você quer o atendimento?', style: Vv2.titleLarge),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'O veterinário vai até você. Escolha a cidade para ver quem atende por lá.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: AppColors.textMedium,
-                fontFamily: 'Poppins',
-              ),
+              style: Vv2.bodyMedium,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Flexible(child: _other ? _buildOther() : _buildCovered()),
           ],
         ),
@@ -150,7 +138,10 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
         children: [
           DropdownButtonFormField<String>(
             initialValue: uf,
-            decoration: const InputDecoration(labelText: 'Estado'),
+            decoration: _dec('Estado'),
+            icon: const Vv2Icon(Ph.caretDown, size: 18, color: Vv2.onBrand),
+            style: Vv2.titleMedium,
+            borderRadius: BorderRadius.circular(Vv2.rControl),
             items: [
               for (final u in ufs)
                 DropdownMenuItem(value: u, child: Text(_stateName(u))),
@@ -163,18 +154,22 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
               shrinkWrap: true,
               children: [
                 for (final c in cities)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(c.key,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      '${c.value} ${c.value == 1 ? 'profissional' : 'profissionais'}',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12),
+                  Column(children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      minVerticalPadding: 8,
+                      title: Text(c.key, style: Vv2.titleMedium),
+                      subtitle: Text(
+                        '${c.value} ${c.value == 1 ? 'profissional' : 'profissionais'}',
+                        style: Vv2.bodySmall,
+                      ),
+                      trailing: const Vv2Icon(Ph.caretRight,
+                          size: 20, color: Vv2.onBrand),
+                      onTap: () => _choose(uf, c.key, 'lista'),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _choose(uf, c.key, 'lista'),
-                  ),
+                    if (c != cities.last)
+                      const Divider(height: 1, color: Vv2.divider),
+                  ]),
                 const SizedBox(height: 4),
                 _OtherButton(onTap: () => setState(() => _other = true)),
               ],
@@ -201,19 +196,22 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
-            borderRadius: BorderRadius.circular(12),
+            color: Vv2.primaryContainer,
+            borderRadius: BorderRadius.circular(Vv2.rControl),
           ),
-          child: const Text(
+          child: Text(
             'Ainda não temos profissional cadastrado em todas as cidades. '
             'Escolha a sua: vamos avisar você quando chegar.',
-            style: TextStyle(fontSize: 12.5, height: 1.4, fontFamily: 'Poppins'),
+            style: Vv2.t(13, 19, 500, color: Vv2.onPrimaryContainer),
           ),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _uf.isEmpty ? null : _uf,
-          decoration: const InputDecoration(labelText: 'Estado'),
+          decoration: _dec('Estado'),
+          icon: const Vv2Icon(Ph.caretDown, size: 18, color: Vv2.onBrand),
+          style: Vv2.titleMedium,
+          borderRadius: BorderRadius.circular(Vv2.rControl),
           items: [
             for (final s in brazilianStates)
               DropdownMenuItem(value: s.sigla, child: Text(s.nome)),
@@ -230,8 +228,13 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
         const SizedBox(height: 8),
         if (_uf.isNotEmpty)
           TextField(
-            decoration: const InputDecoration(
-                labelText: 'Buscar cidade', prefixIcon: Icon(Icons.search)),
+            style: Vv2.bodyLarge,
+            decoration: _dec('Buscar cidade').copyWith(
+              prefixIcon: const Padding(
+                padding: EdgeInsets.all(14),
+                child: Vv2Icon(Ph.search, size: 20, color: Vv2.onBrand),
+              ),
+            ),
             onChanged: (v) => setState(() => _filter = v),
           ),
         if (_loadingMunicipios)
@@ -247,8 +250,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                 for (final m in shown)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(m.nome,
-                        style: const TextStyle(fontFamily: 'Poppins')),
+                    title: Text(m.nome, style: Vv2.bodyLarge),
                     onTap: () => _choose(_uf, m.nome, 'fora_da_lista'),
                   ),
               ],
@@ -256,9 +258,29 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
           ),
         TextButton(
           onPressed: () => setState(() => _other = false),
-          child: const Text('Voltar para as cidades atendidas'),
+          style: TextButton.styleFrom(
+              minimumSize: const Size.fromHeight(Vv2.tapMin)),
+          child: Text('Voltar para as cidades atendidas',
+              style: Vv2.t(14, 20, 700, color: Vv2.primary)),
         ),
       ],
+    );
+  }
+
+  InputDecoration _dec(String label) {
+    OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Vv2.rControl),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: Vv2.bodyMedium,
+      floatingLabelStyle: Vv2.t(13, 18, 600, color: Vv2.textSecondary),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      enabledBorder: b(Vv2.primary, 1),
+      focusedBorder: b(Vv2.primary, 2),
+      border: b(Vv2.primary, 1),
     );
   }
 
@@ -276,10 +298,12 @@ class _OtherButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
+    return TextButton(
       onPressed: onTap,
-      icon: const Icon(Icons.location_off_outlined, size: 18),
-      label: const Text('Minha cidade não aparece'),
+      style: TextButton.styleFrom(
+          minimumSize: const Size.fromHeight(Vv2.tapMin)),
+      child: Text('Minha cidade não aparece',
+          style: Vv2.t(15, 20, 700, color: Vv2.primary)),
     );
   }
 }
