@@ -16,6 +16,7 @@ class LoginView extends GetView<LoginController> {
       title: 'Bem-vindo de volta!',
       petAsset: 'assets/images/tutor_entrar_pet.webp',
       petAspect: 372 / 680,
+      petShift: 76,
       children: [
         Text('Entre para agendar o veterinário do seu pet',
             style: Vv2.t(16, 24, 400, color: Vv2.textSecondary)),

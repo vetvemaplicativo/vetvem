@@ -11,12 +11,14 @@ class AuthShell extends StatelessWidget {
   final String title;
   final String petAsset;
   final double petAspect; // largura / altura da arte
+  final double petShift; // afasta o pet da borda direita (evita o logo)
   final List<Widget> children;
   const AuthShell({
     super.key,
     required this.title,
     required this.petAsset,
     required this.petAspect,
+    this.petShift = 0,
     required this.children,
   });
 
@@ -48,7 +50,7 @@ class AuthShell extends StatelessWidget {
               bottom: false,
               child: Padding(
                 padding:
-                    const EdgeInsets.fromLTRB(Vv2.gutter, 8, Vv2.gutter, 24),
+                    const EdgeInsets.fromLTRB(Vv2.gutter, 8, Vv2.gutter, 46),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -78,18 +80,18 @@ class AuthShell extends StatelessWidget {
                           const SizedBox(width: 48, height: 48),
                         const Spacer(),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(14),
                           child: Image.asset('assets/images/logo_light.png',
-                              width: 40,
-                              height: 40,
+                              width: 58,
+                              height: 58,
                               excludeFromSemantics: true),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Padding(
-                      padding: EdgeInsets.only(right: petW + 8),
-                      child: Text(title, style: Vv2.t(30, 38, 700)),
+                      padding: EdgeInsets.only(right: petW + petShift + 8),
+                      child: Text(title, style: Vv2.t(28, 36, 700)),
                     ),
                   ],
                 ),
@@ -126,7 +128,7 @@ class AuthShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  right: Vv2.gutter + 4,
+                  right: Vv2.gutter + 4 + petShift,
                   top: -petH + 14 - overlap,
                   child: IgnorePointer(
                     child: Image.asset(petAsset,

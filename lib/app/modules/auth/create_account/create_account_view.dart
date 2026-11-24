@@ -15,6 +15,7 @@ class CreateAccountView extends GetView<CreateAccountController> {
       title: 'Criar conta',
       petAsset: 'assets/images/tutor_criar_conta_pet.webp',
       petAspect: 500 / 599,
+      petShift: 28,
       children: [
         Text('Escolha como criar sua conta',
             style: Vv2.t(16, 24, 400, color: Vv2.textSecondary)),
