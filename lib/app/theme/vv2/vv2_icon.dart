@@ -27,10 +27,18 @@ class Ph {
   static final _specialtyByMaterial = <IconData, String>{
     Icons.medical_services_outlined: stethoscope,
     Icons.content_cut: scissors,
-    Icons.monitor_heart_outlined: heartbeat,
-    Icons.vaccines_outlined: syringe,
-    Icons.spa_outlined: flowerLotus,
     Icons.self_improvement_outlined: flowerLotus,
+    Icons.psychology_outlined: 'brain',
+    Icons.vaccines_outlined: syringe,
+    Icons.spa_outlined: 'plant',
+    Icons.monitor_heart_outlined: heartbeat,
+    Icons.visibility_outlined: 'eye',
+    Icons.healing_outlined: 'bandaids',
+    Icons.waves_outlined: 'waves',
+    Icons.biotech_outlined: 'dna',
+    Icons.local_hospital_outlined: 'first_aid_kit',
+    Icons.restaurant_outlined: 'fork_knife',
+    Icons.science_outlined: 'flask',
     Icons.pets_outlined: pawPrint,
   };
 
@@ -43,12 +51,17 @@ class Vv2Icon extends StatelessWidget {
   final double size;
   final Color color;
   final String? semanticLabel;
+  final bool duotone;
   const Vv2Icon(this.name,
-      {super.key, this.size = 24, required this.color, this.semanticLabel});
+      {super.key,
+      this.size = 24,
+      required this.color,
+      this.semanticLabel,
+      this.duotone = false});
 
   @override
   Widget build(BuildContext context) => Image.asset(
-        'assets/icons/phosphor/ph_$name.png',
+        'assets/icons/phosphor/${duotone ? 'phd' : 'ph'}_$name.png',
         width: size,
         height: size,
         color: color,
@@ -72,6 +85,6 @@ class Vv2SpecialtyIcon extends StatelessWidget {
     final n = Ph.forSpecialty(fallback);
     return n == null
         ? Icon(fallback, size: size, color: color)
-        : Vv2Icon(n, size: size, color: color);
+        : Vv2Icon(n, size: size, color: color, duotone: true);
   }
 }
