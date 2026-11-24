@@ -4,7 +4,7 @@ import '../routes/app_routes.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import '../theme/vv2/vv2_icon.dart';
+import '../theme/vv2/vv_icons.dart';
 import '../theme/vv2/vv2_tokens.dart';
 
 /// Pede conta ao visitante que tentou agendar. Guarda o profissional escolhido
@@ -95,7 +95,7 @@ class _GuestWallSheet extends StatelessWidget {
                             color: Vv2.surface.withValues(alpha: 0.7),
                             shape: BoxShape.circle,
                           ),
-                          child: const Vv2Icon(Ph.caretRight,
+                          child: const VvIcon(VvFn.forward,
                               size: 20, color: Vv2.onBrand),
                         ),
                       ],

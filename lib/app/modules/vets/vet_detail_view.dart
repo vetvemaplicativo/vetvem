@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
 import '../../services/analytics_service.dart';
 import '../../services/taxonomy_service.dart';
-import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import 'vets_controller.dart';
 
@@ -149,7 +149,7 @@ class _VetDetailBody extends GetView<VetsController> {
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
                               color: Vv2.surface, shape: BoxShape.circle),
-                          child: const Vv2Icon(Ph.caretLeft,
+                          child: const VvIcon(VvFn.back,
                               size: 24, color: Vv2.onBrand),
                         ),
                       ),
@@ -180,7 +180,7 @@ class _VetDetailBody extends GetView<VetsController> {
                     ),
                     child: image == null
                         ? const Center(
-                            child: Vv2Icon(Ph.userCircle,
+                            child: VvIcon(VvFn.userFallback,
                                 size: 44, color: Vv2.onBrand))
                         : null,
                   ),
@@ -224,7 +224,7 @@ class _VetDetailBody extends GetView<VetsController> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star_rounded,
+                              const VvIcon(VvFn.ratingFilled,
                                   size: 20, color: _kStar),
                               const SizedBox(width: 6),
                               Flexible(
@@ -310,9 +310,9 @@ class _VetDetailBody extends GetView<VetsController> {
   // ── Períodos de atendimento ──────────────────────────────────────
 
   static const _periodDefs = [
-    (label: 'Manhã',  icon: Icons.wb_sunny_outlined,   hours: '08h–12h', min: 0,  max: 11),
-    (label: 'Tarde',  icon: Icons.wb_cloudy_outlined,  hours: '12h–18h', min: 12, max: 17),
-    (label: 'Noite',  icon: Icons.nights_stay_outlined, hours: '18h–21h', min: 18, max: 23),
+    (label: 'Manhã',  icon: VvFn.periodMorning,   hours: '08h–12h', min: 0,  max: 11),
+    (label: 'Tarde',  icon: VvFn.periodAfternoon,  hours: '12h–18h', min: 12, max: 17),
+    (label: 'Noite',  icon: VvFn.periodNight, hours: '18h–21h', min: 18, max: 23),
   ];
 
   Widget _buildSchedule(VetModel vet) {
@@ -343,7 +343,7 @@ class _VetDetailBody extends GetView<VetsController> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(p.icon, size: 20, color: Vv2.onPrimaryContainer),
+                          VvIcon(p.icon, size: 20, color: Vv2.onPrimaryContainer),
                           const SizedBox(width: 8),
                           Text('${p.label} · ${p.hours}',
                               style: Vv2.t(14, 20, 600,
@@ -485,7 +485,7 @@ class _VetDetailBody extends GetView<VetsController> {
                       color: Vv2.surface.withValues(alpha: enabled ? 0.7 : 0.5),
                       shape: BoxShape.circle,
                     ),
-                    child: Vv2Icon(Ph.caretRight,
+                    child: VvIcon(VvFn.forward,
                         size: 20,
                         color: enabled ? Vv2.onBrand : Vv2.textSecondary),
                   ),
@@ -549,10 +549,8 @@ class _ReviewCard extends StatelessWidget {
                 child: Row(
                   children: List.generate(
                     5,
-                    (i) => Icon(
-                      i < rating
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
+                    (i) => VvIcon(
+                      i < rating ? VvFn.ratingFilled : VvFn.ratingEmpty,
                       size: 16,
                       color: _kStar,
                     ),

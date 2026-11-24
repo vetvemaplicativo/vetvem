@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import '../../data/models/vet_model.dart';
 import '../../widgets/shimmer.dart';
@@ -129,7 +129,7 @@ class _AreaPill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Vv2Icon(Ph.mapPin, size: 20, color: Vv2.onBrand),
+                const VvIcon(VvFn.location, size: 20, color: Vv2.onBrand),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(label,
@@ -169,7 +169,7 @@ class _SortPill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Vv2Icon(Ph.sortAscending, size: 20, color: Vv2.onBrand),
+                const VvIcon(VvFn.sort, size: 20, color: Vv2.onBrand),
                 const SizedBox(width: 8),
                 Text(label, style: Vv2.t(14, 20, 700)),
               ],
@@ -215,7 +215,7 @@ class _VetsHeader extends StatelessWidget {
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
                               color: Vv2.surface, shape: BoxShape.circle),
-                          child: const Vv2Icon(Ph.caretLeft,
+                          child: const VvIcon(VvFn.back,
                               size: 24, color: Vv2.onBrand),
                         ),
                       ),
@@ -250,7 +250,7 @@ class _VetsHeader extends StatelessWidget {
                     hintStyle: Vv2.bodyLarge.copyWith(color: Vv2.textSecondary),
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(16),
-                      child: Vv2Icon(Ph.search, size: 24, color: Vv2.onBrand),
+                      child: VvIcon(VvFn.search, size: 24, color: Vv2.onBrand),
                     ),
                     filled: true,
                     fillColor: Vv2.surface,
@@ -362,17 +362,17 @@ void _showSortSheet(BuildContext context, VetsController c) {
             Text('Ordenar por', style: Vv2.titleLarge),
             const SizedBox(height: 8),
             ...[
-              (0, Icons.auto_awesome_rounded, 'Relevância', 'Score combinado: avaliação + atendimentos + cancelamentos'),
-              (1, Icons.star_rounded, 'Melhor avaliados', 'Ordenado pela nota média dos clientes'),
-              (2, Icons.check_circle_outline_rounded, 'Mais atendimentos', 'Profissionais com mais consultas concluídas'),
-              (3, Icons.attach_money_rounded, 'Menor preço', 'Do serviço mais acessível para o mais caro'),
+              (0, VvFn.sortRelevance, 'Relevância', 'Score combinado: avaliação + atendimentos + cancelamentos'),
+              (1, VvFn.sortRating, 'Melhor avaliados', 'Ordenado pela nota média dos clientes'),
+              (2, VvFn.sortVolume, 'Mais atendimentos', 'Profissionais com mais consultas concluídas'),
+              (3, VvFn.sortPrice, 'Menor preço', 'Do serviço mais acessível para o mais caro'),
             ].map((item) {
               final (idx, icon, label, sub) = item;
               final selected = c.sortIndex.value == idx;
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 minVerticalPadding: 8,
-                leading: Icon(icon,
+                leading: VvIcon(icon,
                     color: selected ? Vv2.primary : Vv2.textSecondary,
                     size: 24),
                 title: Text(label,
@@ -380,7 +380,7 @@ void _showSortSheet(BuildContext context, VetsController c) {
                         color: selected ? Vv2.primary : Vv2.text)),
                 subtitle: Text(sub, style: Vv2.bodySmall),
                 trailing: selected
-                    ? const Vv2Icon(Ph.check, size: 20, color: Vv2.primary)
+                    ? const VvIcon(VvFn.check, size: 20, color: Vv2.primary)
                     : null,
                 onTap: () {
                   c.setSort(idx);
@@ -471,7 +471,7 @@ class VetCard extends GetView<VetsController> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Vv2Icon(Ph.star,
+                                const VvIcon(VvFn.ratingBadge,
                                     size: 16, color: Vv2.onBrand),
                                 const SizedBox(width: 4),
                                 Text('${vet.rating}',
@@ -617,7 +617,7 @@ class _EmptyStateState extends State<_EmptyState> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search_off, size: 64, color: AppColors.textLight),
+              VvIcon(VvFn.emptySearch, size: 64, color: AppColors.textLight),
               SizedBox(height: 16),
               Text('Nenhum profissional encontrado',
                   textAlign: TextAlign.center,
@@ -664,7 +664,7 @@ class _EmptyStateState extends State<_EmptyState> {
             ),
           ),
           const SizedBox(height: 28),
-          const Icon(Icons.location_off_outlined, size: 56, color: AppColors.textLight),
+          const VvIcon(VvFn.emptyRegion, size: 56, color: AppColors.textLight),
           const SizedBox(height: 14),
           const Text(
             'Estamos chegando em novas regiões.',
@@ -703,7 +703,7 @@ class _EmptyStateState extends State<_EmptyState> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _openWhatsapp,
-              icon: const Icon(Icons.chat_outlined, size: 18),
+              icon: const VvIcon(VvFn.chat, size: 18, color: Vv2.primary),
               label: const Text('Falar com o VetVem no WhatsApp'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 13),
@@ -746,7 +746,7 @@ class _VetAvatar extends StatelessWidget {
       ),
       child: image == null
           ? Center(
-              child: Vv2Icon(Ph.userCircle,
+              child: VvIcon(VvFn.userFallback,
                   color: Vv2.onBrand, size: size * 0.55))
           : null,
     );

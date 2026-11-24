@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 
 /// Barra de navegação flutuante em pílula (redesign 2.0).
@@ -9,10 +9,10 @@ class HomeNavV2 extends StatelessWidget {
   const HomeNavV2({super.key, required this.currentIndex, required this.onTap});
 
   static const _items = [
-    (Ph.house, 'Início'),
-    (Ph.search, 'Buscar'),
-    (Ph.calendarCheck, 'Consultas'),
-    (Ph.userCircle, 'Perfil'),
+    (VvFn.navHome, 'Início'),
+    (VvFn.navSearch, 'Buscar'),
+    (VvFn.navConsults, 'Consultas'),
+    (VvFn.navProfile, 'Perfil'),
   ];
 
   @override
@@ -64,7 +64,7 @@ class HomeNavV2 extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Vv2Icon(icon, size: 24, color: color),
+              VvIcon(icon, size: 24, color: color),
               const SizedBox(height: 2),
               Text(label,
                   maxLines: 1,

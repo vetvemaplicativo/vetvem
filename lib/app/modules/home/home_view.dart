@@ -15,7 +15,7 @@ import '../../services/taxonomy_service.dart';
 import 'home_controller.dart';
 import '../../widgets/guest_widgets.dart';
 import '../../theme/vv2/vv2_tokens.dart';
-import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv_icons.dart';
 import 'home_nav_v2.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -186,7 +186,7 @@ class _HomeTab extends GetView<HomeController> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Vv2Icon(Ph.mapPin, size: 20, color: Vv2.onBrand),
+          const VvIcon(VvFn.location, size: 20, color: Vv2.onBrand),
           const SizedBox(width: 8),
           Flexible(
             child: Obx(() => Text(controller.locationLabel,
@@ -196,7 +196,7 @@ class _HomeTab extends GetView<HomeController> {
           ),
           if (guest) ...[
             const SizedBox(width: 8),
-            const Vv2Icon(Ph.caretDown, size: 16, color: Vv2.onBrand),
+            const VvIcon(VvFn.expand, size: 16, color: Vv2.onBrand),
           ],
         ],
       ),
@@ -235,7 +235,7 @@ class _HomeTab extends GetView<HomeController> {
                   color: Vv2.surface.withValues(alpha: 0.85),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.notifications_outlined,
+                child: const VvIcon(VvFn.notifications,
                     color: Vv2.onBrand, size: 22),
               ),
               Positioned(
@@ -590,7 +590,7 @@ class _CategoryCard extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                       color: Vv2.surface, shape: BoxShape.circle),
-                  child: Vv2SpecialtyIcon(icon, size: 24, color: Vv2.onBrand),
+                  child: VvIcon.specialty(icon, size: 24, color: Vv2.onBrand),
                 ),
                 const SizedBox(height: 10),
                 Text(

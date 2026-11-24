@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../../services/analytics_service.dart';
 import '../../services/ibge_service.dart';
 import '../../services/region_service.dart';
-import '../../theme/vv2/vv2_icon.dart';
+import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import '../../data/models/service_area_model.dart' show normalizeSearchText;
 import '../../utils/brazilian_states.dart';
@@ -139,7 +139,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
           DropdownButtonFormField<String>(
             initialValue: uf,
             decoration: _dec('Estado'),
-            icon: const Vv2Icon(Ph.caretDown, size: 18, color: Vv2.onBrand),
+            icon: const VvIcon(VvFn.expand, size: 18, color: Vv2.onBrand),
             style: Vv2.titleMedium,
             borderRadius: BorderRadius.circular(Vv2.rControl),
             items: [
@@ -163,7 +163,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                         '${c.value} ${c.value == 1 ? 'profissional' : 'profissionais'}',
                         style: Vv2.bodySmall,
                       ),
-                      trailing: const Vv2Icon(Ph.caretRight,
+                      trailing: const VvIcon(VvFn.forward,
                           size: 20, color: Vv2.onBrand),
                       onTap: () => _choose(uf, c.key, 'lista'),
                     ),
@@ -209,7 +209,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
         DropdownButtonFormField<String>(
           initialValue: _uf.isEmpty ? null : _uf,
           decoration: _dec('Estado'),
-          icon: const Vv2Icon(Ph.caretDown, size: 18, color: Vv2.onBrand),
+          icon: const VvIcon(VvFn.expand, size: 18, color: Vv2.onBrand),
           style: Vv2.titleMedium,
           borderRadius: BorderRadius.circular(Vv2.rControl),
           items: [
@@ -232,7 +232,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
             decoration: _dec('Buscar cidade').copyWith(
               prefixIcon: const Padding(
                 padding: EdgeInsets.all(14),
-                child: Vv2Icon(Ph.search, size: 20, color: Vv2.onBrand),
+                child: VvIcon(VvFn.search, size: 20, color: Vv2.onBrand),
               ),
             ),
             onChanged: (v) => setState(() => _filter = v),
