@@ -191,7 +191,7 @@ class _HomeTab extends GetView<HomeController> {
     final guest = controller.isGuest;
     final pill = Container(
       constraints: const BoxConstraints(minHeight: Vv2.tapMin),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: Vv2.surface.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(Vv2.rPill),
@@ -205,7 +205,8 @@ class _HomeTab extends GetView<HomeController> {
             child: Obx(
               () => Text(
                 controller.locationLabel,
-                maxLines: 1,
+                // Duas linhas: "Informe seu endereço no Perfil" inteiro a 130%.
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Vv2.t(15, 20, 700),
               ),
