@@ -1,6 +1,5 @@
 import 'dart:convert';
-import '../consultas/proposal_card.dart';
-import '../consultas/relocation_card.dart';
+import 'home_alerts.dart';
 import 'first_consult_guide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -90,8 +89,7 @@ class _HomeTab extends GetView<HomeController> {
                 children: [
                   const SizedBox(height: 4),
                   if (!controller.isGuest) ...const [
-                    RelocationBanner(),
-                    ProposalsBanner(),
+                    HomeAlerts(),
                     FirstConsultGuide(),
                   ],
                   _buildCategories(context),
@@ -537,23 +535,16 @@ class _HomeTab extends GetView<HomeController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Próximo agendamento',
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text('Próximo agendamento', style: Vv2.t(22, 28, 700)),
               ),
               TextButton(
                 onPressed: () => Get.find<HomeController>().changeTab(2),
                 style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Ver todos',
-                  style: TextStyle(color: AppColors.primary, fontSize: 13),
-                ),
+                    minimumSize: const Size(48, Vv2.tapMin)),
+                child: Text('Ver todos',
+                    style: Vv2.t(14, 20, 700, color: Vv2.primary)),
               ),
             ],
           ),
@@ -704,104 +695,79 @@ class _AppointmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final photo = appointment.petPhotoBase64;
     final hasPhoto = photo.isNotEmpty;
-
-    return GestureDetector(
-      onTap: () => Get.find<HomeController>().changeTab(2),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Avatar do pet
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                image: hasPhoto
-                    ? DecorationImage(
-                        image: MemoryImage(base64Decode(photo.split(',').last)),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: hasPhoto
-                  ? null
-                  : const VvIcon(
-                      VvFn.petFallback,
-                      color: AppColors.primary,
-                      size: 26,
-                    ),
-            ),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    appointment.vetName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: AppColors.textDark,
-                    ),
+    final confirmed = appointment.status == AppointmentStatus.confirmed;
+    final dt = appointment.dateTime;
+    final when =
+        '${_weekday(dt)} · ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final pet = appointment.petName;
+    return Semantics(
+      button: true,
+      label:
+          'Próximo agendamento com ${appointment.vetName}, ${pet.isNotEmpty ? '$pet, ' : ''}$when, ${appointment.statusLabel}',
+      excludeSemantics: true,
+      child: Material(
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(Vv2.rOverlay),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Vv2.rOverlay),
+          onTap: () => Get.find<HomeController>().changeTab(2),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Vv2.primaryContainer,
+                    shape: BoxShape.circle,
+                    image: hasPhoto
+                        ? DecorationImage(
+                            image: MemoryImage(
+                                base64Decode(photo.split(',').last)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    appointment.petName,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_weekday(appointment.dateTime)} · ${appointment.dateTime.hour.toString().padLeft(2, '0')}:${appointment.dateTime.minute.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Status badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color:
-                    (appointment.status == AppointmentStatus.confirmed
-                            ? AppColors.success
-                            : AppColors.warning)
-                        .withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                appointment.statusLabel,
-                style: TextStyle(
-                  color: appointment.status == AppointmentStatus.confirmed
-                      ? AppColors.success
-                      : AppColors.warning,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  alignment: Alignment.center,
+                  child: hasPhoto
+                      ? null
+                      : const Icon(Icons.calendar_month_outlined,
+                          size: 26, color: Vv2.onPrimaryContainer),
                 ),
-              ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(appointment.vetName, style: Vv2.t(17, 24, 700)),
+                      const SizedBox(height: 2),
+                      Text(pet.isNotEmpty ? '$pet · $when' : when,
+                          style:
+                              Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: confirmed
+                              ? Vv2.successBg
+                              : const Color(0xFFFFF1CC),
+                          borderRadius: BorderRadius.circular(Vv2.rPill),
+                        ),
+                        child: Text(appointment.statusLabel,
+                            style: Vv2.t(13, 18, 600,
+                                color: confirmed
+                                    ? Vv2.successFg
+                                    : const Color(0xFF6B4A06))),
+                      ),
+                    ],
+                  ),
+                ),
+                const VvIcon(VvFn.forward, size: 20, color: Vv2.textSecondary),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

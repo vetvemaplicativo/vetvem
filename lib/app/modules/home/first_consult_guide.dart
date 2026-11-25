@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/analytics_service.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
 import '../profile/profile_controller.dart';
 import 'home_controller.dart';
 
@@ -27,7 +30,7 @@ class FirstConsultGuide extends StatelessWidget {
         _Step('Cadastre seu pet', hasPet, 'pet',
             () => home.changeTab(3), 'Cadastrar meu pet'),
         _Step('Informe seu endereço', hasAddress, 'address',
-            () => home.changeTab(3), 'Informar endereço'),
+            () => home.changeTab(3), 'Informar meu endereço'),
         _Step('Escolha um veterinário', false, 'vet',
             () => home.changeTab(1), 'Escolher veterinário'),
         _Step('Solicite a consulta e pague', false, 'request',
@@ -38,83 +41,78 @@ class FirstConsultGuide extends StatelessWidget {
 
       return Container(
         margin: const EdgeInsets.only(bottom: 24),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+          color: Vv2.surface,
+          borderRadius: BorderRadius.circular(Vv2.rOverlay),
+          boxShadow: Vv2.cardShadow,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Sua primeira consulta em 4 passos',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark)),
+            Text('Sua primeira consulta em 4 passos',
+                style: Vv2.t(18, 24, 700)),
             const SizedBox(height: 4),
-            const Text('O veterinário vai até a sua casa.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            Text('O veterinário vai até a sua casa.',
+                style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
             const SizedBox(height: 14),
             for (var i = 0; i < steps.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    Icon(
-                      steps[i].done
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked,
-                      size: 20,
-                      color: steps[i].done
-                          ? const Color(0xFF22C55E)
-                          : AppColors.textLight,
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: steps[i].done
+                            ? Vv2.successBg
+                            : Vv2.secondaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: steps[i].done
+                          ? const VvIcon(VvFn.check,
+                              size: 16, color: Vv2.successFg)
+                          : Text('${i + 1}', style: Vv2.t(13, 18, 700)),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text('${i + 1}. ${steps[i].label}',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: identical(steps[i], next)
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: steps[i].done
-                                  ? AppColors.textLight
-                                  : AppColors.textDark)),
+                      child: Semantics(
+                        label: steps[i].done
+                            ? '${steps[i].label}, concluído'
+                            : steps[i].label,
+                        excludeSemantics: true,
+                        child: Text(steps[i].label,
+                            style: Vv2.t(
+                                16,
+                                22,
+                                identical(steps[i], next) ? 700 : 400)),
+                      ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.find<AnalyticsService>().logGuideTap(next.key);
-                  next.action();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(next.cta),
-              ),
+            const SizedBox(height: 8),
+            VvPillButton(
+              label: next.cta,
+              arrow: true,
+              onTap: () {
+                Get.find<AnalyticsService>().logGuideTap(next.key);
+                next.action();
+              },
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Theme(
               data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: const ExpansionTile(
+              child: ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                childrenPadding: EdgeInsets.only(bottom: 8),
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                iconColor: Vv2.primary,
+                collapsedIconColor: Vv2.primary,
                 title: Text('Como funciona o pagamento',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark)),
-                children: [
+                    style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+                children: const [
                   _Bullet('Você paga ao solicitar a consulta, por Pix ou cartão de crédito. '
                       'O pedido só chega ao veterinário depois que o pagamento é aprovado.'),
                   _Bullet('O veterinário tem até 3 horas para aceitar ou recusar o pedido.'),
@@ -161,8 +159,7 @@ class _Bullet extends StatelessWidget {
           ),
           Expanded(
             child: Text(text,
-                style: const TextStyle(
-                    fontSize: 12, height: 1.4, color: AppColors.textMedium)),
+                style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
           ),
         ],
       ),

@@ -157,6 +157,8 @@ class VvPillButton extends StatelessWidget {
   final VvPillKind kind;
   final Widget? leading;
   final bool loading;
+  /// Círculo com seta à direita (CTA de avançar).
+  final bool arrow;
   const VvPillButton({
     super.key,
     required this.label,
@@ -164,6 +166,7 @@ class VvPillButton extends StatelessWidget {
     this.kind = VvPillKind.primary,
     this.leading,
     this.loading = false,
+    this.arrow = false,
   });
 
   @override
@@ -181,7 +184,9 @@ class VvPillButton extends StatelessWidget {
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: arrow
+                ? const EdgeInsets.fromLTRB(24, 6, 6, 6)
+                : const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
               gradient: kind == VvPillKind.primary ? Vv2.ctaGradient : null,
               color: kind == VvPillKind.outlined
@@ -211,10 +216,22 @@ class VvPillButton extends StatelessWidget {
                         const SizedBox(width: 12),
                       ],
                       Flexible(
+                        fit: arrow ? FlexFit.tight : FlexFit.loose,
                         child: Text(label,
                             textAlign: TextAlign.center,
                             style: Vv2.t(16, 22, 700, color: fg)),
                       ),
+                      if (arrow)
+                        Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Vv2.surface.withValues(alpha: 0.7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: VvIcon(VvFn.forward, size: 20, color: fg),
+                        ),
                     ],
                   ),
           ),
