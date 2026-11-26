@@ -64,11 +64,17 @@ class Vv2 {
   static const fontFamily = 'PlusJakartaSans';
 
   /// Estilo com a fonte variável: o peso vai também como eixo `wght`.
+  /// Redutor único do tamanho das letras (só texto; imagens e ícones não mudam).
+  /// 92% aprovado pelo Ronald em 26/11 (Plus Jakarta parecia grande a 100%).
+  /// Em teste: --dart-define=VV_FS=0.88
+  static final double fontScale =
+      double.tryParse(const String.fromEnvironment('VV_FS')) ?? 0.92;
+
   static TextStyle t(double size, double lineHeight, int weight,
           {Color color = text}) =>
       TextStyle(
         fontFamily: fontFamily,
-        fontSize: size,
+        fontSize: size * fontScale,
         height: lineHeight / size,
         fontWeight: FontWeight.values[(weight ~/ 100) - 1],
         fontVariations: [FontVariation('wght', weight.toDouble())],
