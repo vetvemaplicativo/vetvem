@@ -23,7 +23,9 @@ class ConsultaDetailView extends StatelessWidget {
     // Tela ao vivo: acompanha o pedido na lista (que o Firestore atualiza), para que
     // os cartões de escolha apareçam/sumam sozinhos quando o servidor muda o estado.
     return Obx(() {
-      final item = profile.recentConsultations.firstWhereOrNull((c) => c.id == arg.id) ?? arg;
+      final item =
+          profile.recentConsultations.firstWhereOrNull((c) => c.id == arg.id) ??
+          arg;
       return _buildDetail(context, item);
     });
   }
@@ -36,7 +38,12 @@ class ConsultaDetailView extends StatelessWidget {
           const _DetailHeader(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter, 20),
+              padding: const EdgeInsets.fromLTRB(
+                Vv2.gutter,
+                20,
+                Vv2.gutter,
+                20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -53,8 +60,12 @@ class ConsultaDetailView extends StatelessWidget {
                   FutureBuilder<VetPublic>(
                     future: vetPublicOf(item.vetId),
                     builder: (_, snap) {
-                      final crmv = item.vetCrmv.isNotEmpty ? item.vetCrmv : (snap.data?.crmv ?? '');
-                      final showSpecialty = item.specialty.isNotEmpty && item.specialty != item.serviceName;
+                      final crmv = item.vetCrmv.isNotEmpty
+                          ? item.vetCrmv
+                          : (snap.data?.crmv ?? '');
+                      final showSpecialty =
+                          item.specialty.isNotEmpty &&
+                          item.specialty != item.serviceName;
                       return _Card(
                         child: Row(
                           children: [
@@ -64,26 +75,38 @@ class ConsultaDetailView extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item.vetName,
-                                      style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: Vv2.text)),
+                                  Text(
+                                    item.vetName,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Vv2.text,
+                                    ),
+                                  ),
                                   if (crmv.isNotEmpty)
-                                    Text('CRMV $crmv',
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Vv2.textSecondary)),
+                                    Text(
+                                      'CRMV $crmv',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Vv2.textSecondary,
+                                      ),
+                                    ),
                                   if (showSpecialty)
-                                    Text(item.specialty,
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Vv2.textSecondary)),
+                                    Text(
+                                      item.specialty,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Vv2.textSecondary,
+                                      ),
+                                    ),
                                   if (item.vetPhone != null)
-                                    Text(item.vetPhone!,
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Vv2.primary)),
+                                    Text(
+                                      item.vetPhone!,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Vv2.primary,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -104,18 +127,23 @@ class ConsultaDetailView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Serviço',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Vv2.textSecondary)),
+                              const Text(
+                                'Serviço',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Vv2.textSecondary,
+                                ),
+                              ),
                               Text(
-                                  item.serviceName.isNotEmpty
-                                      ? item.serviceName
-                                      : item.specialty,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Vv2.text)),
+                                item.serviceName.isNotEmpty
+                                    ? item.serviceName
+                                    : item.specialty,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Vv2.text,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -123,15 +151,21 @@ class ConsultaDetailView extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('Valor',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Vv2.textSecondary)),
-                              Text('R\$ ${item.value}',
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Vv2.primary)),
+                              const Text(
+                                'Valor',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Vv2.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                'R\$ ${item.value}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Vv2.primary,
+                                ),
+                              ),
                             ],
                           ),
                       ],
@@ -142,60 +176,71 @@ class ConsultaDetailView extends StatelessWidget {
                   // Pet + data/hora (cartões com a mesma altura)
                   _PairRow(
                     child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _PetPhoto(base64Photo: item.petPhotoBase64),
-                              const SizedBox(height: 8),
-                              const Text('Pet',
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _PetPhoto(base64Photo: item.petPhotoBase64),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Pet',
                                   style: TextStyle(
-                                      fontSize: 13,
-                                      color: Vv2.textSecondary)),
-                              Text(
-                                  item.petName.isNotEmpty
-                                      ? item.petName
-                                      : '—',
+                                    fontSize: 13,
+                                    color: Vv2.textSecondary,
+                                  ),
+                                ),
+                                Text(
+                                  item.petName.isNotEmpty ? item.petName : '—',
                                   style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Vv2.text)),
-                            ],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Vv2.text,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _Icon(Icons.access_time_rounded,
-                                  Vv2.primary),
-                              const SizedBox(height: 8),
-                              const Text('Data e hora',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _Icon(Icons.access_time_rounded, Vv2.primary),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Data e hora',
                                   style: TextStyle(
-                                      fontSize: 13,
-                                      color: Vv2.textSecondary)),
-                              Text(item.date,
+                                    fontSize: 13,
+                                    color: Vv2.textSecondary,
+                                  ),
+                                ),
+                                Text(
+                                  item.date,
                                   style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Vv2.text)),
-                              if (item.time.isNotEmpty)
-                                Text('às ${item.time}',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Vv2.text,
+                                  ),
+                                ),
+                                if (item.time.isNotEmpty)
+                                  Text(
+                                    'às ${item.time}',
                                     style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Vv2.textSecondary)),
-                            ],
+                                      fontSize: 14,
+                                      color: Vv2.textSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -212,10 +257,13 @@ class ConsultaDetailView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Sua avaliação',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  color: Vv2.textSecondary)),
+                          const Text(
+                            'Sua avaliação',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Vv2.textSecondary,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: List.generate(
@@ -233,10 +281,13 @@ class ConsultaDetailView extends StatelessWidget {
                           ),
                           if (item.comment != null) ...[
                             const SizedBox(height: 6),
-                            Text(item.comment!,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Vv2.text)),
+                            Text(
+                              item.comment!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Vv2.text,
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -255,13 +306,16 @@ class ConsultaDetailView extends StatelessWidget {
               label: 'Avaliar atendimento',
               icon: Icons.star_outline_rounded,
               color: const Color(0xFFE0A100),
-              onTap: () => Get.toNamed(Routes.rating, arguments: {
-                'consultationId': item.id,
-                'vetName': item.vetName,
-                'petName': item.petName,
-                'date': item.date,
-                'specialty': item.specialty,
-              }),
+              onTap: () => Get.toNamed(
+                Routes.rating,
+                arguments: {
+                  'consultationId': item.id,
+                  'vetName': item.vetName,
+                  'petName': item.petName,
+                  'date': item.date,
+                  'specialty': item.specialty,
+                },
+              ),
             ),
           // Pagamento agora acontece já na solicitação — este botão só
           // aparece se o tutor abandonou o pagamento no meio do caminho
@@ -271,24 +325,28 @@ class ConsultaDetailView extends StatelessWidget {
               label: 'Pagar agora e garantir seu horário',
               icon: Icons.account_balance_wallet_rounded,
               color: Vv2.primary,
-              onTap: () => Get.toNamed(Routes.payment, arguments: {
-                'appointmentId': item.id,
-                'vetId': '',
-                'vetName': item.vetName,
-                'tutorName': '',
-                'petName': item.petName,
-                'petSpecies': '',
-                'petBreed': '',
-                'petSex': '',
-                'petAge': '',
-                'petCastrated': false,
-                'petPhotoBase64': item.petPhotoBase64,
-                'serviceName': item.serviceName,
-                'date': item.date,
-                'time': item.time,
-                'price': double.tryParse(item.value.replaceAll(',', '.')) ?? 0.0,
-                'address': '',
-              }),
+              onTap: () => Get.toNamed(
+                Routes.payment,
+                arguments: {
+                  'appointmentId': item.id,
+                  'vetId': '',
+                  'vetName': item.vetName,
+                  'tutorName': '',
+                  'petName': item.petName,
+                  'petSpecies': '',
+                  'petBreed': '',
+                  'petSex': '',
+                  'petAge': '',
+                  'petCastrated': false,
+                  'petPhotoBase64': item.petPhotoBase64,
+                  'serviceName': item.serviceName,
+                  'date': item.date,
+                  'time': item.time,
+                  'price':
+                      double.tryParse(item.value.replaceAll(',', '.')) ?? 0.0,
+                  'address': '',
+                },
+              ),
             ),
           if (item.paymentInReview)
             _BottomAction(
@@ -299,14 +357,19 @@ class ConsultaDetailView extends StatelessWidget {
             ),
           if (item.instructionsText.isNotEmpty && item.status == 'confirmed')
             InstructionsCard(text: item.instructionsText),
-          if (item.status == 'pending_confirmation' && !item.awaitingPayment && !item.paymentInReview && !item.awaitingProposal && !item.awaitingRelocation)
+          if (item.status == 'pending_confirmation' &&
+              !item.awaitingPayment &&
+              !item.paymentInReview &&
+              !item.awaitingProposal &&
+              !item.awaitingRelocation)
             _BottomAction(
               label: 'Aguardando confirmação do profissional...',
               icon: Icons.hourglass_top_rounded,
               color: const Color(0xFF6B4E00),
               onTap: null,
             ),
-          if (item.status == 'confirmed' && item.paymentStatus != 'pending_payment')
+          if (item.status == 'confirmed' &&
+              item.paymentStatus != 'pending_payment')
             _BottomAction(
               label: 'Consulta confirmada! Até lá 🐾',
               icon: Icons.check_circle_rounded,
@@ -318,15 +381,13 @@ class ConsultaDetailView extends StatelessWidget {
               label: 'Ver prontuário',
               icon: Icons.history_edu_rounded,
               color: Vv2.primary,
-              onTap: () => Get.toNamed(Routes.prontuario, arguments: {
-                'item': item,
-              }),
+              onTap: () =>
+                  Get.toNamed(Routes.prontuario, arguments: {'item': item}),
             ),
         ],
       ),
     );
   }
-
 }
 
 // ─── Payment Card ─────────────────────────────────────────────────────────────
@@ -336,30 +397,36 @@ class _PaymentCard extends StatelessWidget {
   const _PaymentCard({required this.item});
 
   void _goToPayment() {
-    Get.toNamed(Routes.payment, arguments: {
-      'appointmentId': item.id,
-      'vetId': '',
-      'vetName': item.vetName,
-      'tutorName': '',
-      'petName': item.petName,
-      'petSpecies': '',
-      'petBreed': '',
-      'petSex': '',
-      'petAge': '',
-      'petCastrated': false,
-      'petPhotoBase64': item.petPhotoBase64,
-      'serviceName': item.serviceName,
-      'date': item.date,
-      'time': item.time,
-      'price': double.tryParse(item.value.replaceAll(',', '.')) ?? 0.0,
-      'address': '',
-    });
+    Get.toNamed(
+      Routes.payment,
+      arguments: {
+        'appointmentId': item.id,
+        'vetId': '',
+        'vetName': item.vetName,
+        'tutorName': '',
+        'petName': item.petName,
+        'petSpecies': '',
+        'petBreed': '',
+        'petSex': '',
+        'petAge': '',
+        'petCastrated': false,
+        'petPhotoBase64': item.petPhotoBase64,
+        'serviceName': item.serviceName,
+        'date': item.date,
+        'time': item.time,
+        'price': double.tryParse(item.value.replaceAll(',', '.')) ?? 0.0,
+        'address': '',
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final needsPayment = item.awaitingPayment;
-    final isPaid = item.paymentStatus == 'approved' || item.paymentStatus == 'paid' || item.status == 'completed';
+    final isPaid =
+        item.paymentStatus == 'approved' ||
+        item.paymentStatus == 'paid' ||
+        item.status == 'completed';
     final isCancelled = item.status == 'cancelled' || item.status == 'rejected';
 
     if (needsPayment) {
@@ -376,28 +443,41 @@ class _PaymentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Pagamento pendente',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Vv2.text)),
-                      Text('Escolha como deseja pagar',
-                          style: TextStyle(
-                              fontSize: 14, color: Vv2.textSecondary)),
+                      Text(
+                        'Pagamento pendente',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Vv2.text,
+                        ),
+                      ),
+                      Text(
+                        'Escolha como deseja pagar',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Vv2.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Vv2.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text('Pendente',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Vv2.primary)),
+                  child: const Text(
+                    'Pendente',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Vv2.primary,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -414,14 +494,33 @@ class _PaymentCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF00B894).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF00B894).withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: const Color(0xFF00B894).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.pix_rounded, color: Color(0xFF00B894), size: 24),
+                          Icon(
+                            Icons.pix_rounded,
+                            color: Color(0xFF00B894),
+                            size: 24,
+                          ),
                           SizedBox(height: 4),
-                          Text('PIX', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00B894))),
-                          Text('Instantâneo', style: TextStyle(fontSize: 14, color: Vv2.textSecondary)),
+                          Text(
+                            'PIX',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF00B894),
+                            ),
+                          ),
+                          Text(
+                            'Instantâneo',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Vv2.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -436,14 +535,33 @@ class _PaymentCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Vv2.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Vv2.primary.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: Vv2.primary.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.credit_card_rounded, color: Vv2.primary, size: 24),
+                          Icon(
+                            Icons.credit_card_rounded,
+                            color: Vv2.primary,
+                            size: 24,
+                          ),
                           SizedBox(height: 4),
-                          Text('Cartão', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Vv2.primary)),
-                          Text('Crédito', style: TextStyle(fontSize: 14, color: Vv2.textSecondary)),
+                          Text(
+                            'Cartão',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Vv2.primary,
+                            ),
+                          ),
+                          Text(
+                            'Crédito',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Vv2.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -460,38 +578,38 @@ class _PaymentCard extends StatelessWidget {
     final color = isCancelled
         ? const Color(0xFF8C1D18)
         : isPaid
-            ? Vv2.successFg
-            : const Color(0xFF6B4E00);
+        ? Vv2.successFg
+        : const Color(0xFF6B4E00);
 
     final label = isCancelled
         ? 'Estornado'
         : isPaid
-            ? 'Pago'
-            : item.awaitingPayment
-                ? 'Pendente'
-                : 'Aguardando';
+        ? 'Pago'
+        : item.awaitingPayment
+        ? 'Pendente'
+        : 'Aguardando';
 
     final description = isCancelled
         ? 'Estornado ao seu método de pagamento'
         : isPaid
-            ? 'Pagamento confirmado — obrigado!'
-            : item.paymentInReview
-                ? 'Pagamento em análise pelo Mercado Pago'
-                : item.awaitingPayment
-                    ? 'Aguardando pagamento: o pedido só vai ao profissional depois de pago'
-                    : 'Aguardando confirmação do profissional';
+        ? 'Pagamento confirmado — obrigado!'
+        : item.paymentInReview
+        ? 'Pagamento em análise pelo Mercado Pago'
+        : item.awaitingPayment
+        ? 'Aguardando pagamento: o pedido só vai ao profissional depois de pago'
+        : 'Aguardando confirmação do profissional';
 
     final methodIcon = item.paymentMethod == 'pix'
         ? Icons.pix_rounded
         : item.paymentMethod == 'card'
-            ? Icons.credit_card_rounded
-            : Icons.payment_rounded;
+        ? Icons.credit_card_rounded
+        : Icons.payment_rounded;
 
     final methodLabel = item.paymentMethod == 'pix'
         ? 'PIX'
         : item.paymentMethod == 'card'
-            ? 'Cartão de crédito'
-            : 'Pagamento';
+        ? 'Cartão de crédito'
+        : 'Pagamento';
 
     return _Card(
       child: Row(
@@ -502,14 +620,21 @@ class _PaymentCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(methodLabel,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Vv2.text)),
-                Text(description,
-                    style: const TextStyle(
-                        fontSize: 14, color: Vv2.textSecondary)),
+                Text(
+                  methodLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Vv2.text,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Vv2.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -519,11 +644,14 @@ class _PaymentCard extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: color)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
@@ -580,17 +708,19 @@ class _StatusTimeline extends StatelessWidget {
                     item.cancelledByTutor
                         ? 'Consulta cancelada pelo tutor'
                         : item.tutorTimedOut
-                            ? 'Consulta encerrada: o prazo para escolher terminou'
-                            : item.vetNoResponse
-                                ? 'Consulta sem resposta do profissional'
-                                : status == 'rejected'
-                                    ? 'Consulta recusada pelo profissional'
-                                    : 'Consulta cancelada',
+                        ? 'Consulta encerrada: o prazo para escolher terminou'
+                        : item.vetNoResponse
+                        ? 'Consulta sem resposta do profissional'
+                        : status == 'rejected'
+                        ? 'Consulta recusada pelo profissional'
+                        : 'Consulta cancelada',
                     style: Vv2.t(16, 22, 700, color: _red),
                   ),
                   const SizedBox(height: 4),
-                  Text('O valor foi estornado ao pagamento original.',
-                      style: Vv2.t(14, 20, 400, color: Vv2.text)),
+                  Text(
+                    'O valor foi estornado ao pagamento original.',
+                    style: Vv2.t(14, 20, 400, color: Vv2.text),
+                  ),
                 ],
               ),
             ),
@@ -604,65 +734,93 @@ class _StatusTimeline extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Expanded(child: Text('Andamento', style: Vv2.t(16, 22, 700))),
-            ConsultaStatusPill(st),
-          ]),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('Andamento', style: Vv2.t(16, 22, 700)),
+              ConsultaStatusPill(st),
+            ],
+          ),
           const SizedBox(height: 16),
           Semantics(
-            label: 'Etapa ${current + 1} de ${_steps.length}: ${_steps[current.clamp(0, 3)]}',
+            label:
+                'Etapa ${current + 1} de ${_steps.length}: ${_steps[current.clamp(0, 3)]}',
             excludeSemantics: true,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < _steps.length; i++)
                   Expanded(
-                    child: Column(children: [
-                      Row(children: [
-                        Expanded(
-                          child: Container(
-                            height: 3,
-                            color: i == 0
-                                ? Colors.transparent
-                                : i <= current
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 3,
+                                color: i == 0
+                                    ? Colors.transparent
+                                    : i <= current
                                     ? Vv2.primary
                                     : Vv2.divider,
-                          ),
-                        ),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: i <= current ? Vv2.primary : Vv2.surface,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: i <= current ? Vv2.primary : Vv2.divider,
-                                width: 2),
-                          ),
-                          child: i <= current
-                              ? const Icon(Icons.check_rounded,
-                                  size: 18, color: Vv2.onPrimary)
-                              : null,
-                        ),
-                        Expanded(
-                          child: Container(
-                            height: 3,
-                            color: i == _steps.length - 1
-                                ? Colors.transparent
-                                : i < current
+                              ),
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: i <= current ? Vv2.primary : Vv2.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: i <= current
+                                      ? Vv2.primary
+                                      : Vv2.divider,
+                                  width: 2,
+                                ),
+                              ),
+                              child: i <= current
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 18,
+                                      color: Vv2.onPrimary,
+                                    )
+                                  : null,
+                            ),
+                            Expanded(
+                              child: Container(
+                                height: 3,
+                                color: i == _steps.length - 1
+                                    ? Colors.transparent
+                                    : i < current
                                     ? Vv2.primary
                                     : Vv2.divider,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _steps[i],
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.center,
+                            style: Vv2.t(
+                              12,
+                              16,
+                              i == current ? 700 : 500,
+                              color: i <= current
+                                  ? Vv2.text
+                                  : Vv2.textSecondary,
+                            ),
                           ),
                         ),
-                      ]),
-                      const SizedBox(height: 6),
-                      Text(
-                        _steps[i],
-                        textAlign: TextAlign.center,
-                        style: Vv2.t(12, 16, i == current ? 700 : 500,
-                            color: i <= current ? Vv2.text : Vv2.textSecondary),
-                      ),
-                    ]),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -680,7 +838,8 @@ class _DetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      width: double.infinity,
       decoration: const BoxDecoration(gradient: Vv2.headerGradient),
       child: SafeArea(
         bottom: false,
@@ -703,8 +862,8 @@ class _DetailHeader extends StatelessWidget {
                       width: 48,
                       height: 48,
                       child: Center(
-                          child: VvIcon(VvFn.back,
-                              size: 22, color: Vv2.onBrand)),
+                        child: VvIcon(VvFn.back, size: 22, color: Vv2.onBrand),
+                      ),
                     ),
                   ),
                 ),
@@ -735,12 +894,14 @@ class _PairRow extends StatelessWidget {
           .whereType<Expanded>()
           .map((e) => e.child)
           .toList();
-      return Column(children: [
-        for (var i = 0; i < kids.length; i++) ...[
-          if (i > 0) const SizedBox(height: 12),
-          kids[i],
+      return Column(
+        children: [
+          for (var i = 0; i < kids.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            kids[i],
+          ],
         ],
-      ]);
+      );
     }
     return IntrinsicHeight(child: child);
   }
@@ -780,7 +941,10 @@ class _PetPhoto extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            image: DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
+            image: DecorationImage(
+              image: MemoryImage(bytes),
+              fit: BoxFit.cover,
+            ),
           ),
         );
       } catch (_) {}
@@ -793,8 +957,12 @@ class _PetPhoto extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: const Center(
-          child: VvIcon(VvFn.petFallback,
-              size: 24, color: Vv2.onPrimaryContainer)),
+        child: VvIcon(
+          VvFn.petFallback,
+          size: 24,
+          color: Vv2.onPrimaryContainer,
+        ),
+      ),
     );
   }
 }
@@ -815,9 +983,11 @@ class _Icon extends StatelessWidget {
             : color.withValues(alpha: 0.12),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon,
-          color: color == Vv2.primary ? Vv2.onPrimaryContainer : color,
-          size: 22),
+      child: Icon(
+        icon,
+        color: color == Vv2.primary ? Vv2.onPrimaryContainer : color,
+        size: 22,
+      ),
     );
   }
 }
@@ -828,11 +998,12 @@ class _BottomAction extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onTap;
-  const _BottomAction(
-      {required this.label,
-      required this.icon,
-      required this.color,
-      required this.onTap});
+  const _BottomAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -857,9 +1028,11 @@ class _BottomAction extends StatelessWidget {
           Icon(icon, color: color, size: 22),
           const SizedBox(width: 8),
           Flexible(
-            child: Text(label,
-                textAlign: TextAlign.center,
-                style: Vv2.t(15, 20, 700, color: color)),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Vv2.t(15, 20, 700, color: color),
+            ),
           ),
         ],
       ),
