@@ -42,6 +42,8 @@ class RegisterController extends GetxController {
   final referenceController = TextEditingController();
   final formStep3Key = GlobalKey<FormState>();
   final isLoadingCep = false.obs;
+  // Erro do CEP mostrado junto ao campo (não encontrado / sem conexão).
+  final cepError = ''.obs;
 
   // ── Step 4 — Pet ─────────────────────────────────────────────────
   final petSpecies = 'cat'.obs; // 'cat' | 'dog' | 'other'
@@ -168,13 +170,14 @@ class RegisterController extends GetxController {
 
   Future<void> lookupCep() async {
     final digits = cepController.text.replaceAll(RegExp(r'\D'), '');
+    cepError.value = '';
     if (digits.length != 8) return;
     isLoadingCep.value = true;
     try {
       final result = await cep.lookupCep(digits);
       if (result == null) {
-        Get.snackbar('CEP não encontrado', 'Verifique o CEP informado.',
-            snackPosition: SnackPosition.TOP);
+        cepError.value =
+            'CEP não encontrado. Verifique o CEP ou preencha o endereço.';
         return;
       }
       streetController.text = result.street;
@@ -182,9 +185,8 @@ class RegisterController extends GetxController {
       cityController.text = result.city;
       stateController.text = result.state;
     } catch (_) {
-      Get.snackbar('Sem conexão',
-          'Não foi possível buscar o CEP. Preencha o endereço manualmente.',
-          snackPosition: SnackPosition.TOP);
+      cepError.value =
+          'Sem conexão para buscar o CEP. Preencha o endereço manualmente.';
     } finally {
       isLoadingCep.value = false;
     }
