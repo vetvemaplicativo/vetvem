@@ -55,14 +55,34 @@ class VetsController extends GetxController {
     searchController.addListener(_filter);
     _loadTutorAddress();
     _loadVets();
+    // Controlador permanente: ao trocar de conta (visitante → login, logout),
+    // recarrega o endereço do tutor e reabre a escuta com a credencial nova.
+    String key(User? u) => '${u?.uid}|${u?.isAnonymous}';
+    _lastUid = key(FirebaseAuth.instance.currentUser);
+    // userChanges (não authStateChanges): cobre também o visitante anônimo
+    // que vincula a conta e mantém o mesmo uid.
+    _authSub = FirebaseAuth.instance.userChanges().listen((u) {
+      if (key(u) == _lastUid) return;
+      _lastUid = key(u);
+      filterByArea.value = false;
+      showOtherCities.value = false;
+      _loadTutorAddress();
+      _loadVets();
+    });
   }
+
+  String? _lastUid;
+  StreamSubscription<User?>? _authSub;
 
   Future<void> _loadTutorAddress() async {
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final user = FirebaseAuth.instance.currentUser;
+      final uid = user?.uid;
       if (uid == null) return;
       // Visitante: não há perfil; usa a cidade que ele escolheu.
-      if (Get.find<AuthService>().isGuest) {
+      // Lê direto do Firebase (não AuthService.isGuest): na troca de conta os
+      // dois ouvintes de login disputam a ordem.
+      if (user!.isAnonymous) {
         applyRegion();
         return;
       }
@@ -90,6 +110,7 @@ class VetsController extends GetxController {
         // manualmente (toggleAreaFilter) se quiser ver todo mundo.
         filterByArea.value = true;
         _filter();
+        update();
       }
     } catch (_) {
       // Sem endereço: o filtro simplesmente fica indisponível.
@@ -419,6 +440,7 @@ class VetsController extends GetxController {
   @override
   void onClose() {
     _vetsSub?.cancel();
+    _authSub?.cancel();
     searchController.dispose();
     super.onClose();
   }

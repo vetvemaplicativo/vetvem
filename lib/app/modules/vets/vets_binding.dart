@@ -4,6 +4,9 @@ import 'vets_controller.dart';
 class VetsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<VetsController>(() => VetsController(), fenix: true);
+    // Mesma instância permanente da Home (ver HomeBinding).
+    if (!Get.isRegistered<VetsController>()) {
+      Get.put<VetsController>(VetsController(), permanent: true);
+    }
   }
 }
