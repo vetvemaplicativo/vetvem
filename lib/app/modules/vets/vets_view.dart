@@ -579,7 +579,10 @@ class VetCard extends GetView<VetsController> {
                         const VvIcon(VvFn.ratingBadge,
                             size: 14, color: Vv2.onBrand),
                         const SizedBox(width: 3),
-                        Text(vet.rating.toStringAsFixed(1).replaceAll('.', ','),
+                        Text(
+                            vet.reviewCount == 0 && vet.rating == 0
+                                ? 'Novo'
+                                : vet.rating.toStringAsFixed(1).replaceAll('.', ','),
                             style: Vv2.t(13, 18, 700)),
                       ],
                     ),
@@ -869,7 +872,10 @@ class _EmptyStateState extends State<_EmptyState> {
             ),
           ),
         ),
-        for (final a in acoes) ...[const SizedBox(height: 14), a],
+        for (final a in acoes) ...[
+          const SizedBox(height: 14),
+          Semantics(container: true, child: a),
+        ],
       ],
     );
   }
