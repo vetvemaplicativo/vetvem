@@ -58,7 +58,7 @@ class ConsultaDetailView extends StatelessWidget {
 
                   // Veterinário: foto, nome e CRMV
                   FutureBuilder<VetPublic>(
-                    future: vetPublicOf(item.vetId),
+                    future: vetPublicOf(item.vetId, appointmentId: item.id),
                     builder: (_, snap) {
                       final crmv = item.vetCrmv.isNotEmpty
                           ? item.vetCrmv
@@ -69,7 +69,7 @@ class ConsultaDetailView extends StatelessWidget {
                       return _Card(
                         child: Row(
                           children: [
-                            VetPhotoAvatar(vetId: item.vetId, size: 56),
+                            VetPhotoAvatar(vetId: item.vetId, appointmentId: item.id, size: 56),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

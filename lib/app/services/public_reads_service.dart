@@ -30,4 +30,9 @@ class PublicReadsService {
   /// Avaliações do profissional: { reviews: [...], rating, reviewCount }.
   static Future<Map<String, dynamic>> vetReviews({required String vetId, required String vetName}) =>
       _post('vetReviews', {'vetId': vetId, 'vetName': vetName});
+
+  /// Foto/CRMV do profissional de uma consulta do próprio tutor (quando ele
+  /// saiu da vitrine pública): { photoBase64, photoUrl, crmv }.
+  static Future<Map<String, dynamic>> vetPhotoForAppointment(String appointmentId) =>
+      _post('vetPhotoForAppointment', {'appointmentId': appointmentId});
 }

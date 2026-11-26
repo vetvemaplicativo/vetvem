@@ -79,3 +79,32 @@ exports.syncVetRating = onDocumentUpdated(
     await admin.firestore().collection("users").doc(vetId).update(agg);
   }
 );
+
+// Foto + CRMV do profissional de UMA consulta do próprio tutor. Usado quando o
+// profissional saiu da vitrine (bloqueado/desativado): o histórico do tutor
+// continua mostrando quem atendeu. Só responde ao tutor dono da consulta.
+exports.vetPhotoForAppointment = onRequest(OPTS, async (req, res) => {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  const h = req.headers.authorization || "";
+  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!token) return res.status(401).json({ error: "Token não fornecido" });
+  let uid;
+  try { uid = (await admin.auth().verifyIdToken(token)).uid; } catch (_) {
+    return res.status(401).json({ error: "Token inválido" });
+  }
+  const appointmentId = String((req.body || {}).appointmentId || "");
+  if (!appointmentId) return res.status(400).json({ error: "Informe appointmentId" });
+  try {
+    const db = admin.firestore();
+    const appt = (await db.collection("appointments").doc(appointmentId).get()).data();
+    if (!appt || appt.tutorId !== uid) return res.status(403).json({ error: "Sem acesso" });
+    if (!appt.vetId) return res.json({ photoBase64: "", photoUrl: "", crmv: "" });
+    const v = (await db.collection("users").doc(String(appt.vetId)).get()).data() || {};
+    if (v.role !== "professional") return res.json({ photoBase64: "", photoUrl: "", crmv: "" });
+    const s = (x) => (typeof x === "string" ? x : "");
+    return res.json({ photoBase64: s(v.photoBase64), photoUrl: s(v.photoUrl), crmv: s(v.crmv).trim() });
+  } catch (e) {
+    console.error("vetPhotoForAppointment:", e.message);
+    return res.status(500).json({ error: "Erro ao consultar profissional" });
+  }
+});

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../services/public_reads_service.dart';
 import '../../theme/app_theme.dart';
 
 /// Dados públicos do profissional (vitrine): foto e CRMV.
@@ -12,13 +13,19 @@ class VetPublic {
 
 final Map<String, Future<VetPublic>> _vetPublicCache = {};
 
-/// Busca foto e CRMV em professionals_public/{vetId} (com cache). Sem vetId ou sem
-/// dados, devolve vazio — a tela mostra o ícone padrão.
-Future<VetPublic> vetPublicOf(String vetId) {
+/// Busca foto e CRMV em professionals_public/{vetId} (com cache). Se o
+/// profissional saiu da vitrine (bloqueado/desativado) e há [appointmentId],
+/// pergunta ao servidor (só responde ao tutor dono da consulta). Sem dados,
+/// devolve vazio e a tela mostra o ícone padrão. Falha não fica no cache.
+Future<VetPublic> vetPublicOf(String vetId, {String appointmentId = ''}) {
   if (vetId.isEmpty) return Future.value(const VetPublic(null, ''));
-  return _vetPublicCache.putIfAbsent(vetId, () async {
+  final key = appointmentId.isEmpty ? vetId : '$vetId|$appointmentId';
+  return _vetPublicCache.putIfAbsent(key, () async {
     try {
-      final d = (await FirebaseFirestore.instance.collection('professionals_public').doc(vetId).get()).data();
+      var d = (await FirebaseFirestore.instance.collection('professionals_public').doc(vetId).get()).data();
+      if (d == null && appointmentId.isNotEmpty) {
+        d = await PublicReadsService.vetPhotoForAppointment(appointmentId);
+      }
       final b64 = (d?['photoBase64'] ?? '').toString();
       final url = (d?['photoUrl'] ?? '').toString();
       ImageProvider? photo;
@@ -29,6 +36,7 @@ Future<VetPublic> vetPublicOf(String vetId) {
       }
       return VetPublic(photo, (d?['crmv'] ?? '').toString().trim());
     } catch (_) {
+      _vetPublicCache.remove(key);
       return const VetPublic(null, '');
     }
   });
@@ -38,12 +46,13 @@ Future<VetPublic> vetPublicOf(String vetId) {
 class VetPhotoAvatar extends StatelessWidget {
   final String vetId;
   final double size;
-  const VetPhotoAvatar({super.key, required this.vetId, this.size = 52});
+  final String appointmentId;
+  const VetPhotoAvatar({super.key, required this.vetId, this.size = 52, this.appointmentId = ''});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<VetPublic>(
-      future: vetPublicOf(vetId),
+      future: vetPublicOf(vetId, appointmentId: appointmentId),
       builder: (_, snap) {
         final image = snap.data?.photo;
         return Container(
