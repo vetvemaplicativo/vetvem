@@ -40,40 +40,61 @@ class HomeController extends GetxController {
     if (args != null && args['tab'] != null) {
       currentIndex.value = args['tab'] as int;
     }
-    _listenUpcoming();
-    // Sincroniza nome do perfil
+    // Sincroniza nome do perfil (o cadastro abaixo também atualiza)
     final profile = Get.find<ProfileController>();
     userName.value = profile.userName.value;
-    profile.userName.listen((v) => userName.value = v);
-    // Cidade: vem do próprio cadastro no Firestore, não do ProfileController
-    // (ele é recriado na troca de conta — visitante → login — e a escuta
-    // ficava presa à instância antiga: endereço novo não aparecia na Home).
-    _listenUserDoc();
-    _authSub = FirebaseAuth.instance.userChanges().listen((_) => _listenUserDoc());
-    _listenNotifications();
+    // Instância única na sessão (HomeBinding: permanent). Ao entrar/sair da
+    // conta a Home era recriada e a tela ficava com a instância antiga, já
+    // descartada: endereço novo não aparecia, escutas ficavam órfãs. Agora
+    // as escutas são refeitas aqui quando a conta muda.
+    _onAccount(FirebaseAuth.instance.currentUser);
+    _authSub = FirebaseAuth.instance.userChanges().listen(_onAccount);
   }
 
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
-  String? _userDocUid;
+  StreamSubscription? _upcomingSub;
+  StreamSubscription? _notifSub;
+  String? _userDocUid = '-';
 
-  void _listenUserDoc() {
-    final u = FirebaseAuth.instance.currentUser;
+  void _onAccount(User? u) {
     final uid = (u == null || u.isAnonymous) ? null : u.uid;
     if (uid == _userDocUid) return;
+    final entrou = _userDocUid != '-' && uid != null;
     _userDocUid = uid;
     _userDocSub?.cancel();
-    _userDocSub = null;
+    _upcomingSub?.cancel();
+    _notifSub?.cancel();
+    _userDocSub = _upcomingSub = _notifSub = null;
+    upcomingAppointments.clear();
+    notifications.clear();
+    unreadNotifications.value = 0;
+    hasAnyAppointment.value = false;
+    appointmentsLoaded.value = false;
     if (uid == null) {
       userCity.value = '';
       return;
     }
+    _listenUpcoming(uid);
+    _listenNotifications(uid);
+    _listenUserDoc(uid);
+    if (entrou) {
+      // Acabou de entrar na conta (visitante → login/cadastro): volta ao
+      // Início e retoma o agendamento pedido, se houver.
+      currentIndex.value = 0;
+      Future.delayed(const Duration(milliseconds: 600), _resumePendingBooking);
+    }
+  }
+
+  void _listenUserDoc(String uid) {
     _userDocSub = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .snapshots()
         .listen((doc) async {
       final d = doc.data();
+      final nome = (d?['name'] ?? '').toString().trim();
+      if (nome.isNotEmpty) userName.value = nome;
       final addrs = List<Map<String, dynamic>>.from(d?['addresses'] ?? []);
       if (addrs.isEmpty) {
         userCity.value = '';
@@ -92,12 +113,16 @@ class HomeController extends GetxController {
   void onClose() {
     _authSub?.cancel();
     _userDocSub?.cancel();
+    _upcomingSub?.cancel();
+    _notifSub?.cancel();
     super.onClose();
   }
 
   @override
   void onReady() {
     super.onReady();
+    // App aberto já logado com um agendamento pendente (raro). O caso comum
+    // — visitante que entra na conta — é tratado em _onAccount.
     _resumePendingBooking();
   }
 
@@ -106,7 +131,8 @@ class HomeController extends GetxController {
   Future<void> _resumePendingBooking() async {
     final auth = Get.find<AuthService>();
     final vetId = auth.pendingVetId;
-    if (vetId == null || auth.isGuest) return;
+    final u = FirebaseAuth.instance.currentUser;
+    if (vetId == null || u == null || u.isAnonymous) return;
     auth.pendingVetId = null;
     final vets = Get.find<VetsController>();
     for (var i = 0; i < 40 && (vets.isLoading.value || vets.allVets.isEmpty); i++) {
@@ -132,10 +158,8 @@ class HomeController extends GetxController {
 
   Future<void> pickRegion() => RegionPickerSheet.show();
 
-  void _listenUpcoming() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || isGuest) return;
-    FirebaseFirestore.instance
+  void _listenUpcoming(String uid) {
+    _upcomingSub = FirebaseFirestore.instance
         .collection('appointments')
         .where('tutorId', isEqualTo: uid)
         .snapshots()
@@ -276,16 +300,14 @@ class HomeController extends GetxController {
     }
   }
 
-  void _listenNotifications() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || isGuest) return;
+  void _listenNotifications(String uid) {
     final db = FirebaseFirestore.instance;
     db.collection('users').doc(uid).get().then((s) {
       final t = s.data()?['lastNotifSeenAt'];
       _lastNotifSeen = t is Timestamp ? t.toDate() : null;
       _recountUnread();
     }).catchError((_) {});
-    db
+    _notifSub = db
         .collection('notifications')
         .doc(uid)
         .collection('pending')
