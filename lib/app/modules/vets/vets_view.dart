@@ -54,7 +54,9 @@ class VetsView extends GetView<VetsController> {
                     children: [
                       _AreaPill(
                         active: filterActive,
-                        label: filterActive
+                        label: controller.showOtherCities.value
+                            ? 'Perto de ${controller.tutorCity} · até ${VetsController.nearbyRadiusKm.round()} km'
+                            : filterActive
                             ? 'Atendem: ${controller.tutorAddressLabel.value}'
                             : (controller.isGuest
                                 ? 'Escolher minha cidade'
@@ -478,6 +480,21 @@ class VetCard extends GetView<VetsController> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Vv2.bodyMedium),
+                      if (controller.nearbyLabel(vet) case final perto?) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const VvIcon(VvFn.location,
+                                size: 16, color: Vv2.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(perto,
+                                  style: Vv2.t(13, 18, 600,
+                                      color: Vv2.primary)),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       Container(
                         width: double.infinity,
@@ -623,6 +640,8 @@ class _EmptyStateState extends State<_EmptyState> {
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
+          // Já no modo "perto de você" e mesmo assim vazio: não oferece de novo.
+          if (!_c.showOtherCities.value) ...[
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -644,11 +663,11 @@ class _EmptyStateState extends State<_EmptyState> {
                 children: [
                   Image.asset('assets/images/icone_proximos.png', width: 22, height: 22),
                   const SizedBox(width: 10),
-                  const Flexible(
+                  Flexible(
                     child: Text(
-                      'Ver veterinários próximos da sua região',
+                      'Ver profissionais perto de você (até ${VetsController.nearbyRadiusKm.round()} km)',
                       textAlign: TextAlign.center,
-                      style: TextStyle(height: 1.2),
+                      style: const TextStyle(height: 1.2),
                     ),
                   ),
                 ],
@@ -656,6 +675,7 @@ class _EmptyStateState extends State<_EmptyState> {
             ),
           ),
           const SizedBox(height: 28),
+          ],
           const VvIcon(VvFn.emptyRegion, size: 56, color: AppColors.textLight),
           const SizedBox(height: 14),
           const Text(

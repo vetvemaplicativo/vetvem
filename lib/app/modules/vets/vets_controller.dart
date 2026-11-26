@@ -12,6 +12,7 @@ import '../../services/public_reads_service.dart';
 import '../../services/region_service.dart';
 import '../../widgets/guest_widgets.dart';
 import '../../services/taxonomy_service.dart';
+import '../../services/municipios_coords.dart';
 
 class VetsController extends GetxController {
   final searchController = TextEditingController();
@@ -29,8 +30,13 @@ class VetsController extends GetxController {
 
   // ── Filtro por endereço do tutor ─────────────────────────────────
   final filterByArea = false.obs;
-  // "Ver veterinários de outras cidades": ignora a restrição de cidade.
+  // "Ver profissionais perto de você": troca a restrição de cidade/bairro por
+  // um raio (centro da cidade do tutor → cidades atendidas pelo profissional).
+  // O nome ficou do comportamento antigo (mostrava todas as cidades).
   final showOtherCities = false.obs;
+  static const double nearbyRadiusKm = 50;
+  // vetId → (km até a cidade atendida mais próxima, nome dessa cidade)
+  final Map<String, (double, String)> _nearby = {};
   String get tutorUf => _tutorUf;
   String get tutorCity => _tutorCity;
   final tutorAddressLabel = ''.obs; // ex.: "Icaraí, Niterói"
@@ -168,10 +174,45 @@ class VetsController extends GetxController {
     return s.toUpperCase();
   }
 
-  void showAllCities() {
+  Future<void> showAllCities() async {
     showOtherCities.value = true;
+    await MunicipiosCoords.ensureLoaded();
     _filter();
     update();
+  }
+
+  /// Calcula, para cada profissional, a cidade atendida mais próxima do
+  /// centro da cidade do tutor. Fora do raio (ou sem coordenada) não entra.
+  void _computeNearby() {
+    _nearby.clear();
+    if (!MunicipiosCoords.isLoaded || _tutorCity.isEmpty) return;
+    final origem = MunicipiosCoords.ibgeOf(_tutorUf, _tutorCity);
+    if (origem == null) return;
+    for (final v in allVets) {
+      final a = v.areaAtuacao;
+      if (a == null) continue;
+      (double, String)? best;
+      for (final c in a.cidades) {
+        final ibge = c.ibgeId.isNotEmpty
+            ? c.ibgeId
+            : MunicipiosCoords.ibgeOf(a.estado, c.nome);
+        if (ibge == null) continue;
+        final km = MunicipiosCoords.distanceKm(origem, ibge);
+        if (km == null || km > nearbyRadiusKm) continue;
+        if (best == null || km < best.$1) best = (km, c.nome);
+      }
+      if (best != null) _nearby[v.id] = best;
+    }
+  }
+
+  /// Texto de distância do cartão no modo "perto de você", ex.:
+  /// "Atende sua cidade" ou "Atende Niterói · a ~12 km". Nulo fora do modo.
+  String? nearbyLabel(VetModel v) {
+    if (!showOtherCities.value) return null;
+    final n = _nearby[v.id];
+    if (n == null) return null;
+    if (n.$1 < 1) return 'Atende sua cidade';
+    return 'Atende ${n.$2} · a ~${n.$1.round()} km';
   }
 
   void toggleAreaFilter() {
@@ -186,7 +227,13 @@ class VetsController extends GetxController {
       );
       return;
     }
-    showOtherCities.value = false;
+    // No modo "perto de você", tocar na pílula volta ao filtro do endereço.
+    if (showOtherCities.value) {
+      showOtherCities.value = false;
+      _filter();
+      update();
+      return;
+    }
     filterByArea.toggle();
     _filter();
     update();
@@ -310,6 +357,7 @@ class VetsController extends GetxController {
   void _filter() {
     final query = searchController.text.toLowerCase();
     final specialty = selectedSpecialty.value;
+    if (showOtherCities.value) _computeNearby();
     var result = allVets.where((v) {
       final matchesSearch = query.isEmpty ||
           v.name.toLowerCase().contains(query) ||
@@ -321,8 +369,9 @@ class VetsController extends GetxController {
       // tutor. Desligado, continua restrito à cidade do tutor (nunca mostra
       // o Brasil inteiro) — só mostra todo mundo se o tutor não tiver
       // nenhum endereço cadastrado, caso em que não há cidade pra restringir.
-      final matchesArea = showOtherCities.value ||
-          (filterByArea.value
+      final matchesArea = showOtherCities.value
+          ? _nearby.containsKey(v.id)
+          : (filterByArea.value
           ? (v.areaAtuacao?.cobreEndereco(
                 uf: _tutorUf,
                 cidade: _tutorCity,
@@ -347,6 +396,16 @@ class VetsController extends GetxController {
         result.sort((a, b) => b.completedCount.compareTo(a.completedCount));
       case 3: // Menor preço
         result.sort((a, b) => a.startingPrice.compareTo(b.startingPrice));
+    }
+    // Perto de você: a distância manda (faixas de 5 km); dentro da faixa
+    // vale a ordenação escolhida (desempate explícito: sort não é estável).
+    if (showOtherCities.value) {
+      int faixa(VetModel v) => ((_nearby[v.id]?.$1 ?? 999) / 5).floor();
+      final ordem = {for (var i = 0; i < result.length; i++) result[i].id: i};
+      result.sort((a, b) {
+        final f = faixa(a).compareTo(faixa(b));
+        return f != 0 ? f : ordem[a.id]!.compareTo(ordem[b.id]!);
+      });
     }
 
     filteredVets.assignAll(result);
