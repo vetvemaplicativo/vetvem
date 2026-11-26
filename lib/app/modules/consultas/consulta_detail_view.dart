@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
 import '../profile/profile_controller.dart';
+import 'consulta_status.dart';
 import 'paid_extras_card.dart';
 import 'proposal_card.dart';
 import 'relocation_card.dart';
@@ -27,43 +30,13 @@ class ConsultaDetailView extends StatelessWidget {
 
   Widget _buildDetail(BuildContext context, ConsultationHistory item) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: Column(
         children: [
-          // Header
-          Material(
-            color: AppColors.primary,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 20, 20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 20),
-                      onPressed: () => Get.back(),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Detalhes da consulta',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
+          const _DetailHeader(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -95,22 +68,22 @@ class ConsultaDetailView extends StatelessWidget {
                                       style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
-                                          color: AppColors.textDark)),
+                                          color: Vv2.text)),
                                   if (crmv.isNotEmpty)
                                     Text('CRMV $crmv',
                                         style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textMedium)),
+                                            fontSize: 14,
+                                            color: Vv2.textSecondary)),
                                   if (showSpecialty)
                                     Text(item.specialty,
                                         style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textMedium)),
+                                            fontSize: 14,
+                                            color: Vv2.textSecondary)),
                                   if (item.vetPhone != null)
                                     Text(item.vetPhone!,
                                         style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.primary)),
+                                            fontSize: 14,
+                                            color: Vv2.primary)),
                                 ],
                               ),
                             ),
@@ -125,7 +98,7 @@ class ConsultaDetailView extends StatelessWidget {
                   _Card(
                     child: Row(
                       children: [
-                        _Icon(Icons.medical_services_outlined, AppColors.primary),
+                        _Icon(Icons.medical_services_outlined, Vv2.primary),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -133,8 +106,8 @@ class ConsultaDetailView extends StatelessWidget {
                             children: [
                               const Text('Serviço',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMedium)),
+                                      fontSize: 13,
+                                      color: Vv2.textSecondary)),
                               Text(
                                   item.serviceName.isNotEmpty
                                       ? item.serviceName
@@ -142,7 +115,7 @@ class ConsultaDetailView extends StatelessWidget {
                                   style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textDark)),
+                                      color: Vv2.text)),
                             ],
                           ),
                         ),
@@ -152,13 +125,13 @@ class ConsultaDetailView extends StatelessWidget {
                             children: [
                               const Text('Valor',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMedium)),
+                                      fontSize: 13,
+                                      color: Vv2.textSecondary)),
                               Text('R\$ ${item.value}',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.primary)),
+                                      color: Vv2.primary)),
                             ],
                           ),
                       ],
@@ -167,7 +140,7 @@ class ConsultaDetailView extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Pet + data/hora (cartões com a mesma altura)
-                  IntrinsicHeight(
+                  _PairRow(
                     child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -180,8 +153,8 @@ class ConsultaDetailView extends StatelessWidget {
                               const SizedBox(height: 8),
                               const Text('Pet',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMedium)),
+                                      fontSize: 13,
+                                      color: Vv2.textSecondary)),
                               Text(
                                   item.petName.isNotEmpty
                                       ? item.petName
@@ -189,7 +162,7 @@ class ConsultaDetailView extends StatelessWidget {
                                   style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textDark)),
+                                      color: Vv2.text)),
                             ],
                           ),
                         ),
@@ -201,22 +174,22 @@ class ConsultaDetailView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _Icon(Icons.access_time_rounded,
-                                  AppColors.primary),
+                                  Vv2.primary),
                               const SizedBox(height: 8),
                               const Text('Data e hora',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMedium)),
+                                      fontSize: 13,
+                                      color: Vv2.textSecondary)),
                               Text(item.date,
                                   style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textDark)),
+                                      color: Vv2.text)),
                               if (item.time.isNotEmpty)
                                 Text('às ${item.time}',
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textMedium)),
+                                        fontSize: 14,
+                                        color: Vv2.textSecondary)),
                             ],
                           ),
                         ),
@@ -241,8 +214,8 @@ class ConsultaDetailView extends StatelessWidget {
                         children: [
                           const Text('Sua avaliação',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textMedium)),
+                                  fontSize: 14,
+                                  color: Vv2.textSecondary)),
                           const SizedBox(height: 6),
                           Row(
                             children: List.generate(
@@ -252,7 +225,7 @@ class ConsultaDetailView extends StatelessWidget {
                                     ? Icons.star_rounded
                                     : Icons.star_outline_rounded,
                                 color: i < item.rating!
-                                    ? const Color(0xFFFBBC05)
+                                    ? const Color(0xFFE0A100)
                                     : const Color(0xFFD1D5DB),
                                 size: 20,
                               ),
@@ -263,7 +236,7 @@ class ConsultaDetailView extends StatelessWidget {
                             Text(item.comment!,
                                 style: const TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.textDark)),
+                                    color: Vv2.text)),
                           ],
                         ],
                       ),
@@ -281,7 +254,7 @@ class ConsultaDetailView extends StatelessWidget {
             _BottomAction(
               label: 'Avaliar atendimento',
               icon: Icons.star_outline_rounded,
-              color: const Color(0xFFFBBC05),
+              color: const Color(0xFFE0A100),
               onTap: () => Get.toNamed(Routes.rating, arguments: {
                 'consultationId': item.id,
                 'vetName': item.vetName,
@@ -297,7 +270,7 @@ class ConsultaDetailView extends StatelessWidget {
             _BottomAction(
               label: 'Pagar agora e garantir seu horário',
               icon: Icons.account_balance_wallet_rounded,
-              color: AppColors.primary,
+              color: Vv2.primary,
               onTap: () => Get.toNamed(Routes.payment, arguments: {
                 'appointmentId': item.id,
                 'vetId': '',
@@ -321,7 +294,7 @@ class ConsultaDetailView extends StatelessWidget {
             _BottomAction(
               label: 'Pagamento em análise...',
               icon: Icons.hourglass_top_rounded,
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFF6B4E00),
               onTap: null,
             ),
           if (item.instructionsText.isNotEmpty && item.status == 'confirmed')
@@ -330,21 +303,21 @@ class ConsultaDetailView extends StatelessWidget {
             _BottomAction(
               label: 'Aguardando confirmação do profissional...',
               icon: Icons.hourglass_top_rounded,
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFF6B4E00),
               onTap: null,
             ),
           if (item.status == 'confirmed' && item.paymentStatus != 'pending_payment')
             _BottomAction(
               label: 'Consulta confirmada! Até lá 🐾',
               icon: Icons.check_circle_rounded,
-              color: const Color(0xFF22C55E),
+              color: Vv2.successFg,
               onTap: null,
             ),
           if (item.sentToClient && item.prontuario != null)
             _BottomAction(
               label: 'Ver prontuário',
               icon: Icons.history_edu_rounded,
-              color: AppColors.primary,
+              color: Vv2.primary,
               onTap: () => Get.toNamed(Routes.prontuario, arguments: {
                 'item': item,
               }),
@@ -397,7 +370,7 @@ class _PaymentCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const _Icon(Icons.payment_rounded, AppColors.primary),
+                const _Icon(Icons.payment_rounded, Vv2.primary),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
@@ -407,24 +380,24 @@ class _PaymentCard extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textDark)),
+                              color: Vv2.text)),
                       Text('Escolha como deseja pagar',
                           style: TextStyle(
-                              fontSize: 12, color: AppColors.textMedium)),
+                              fontSize: 14, color: Vv2.textSecondary)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: Vv2.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text('Pendente',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary)),
+                          color: Vv2.primary)),
                 ),
               ],
             ),
@@ -448,7 +421,7 @@ class _PaymentCard extends StatelessWidget {
                           Icon(Icons.pix_rounded, color: Color(0xFF00B894), size: 24),
                           SizedBox(height: 4),
                           Text('PIX', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00B894))),
-                          Text('Instantâneo', style: TextStyle(fontSize: 10, color: AppColors.textMedium)),
+                          Text('Instantâneo', style: TextStyle(fontSize: 14, color: Vv2.textSecondary)),
                         ],
                       ),
                     ),
@@ -461,16 +434,16 @@ class _PaymentCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: Vv2.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                        border: Border.all(color: Vv2.primary.withValues(alpha: 0.3)),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.credit_card_rounded, color: AppColors.primary, size: 24),
+                          Icon(Icons.credit_card_rounded, color: Vv2.primary, size: 24),
                           SizedBox(height: 4),
-                          Text('Cartão', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                          Text('Crédito', style: TextStyle(fontSize: 10, color: AppColors.textMedium)),
+                          Text('Cartão', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Vv2.primary)),
+                          Text('Crédito', style: TextStyle(fontSize: 14, color: Vv2.textSecondary)),
                         ],
                       ),
                     ),
@@ -485,15 +458,15 @@ class _PaymentCard extends StatelessWidget {
 
     // Estado normal (pago, cancelado, aguardando confirmação)
     final color = isCancelled
-        ? AppColors.error
+        ? const Color(0xFF8C1D18)
         : isPaid
-            ? const Color(0xFF22C55E)
-            : const Color(0xFFF59E0B);
+            ? Vv2.successFg
+            : const Color(0xFF6B4E00);
 
     final label = isCancelled
         ? 'Estornado'
         : isPaid
-            ? 'Pago ✓'
+            ? 'Pago'
             : item.awaitingPayment
                 ? 'Pendente'
                 : 'Aguardando';
@@ -533,10 +506,10 @@ class _PaymentCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textDark)),
+                        color: Vv2.text)),
                 Text(description,
                     style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMedium)),
+                        fontSize: 14, color: Vv2.textSecondary)),
               ],
             ),
           ),
@@ -548,7 +521,7 @@ class _PaymentCard extends StatelessWidget {
             ),
             child: Text(label,
                 style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: color)),
           ),
@@ -565,12 +538,8 @@ class _StatusTimeline extends StatelessWidget {
   final ConsultationHistory item;
   const _StatusTimeline({required this.status, required this.item});
 
-  static const _steps = [
-    ('Agendado', Icons.calendar_today_rounded),
-    ('Aguardando', Icons.hourglass_top_rounded),
-    ('Confirmado', Icons.check_circle_outline_rounded),
-    ('Concluído', Icons.verified_rounded),
-  ];
+  static const _steps = ['Agendado', 'Aguardando', 'Confirmado', 'Concluído'];
+  static const _red = Color(0xFF8C1D18);
 
   int get _currentStep {
     switch (status) {
@@ -595,16 +564,13 @@ class _StatusTimeline extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
-          border:
-              Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+          color: const Color(0xFFFBE3E1),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.cancel_rounded,
-                color: AppColors.error, size: 24),
+            const Icon(Icons.cancel_rounded, color: _red, size: 26),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -620,15 +586,11 @@ class _StatusTimeline extends StatelessWidget {
                                 : status == 'rejected'
                                     ? 'Consulta recusada pelo profissional'
                                     : 'Consulta cancelada',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.error),
+                    style: Vv2.t(16, 22, 700, color: _red),
                   ),
-                  const SizedBox(height: 2),
-                  const Text('O valor foi estornado ao pagamento original.',
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.textMedium)),
+                  const SizedBox(height: 4),
+                  Text('O valor foi estornado ao pagamento original.',
+                      style: Vv2.t(14, 20, 400, color: Vv2.text)),
                 ],
               ),
             ),
@@ -637,81 +599,152 @@ class _StatusTimeline extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: List.generate(_steps.length * 2 - 1, (i) {
-          if (i.isOdd) {
-            // Linha de conexão
-            final stepIndex = i ~/ 2;
-            final done = stepIndex < current;
-            return Expanded(
-              child: Container(
-                height: 2,
-                color: done
-                    ? AppColors.primary
-                    : const Color(0xFFE5E7EB),
-              ),
-            );
-          }
-          final stepIndex = i ~/ 2;
-          final done = stepIndex <= current;
-          final active = stepIndex == current;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: done
-                      ? AppColors.primary
-                      : const Color(0xFFF3F4F6),
-                  shape: BoxShape.circle,
-                  border: active
-                      ? Border.all(color: AppColors.primary, width: 2)
-                      : null,
-                ),
-                child: Icon(
-                  _steps[stepIndex].$2,
-                  size: 16,
-                  color: done ? Colors.white : const Color(0xFFD1D5DB),
-                ),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: 62,
-                child: Text(
-                  _steps[stepIndex].$1,
-                  maxLines: 1,
-                  overflow: TextOverflow.visible,
-                  softWrap: false,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: active || done
-                        ? FontWeight.w700
-                        : FontWeight.normal,
-                    color: done
-                        ? AppColors.primary
-                        : AppColors.textLight,
+    final st = ConsultaStatus.of(item);
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: Text('Andamento', style: Vv2.t(16, 22, 700))),
+            ConsultaStatusPill(st),
+          ]),
+          const SizedBox(height: 16),
+          Semantics(
+            label: 'Etapa ${current + 1} de ${_steps.length}: ${_steps[current.clamp(0, 3)]}',
+            excludeSemantics: true,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < _steps.length; i++)
+                  Expanded(
+                    child: Column(children: [
+                      Row(children: [
+                        Expanded(
+                          child: Container(
+                            height: 3,
+                            color: i == 0
+                                ? Colors.transparent
+                                : i <= current
+                                    ? Vv2.primary
+                                    : Vv2.divider,
+                          ),
+                        ),
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: i <= current ? Vv2.primary : Vv2.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: i <= current ? Vv2.primary : Vv2.divider,
+                                width: 2),
+                          ),
+                          child: i <= current
+                              ? const Icon(Icons.check_rounded,
+                                  size: 18, color: Vv2.onPrimary)
+                              : null,
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 3,
+                            color: i == _steps.length - 1
+                                ? Colors.transparent
+                                : i < current
+                                    ? Vv2.primary
+                                    : Vv2.divider,
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 6),
+                      Text(
+                        _steps[i],
+                        textAlign: TextAlign.center,
+                        style: Vv2.t(12, 16, i == current ? 700 : 500,
+                            color: i <= current ? Vv2.text : Vv2.textSecondary),
+                      ),
+                    ]),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          );
-        }),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+class _DetailHeader extends StatelessWidget {
+  const _DetailHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Vv2.gutter, 8, Vv2.gutter, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                button: true,
+                label: 'Voltar',
+                excludeSemantics: true,
+                child: Material(
+                  color: Vv2.surface.withValues(alpha: 0.85),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Get.back(),
+                    child: const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                          child: VvIcon(VvFn.back,
+                              size: 22, color: Vv2.onBrand)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Semantics(
+                header: true,
+                child: Text('Detalhes da consulta', style: Vv2.t(28, 34, 700)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dois cartões lado a lado; empilha com texto grande.
+class _PairRow extends StatelessWidget {
+  final Row child;
+  const _PairRow({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    if (scale > 1.25 || MediaQuery.sizeOf(context).width < 340) {
+      final kids = child.children
+          .whereType<Expanded>()
+          .map((e) => e.child)
+          .toList();
+      return Column(children: [
+        for (var i = 0; i < kids.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          kids[i],
+        ],
+      ]);
+    }
+    return IntrinsicHeight(child: child);
+  }
+}
 
 class _Card extends StatelessWidget {
   final Widget child;
@@ -723,9 +756,9 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1E0D6)),
       ),
       child: child,
     );
@@ -743,8 +776,8 @@ class _PetPhoto extends StatelessWidget {
       try {
         final bytes = base64Decode(base64Photo.split(',').last);
         return Container(
-          width: 56,
-          height: 56,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             image: DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
@@ -753,13 +786,15 @@ class _PetPhoto extends StatelessWidget {
       } catch (_) {}
     }
     return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF6B2B).withValues(alpha: 0.1),
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        color: Vv2.pressedSurface,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.pets, color: Color(0xFFFF6B2B), size: 26),
+      child: const Center(
+          child: VvIcon(VvFn.petFallback,
+              size: 24, color: Vv2.onPrimaryContainer)),
     );
   }
 }
@@ -772,17 +807,22 @@ class _Icon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(9),
+        color: color == Vv2.primary
+            ? Vv2.pressedSurface
+            : color.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: color, size: 18),
+      child: Icon(icon,
+          color: color == Vv2.primary ? Vv2.onPrimaryContainer : color,
+          size: 22),
     );
   }
 }
 
+/// Ação fixa embaixo. Com toque: botão em pílula; sem toque: aviso em texto.
 class _BottomAction extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -796,30 +836,32 @@ class _BottomAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(
-            20, 14, 20, 14 + MediaQuery.of(context).padding.bottom),
-        decoration: BoxDecoration(
-          color: onTap != null ? color : color.withValues(alpha: 0.08),
-          border: Border(top: BorderSide(color: color.withValues(alpha: 0.3))),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon,
-                color: onTap != null ? Colors.white : color, size: 20),
-            const SizedBox(width: 8),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: onTap != null ? Colors.white : color,
-                    fontFamily: 'Poppins')),
-          ],
-        ),
+    final bottom = MediaQuery.of(context).padding.bottom;
+    if (onTap != null) {
+      return Container(
+        color: Vv2Pastel.cream,
+        padding: EdgeInsets.fromLTRB(Vv2.gutter, 10, Vv2.gutter, 12 + bottom),
+        child: VvPillButton(label: label, onTap: onTap),
+      );
+    }
+    final green = color == Vv2.successFg;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(Vv2.gutter, 14, Vv2.gutter, 14 + bottom),
+      decoration: BoxDecoration(
+        color: green ? Vv2.successBg : const Color(0xFFFFF1C7),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(label,
+                textAlign: TextAlign.center,
+                style: Vv2.t(15, 20, 700, color: color)),
+          ),
+        ],
       ),
     );
   }

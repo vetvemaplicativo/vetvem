@@ -6,8 +6,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cep_service.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../consultas/consulta_status.dart';
+import '../consultas/consultas_view.dart' show ConsultaPetAvatar;
+
 import '../terms/terms_view.dart';
 import 'profile_controller.dart';
+
+const _kRed = Color(0xFF8C1D18);
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -15,18 +22,40 @@ class ProfileView extends GetView<ProfileController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildHeader(context),
+            DecoratedBox(
+              decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter, 56),
+                  child: Semantics(
+                    header: true,
+                    child: Text('Perfil', style: Vv2.t(28, 34, 700)),
+                  ),
+                ),
+              ),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -40),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Vv2.gutter),
+                child: _buildHeader(context),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(Vv2.gutter, 0, Vv2.gutter, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionTitle('Meus Pets'),
-                  const SizedBox(height: 12),
+                  Transform.translate(
+                    offset: const Offset(0, -16),
+                    child: _sectionTitle('Meus Pets'),
+                  ),
                   Obx(() => Column(
                         children: [
                           ...controller.pets.map(
@@ -36,20 +65,18 @@ class ProfileView extends GetView<ProfileController> {
                       )),
                   const SizedBox(height: 28),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _sectionTitle('Últimas consultas'),
-                      GestureDetector(
-                        onTap: () => _showFullHistory(context),
-                        child: const Text('Ver tudo',
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600)),
+                      Expanded(child: _sectionTitle('Últimas consultas')),
+                      TextButton(
+                        onPressed: () => _showFullHistory(context),
+                        style: TextButton.styleFrom(
+                            minimumSize: const Size(48, Vv2.tapMin)),
+                        child: Text('Ver tudo',
+                            style: Vv2.t(15, 20, 700, color: Vv2.primary)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Obx(() => Column(
                         children: controller.recentConsultations
                             .take(3)
@@ -63,27 +90,30 @@ class ProfileView extends GetView<ProfileController> {
                   const SizedBox(height: 20),
                   OutlinedButton.icon(
                     onPressed: () => _showLogoutDialog(context),
-                    icon: const Icon(Icons.logout,
-                        color: AppColors.error, size: 18),
-                    label: const Text('Sair da conta',
-                        style: TextStyle(color: AppColors.error)),
+                    icon: const Icon(Icons.logout, color: _kRed, size: 20),
+                    label: Text('Sair da conta',
+                        style: Vv2.t(16, 22, 700, color: _kRed)),
                     style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.error)),
+                        backgroundColor: Vv2.surface,
+                        minimumSize: const Size.fromHeight(Vv2.buttonMin),
+                        shape: const StadiumBorder(),
+                        side: const BorderSide(color: _kRed)),
                   ),
                   const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () => _showDeleteAccountDialog(context),
-                    child: const Text('Encerrar conta',
-                        style: TextStyle(
-                            color: AppColors.textLight,
-                            fontSize: 13,
-                            decoration: TextDecoration.underline)),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => _showDeleteAccountDialog(context),
+                      style: TextButton.styleFrom(
+                          minimumSize: const Size(48, Vv2.tapMin)),
+                      child: Text('Encerrar conta',
+                          style: Vv2.t(14, 20, 600, color: Vv2.textSecondary)
+                              .copyWith(decoration: TextDecoration.underline)),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  const Center(
+                  const SizedBox(height: 8),
+                  Center(
                     child: Text('VetVem v1.0.0',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.textLight)),
+                        style: Vv2.t(13, 18, 400, color: Vv2.textSecondary)),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -95,120 +125,125 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _sectionTitle(String title) => Text(title,
-      style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textDark));
+  Widget _sectionTitle(String title) => Semantics(
+        header: true,
+        child: Text(title, style: Vv2.t(20, 26, 700)),
+      );
 
-  // ── Header ────────────────────────────────────────────────────────
+  // ── Cartão do perfil ──────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {
-    return Material(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Obx(() => Column(
-                children: [
-                  GestureDetector(
-                    onTap: () => _showPhotoOptions(context),
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 84,
-                          height: 84,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.2),
-                            border: Border.all(color: Colors.white, width: 3),
-                          ),
-                          child: controller.userPhotoUrl.value.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    controller.userName.value.trim().isEmpty
-                                        ? '?'
-                                        : controller.userName.value
-                                            .trim()
-                                            .split(' ')
-                                            .where((e) => e.isNotEmpty)
-                                            .take(2)
-                                            .map((e) => e[0].toUpperCase())
-                                            .join(),
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                )
-                              : ClipOval(child: _profileImage(controller.userPhotoUrl.value, 84)),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: controller.isUploadingPhoto.value
-                              ? Container(
-                                  width: 28, height: 28,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.primary, width: 2),
-                                  ),
-                                  padding: const EdgeInsets.all(6),
-                                  child: const CircularProgressIndicator(
-                                      strokeWidth: 2, color: AppColors.primary),
-                                )
-                              : Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.primary, width: 2),
-                                  ),
-                                  child: const Icon(Icons.camera_alt,
-                                      size: 14, color: AppColors.primary),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(controller.userName.value,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(controller.userEmail.value,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 13)),
-                  const SizedBox(height: 2),
-                  Text(controller.userPhone.value,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 13)),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () => _showEditProfile(context),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white, width: 1.5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                    ),
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Editar perfil',
-                        style: TextStyle(fontSize: 13)),
-                  ),
-                ],
-              )),
-        ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+      decoration: BoxDecoration(
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: Vv2.cardShadow,
       ),
+      child: Obx(() {
+        final name = controller.userName.value.trim();
+        final initials = name.isEmpty
+            ? '?'
+            : name
+                .split(' ')
+                .where((e) => e.isNotEmpty)
+                .take(2)
+                .map((e) => e[0].toUpperCase())
+                .join();
+        final avatar = Semantics(
+          button: true,
+          label: 'Trocar foto do perfil',
+          excludeSemantics: true,
+          child: GestureDetector(
+            onTap: () => _showPhotoOptions(context),
+            child: Stack(
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Vv2.pressedSurface,
+                  ),
+                  child: controller.userPhotoUrl.value.isEmpty
+                      ? Center(
+                          child: Text(initials,
+                              style: Vv2.t(26, 32, 700,
+                                  color: Vv2.onPrimaryContainer)),
+                        )
+                      : ClipOval(
+                          child: _profileImage(
+                              controller.userPhotoUrl.value, 76)),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Vv2.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Vv2.primary, width: 2),
+                    ),
+                    padding: controller.isUploadingPhoto.value
+                        ? const EdgeInsets.all(6)
+                        : null,
+                    child: controller.isUploadingPhoto.value
+                        ? const CircularProgressIndicator(
+                            strokeWidth: 2, color: Vv2.primary)
+                        : const Icon(Icons.camera_alt_outlined,
+                            size: 15, color: Vv2.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                avatar,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(controller.userName.value,
+                          style: Vv2.t(20, 26, 700)),
+                      if (controller.userEmail.value.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(controller.userEmail.value,
+                            style: Vv2.t(14, 20, 400,
+                                color: Vv2.textSecondary)),
+                      ],
+                      if (controller.userPhone.value.isNotEmpty)
+                        Text(controller.userPhone.value,
+                            style: Vv2.t(14, 20, 400,
+                                color: Vv2.textSecondary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: () => _showEditProfile(context),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Vv2.primary, width: 1.5),
+                foregroundColor: Vv2.primary,
+                minimumSize: const Size.fromHeight(Vv2.tapMin),
+                shape: const StadiumBorder(),
+              ),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text('Editar perfil',
+                  style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -516,127 +551,87 @@ class _PetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final emoji = pet.species == 'cat'
-        ? '🐱'
+    final speciesLabel = pet.species == 'cat'
+        ? 'Gato'
         : pet.species == 'dog'
-            ? '🐶'
+            ? 'Cão'
             : pet.species == 'bird'
-                ? '🐦'
-                : '🐾';
+                ? 'Ave'
+                : 'Pet';
     final hasPhoto = pet.photoBase64.isNotEmpty;
+    final sub = [
+      if (pet.ageLabel.isNotEmpty) pet.ageLabel,
+      if (pet.sex.isNotEmpty) pet.sex,
+    ].join(' · ');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 4, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Vv2.cardShadow,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  image: hasPhoto
-                      ? DecorationImage(
-                          image: MemoryImage(base64Decode(
-                              pet.photoBase64.split(',').last)),
-                          fit: BoxFit.cover)
-                      : null,
-                ),
-                child: hasPhoto
-                    ? null
-                    : Center(
-                        child: Text(emoji,
-                            style: const TextStyle(fontSize: 28))),
-              ),
-              if (hasPhoto)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                          color: const Color(0xFFE5E7EB), width: 1),
-                    ),
-                    child: Center(
-                        child: Text(emoji,
-                            style: const TextStyle(fontSize: 12))),
-                  ),
-                ),
-            ],
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Vv2.pressedSurface,
+              shape: BoxShape.circle,
+              image: hasPhoto
+                  ? DecorationImage(
+                      image: MemoryImage(
+                          base64Decode(pet.photoBase64.split(',').last)),
+                      fit: BoxFit.cover)
+                  : null,
+            ),
+            child: hasPhoto
+                ? null
+                : Center(
+                    child: VvIcon.species(pet.species, speciesLabel,
+                        size: 36, color: Vv2.onPrimaryContainer)),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(pet.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.textDark)),
-                const SizedBox(height: 3),
-                Text(pet.breed,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMedium)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (pet.ageLabel.isNotEmpty) _MiniChip(pet.ageLabel),
-                    _MiniChip(pet.sex),
-                    if (pet.castrated)
-                      _MiniChip('Castrado', color: AppColors.success),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => _showPetConsultations(context, pet),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.event_note_rounded,
-                            size: 13, color: AppColors.primary),
-                        SizedBox(width: 4),
-                        Text('Ver consultas',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
+                Text(pet.name, style: Vv2.t(18, 24, 700)),
+                if (pet.breed.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(pet.breed,
+                      style: Vv2.t(14, 20, 500, color: Vv2.textSecondary)),
+                ],
+                if (sub.isNotEmpty)
+                  Text(sub,
+                      style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
+                if (pet.castrated) ...[
+                  const SizedBox(height: 6),
+                  const _MiniChip('Castrado', color: Vv2.successFg),
+                ],
+                TextButton.icon(
+                  onPressed: () => _showPetConsultations(context, pet),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Vv2.primary,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(48, Vv2.tapMin),
+                    tapTargetSize: MaterialTapTargetSize.padded,
                   ),
+                  icon: const VvIcon(VvFn.navConsults,
+                      size: 18, color: Vv2.primary),
+                  label: Text('Ver consultas',
+                      style: Vv2.t(15, 20, 700, color: Vv2.primary)),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert,
-                color: AppColors.textLight, size: 20),
+            tooltip: 'Opções de ${pet.name}',
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: const Icon(Icons.more_vert, color: Vv2.textSecondary, size: 24),
             onPressed: () => _showPetOptions(context),
           ),
         ],
@@ -850,14 +845,12 @@ class _MiniChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
+        color: color == Vv2.successFg ? Vv2.successBg : color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(Vv2.rPill),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+      child: Text(label, style: Vv2.t(13, 18, 700, color: color)),
     );
   }
 }
@@ -1169,35 +1162,27 @@ class _AddPetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showAddPet(context),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+    return Material(
+      color: Vv2.pressedSurface,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: () => _showAddPet(context),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: Vv2.buttonMin),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_rounded,
+                  color: Vv2.onPrimaryContainer, size: 22),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text('Adicionar pet',
+                    style: Vv2.t(16, 22, 700, color: Vv2.onPrimaryContainer)),
               ),
-              child: const Icon(Icons.add, color: AppColors.primary, size: 18),
-            ),
-            const SizedBox(width: 10),
-            const Text('Adicionar pet',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14)),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1606,106 +1591,47 @@ class _ConsultationCard extends StatelessWidget {
   final ConsultationHistory item;
   const _ConsultationCard({required this.item});
 
-  Widget _buildPetPhoto(String photo) {
-    ImageProvider? img;
-    if (photo.isNotEmpty) {
-      try {
-        img = MemoryImage(base64Decode(
-            photo.contains(',') ? photo.split(',').last : photo));
-      } catch (_) {}
-    }
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-        image: img != null
-            ? DecorationImage(image: img, fit: BoxFit.cover)
-            : null,
-      ),
-      child: img == null
-          ? const Icon(Icons.pets, color: AppColors.primary, size: 22)
-          : null,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isCompleted = item.status == 'completed';
-    final isCancelled = item.status == 'cancelled' || item.status == 'rejected';
-    final isConfirmed = item.status == 'confirmed';
-    final statusColor = isCompleted
-        ? AppColors.success
-        : isCancelled
-            ? AppColors.error
-            : isConfirmed
-                ? const Color(0xFF1A73E8)
-                : AppColors.warning;
-    final statusLabel = isCompleted
-        ? 'Concluída'
-        : isCancelled
-            ? (item.status == 'rejected' && !item.cancelledByTutor && !item.tutorTimedOut ? 'Recusada' : item.tutorTimedOut ? 'Encerrada' : 'Cancelada')
-            : isConfirmed
-                ? 'Confirmada'
-                : 'Aguardando';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildPetPhoto(item.petPhotoBase64),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final st = ConsultaStatus.of(item);
+    final quando =
+        '${item.date}${item.time.isNotEmpty ? ' · ${item.time}' : ''}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.consultaDetail, arguments: item),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+            child: Row(
               children: [
-                Text(item.vetName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: AppColors.textDark)),
-                const SizedBox(height: 2),
-                Text(item.petName.isNotEmpty ? '${item.petName} · ${item.specialty}' : item.specialty,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMedium)),
-                const SizedBox(height: 4),
-                Row(children: [
-                  const Icon(Icons.calendar_today,
-                      size: 11, color: AppColors.textLight),
-                  const SizedBox(width: 4),
-                  Text('${item.date}${item.time.isNotEmpty ? ' · ${item.time}' : ''}',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.textLight)),
-                ]),
+                ConsultaPetAvatar(photo: item.petPhotoBase64, size: 48),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.vetName, style: Vv2.t(16, 22, 700)),
+                      Text(
+                          item.petName.isNotEmpty
+                              ? '${item.petName} · ${item.specialty}'
+                              : item.specialty,
+                          style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
+                      Text(quando,
+                          style: Vv2.t(14, 20, 600, color: Vv2.textSecondary)),
+                      const SizedBox(height: 6),
+                      ConsultaStatusPill(st),
+                    ],
+                  ),
+                ),
+                const VvIcon(VvFn.forward, size: 20, color: Vv2.outline),
               ],
             ),
           ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(statusLabel,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1730,28 +1656,18 @@ class _SettingsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Vv2.cardShadow,
       ),
       child: Column(
         children: _items.indexed.map(((int, (IconData, String, String)) e) {
           final (i, (icon, label, action)) = e;
           return Column(
             children: [
-              ListTile(
-                leading: Icon(icon, color: AppColors.primary, size: 20),
-                title: Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, color: AppColors.textDark)),
-                trailing: const Icon(Icons.arrow_forward_ios,
-                    size: 13, color: AppColors.textLight),
+              InkWell(
                 onTap: () {
                   switch (action) {
                     case 'edit':
@@ -1770,9 +1686,25 @@ class _SettingsList extends StatelessWidget {
                       Get.to(() => const TermsView(readOnly: true));
                   }
                 },
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 60),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                          color: Vv2.pressedSurface, shape: BoxShape.circle),
+                      child: Icon(icon, color: Vv2.onPrimaryContainer, size: 21),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Text(label, style: Vv2.t(16, 22, 600))),
+                    const VvIcon(VvFn.forward, size: 20, color: Vv2.outline),
+                  ]),
+                ),
               ),
               if (i < _items.length - 1)
-                const Divider(height: 1, indent: 56, endIndent: 16),
+                const Divider(height: 1, indent: 68, endIndent: 14, color: Vv2.divider),
             ],
           );
         }).toList(),

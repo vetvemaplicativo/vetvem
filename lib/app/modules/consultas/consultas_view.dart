@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../profile/profile_controller.dart';
 import 'claim_portal_sheet.dart';
+import 'consulta_status.dart';
 
 class ConsultasView extends StatelessWidget {
   const ConsultasView({super.key});
@@ -14,53 +16,44 @@ class ConsultasView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<ProfileController>();
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: Column(
         children: [
-          // Header
-          Material(
-            color: AppColors.primary,
+          DecoratedBox(
+            decoration: const BoxDecoration(gradient: Vv2.headerGradient),
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Minhas Consultas',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
+                padding: const EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter, 22),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text('Minhas Consultas',
+                              style: Vv2.t(28, 34, 700)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Acompanhe seus agendamentos',
+                            style: Vv2.t(15, 20, 500, color: Vv2.onBrand)),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Acompanhe seus agendamentos',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 13,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Filter chips
-                    _FilterChips(ctrl: c),
-                  ],
-                ),
+                  ),
+                ]),
               ),
             ),
           ),
-
-          // Lista
+          const SizedBox(height: 14),
+          _FilterChips(ctrl: c),
+          const SizedBox(height: 6),
           Expanded(
             child: Obx(() {
               final all = c.filteredConsultations;
               if (all.isEmpty) return const _EmptyState();
               return ListView.builder(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(Vv2.gutter, 8, Vv2.gutter, 24),
                 itemCount: all.length + 1,
                 itemBuilder: (context, i) => i == all.length
                     ? const ClaimPortalCard()
@@ -85,43 +78,47 @@ class _FilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final selected = ctrl.consultaFilter.value; // leitura síncrona — GetX rastreia aqui
-      return SizedBox(
-          height: 32,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _filters.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final sel = selected == i;
-              return GestureDetector(
-                onTap: () => ctrl.consultaFilter.value = i,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: sel
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
+      final selected = ctrl.consultaFilter.value;
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Vv2.gutter),
+        child: Row(
+          children: [
+            for (var i = 0; i < _filters.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Semantics(
+                button: true,
+                selected: selected == i,
+                label: 'Filtro ${_filters[i]}',
+                excludeSemantics: true,
+                child: Material(
+                  color: selected == i ? Vv2.primary : Vv2.surface,
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                        color: selected == i
+                            ? Vv2.primary
+                            : const Color(0xFFE8D5CA)),
                   ),
-                  child: Center(
-                    child: Text(
-                      _filters[i],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            sel ? FontWeight.w700 : FontWeight.w500,
-                        color: sel ? AppColors.primary : Colors.white,
-                        fontFamily: 'Poppins',
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => ctrl.consultaFilter.value = i,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: Vv2.tapMin),
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _filters[i],
+                        style: Vv2.t(15, 20, selected == i ? 700 : 600,
+                            color: selected == i ? Vv2.onPrimary : Vv2.text),
                       ),
                     ),
                   ),
                 ),
-              );
-            },
-          ),
-        );
+              ),
+            ],
+          ],
+        ),
+      );
     });
   }
 }
@@ -166,7 +163,149 @@ class _ConsultaCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPetAvatar(String photo) {
+  @override
+  Widget build(BuildContext context) {
+    final isCompleted = item.status == 'completed';
+    final st = ConsultaStatus.of(item);
+    final quando = item.time.isNotEmpty ? '${item.date} · ${item.time}' : item.date;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.consultaDetail, arguments: item),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ConsultaStatusPill(st),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ConsultaPetAvatar(photo: item.petPhotoBase64, size: 52),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.petName.isNotEmpty ? item.petName : 'Pet',
+                                  style: Vv2.t(18, 24, 700)),
+                              const SizedBox(height: 2),
+                              Text(item.vetName,
+                                  style: Vv2.t(15, 20, 600,
+                                      color: Vv2.onPrimaryContainer)),
+                              if (item.serviceName.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(item.serviceName,
+                                    style: Vv2.t(14, 20, 400,
+                                        color: Vv2.textSecondary)),
+                              ],
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                const Icon(Icons.calendar_today_outlined,
+                                    size: 15, color: Vv2.textSecondary),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(quando,
+                                      style: Vv2.t(14, 20, 600,
+                                          color: Vv2.textSecondary)),
+                                ),
+                              ]),
+                            ],
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 14),
+                          child: VvIcon(VvFn.forward,
+                              size: 20, color: Vv2.outline),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (item.status == 'upcoming') ...[
+                const Divider(height: 1, color: Vv2.divider),
+                TextButton.icon(
+                  onPressed: _showCancelInfo,
+                  icon: const Icon(Icons.close, size: 18),
+                  label: Text('Cancelar', style: Vv2.t(15, 20, 700, color: const Color(0xFF8C1D18))),
+                  style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF8C1D18),
+                      minimumSize: const Size.fromHeight(Vv2.tapMin)),
+                ),
+              ],
+              if (item.canRate) ...[
+                const Divider(height: 1, color: Vv2.divider),
+                TextButton.icon(
+                  onPressed: () => Get.toNamed(Routes.rating, arguments: {
+                    'consultationId': item.id,
+                    'vetName': item.vetName,
+                    'petName': item.petName,
+                    'date': item.date,
+                    'specialty': item.specialty,
+                  }),
+                  icon: const Icon(Icons.star_outline_rounded, size: 20),
+                  label: Text('Avaliar atendimento',
+                      style: Vv2.t(15, 20, 700, color: Vv2.primary)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Vv2.primary,
+                    minimumSize: const Size.fromHeight(Vv2.tapMin),
+                  ),
+                ),
+              ],
+              if (isCompleted && item.rating != null) ...[
+                const Divider(height: 1, color: Vv2.divider),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      ...List.generate(5, (i) => Icon(
+                            i < item.rating!
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: i < item.rating!
+                                ? const Color(0xFFE0A100)
+                                : const Color(0xFFD1D5DB),
+                            size: 18,
+                          )),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item.comment ?? 'Avaliado',
+                          style: Vv2.t(14, 20, 400, color: Vv2.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Foto do pet (base64) ou ícone de calendário num círculo creme.
+class ConsultaPetAvatar extends StatelessWidget {
+  final String photo;
+  final double size;
+  const ConsultaPetAvatar({super.key, required this.photo, this.size = 48});
+
+  @override
+  Widget build(BuildContext context) {
     ImageProvider? img;
     if (photo.isNotEmpty) {
       try {
@@ -175,249 +314,20 @@ class _ConsultaCard extends StatelessWidget {
       } catch (_) {}
     }
     return Container(
-      width: 50,
-      height: 50,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: Vv2.pressedSurface,
         shape: BoxShape.circle,
-        border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.2), width: 1.5),
         image: img != null
             ? DecorationImage(image: img, fit: BoxFit.cover)
             : null,
       ),
       child: img == null
-          ? const Icon(Icons.pets, color: AppColors.primary, size: 26)
+          ? Center(
+              child: VvIcon(VvFn.navConsults,
+                  size: size * 0.48, color: Vv2.onPrimaryContainer))
           : null,
-    );
-  }
-
-  Color get _statusColor {
-    switch (item.status) {
-      case 'completed': return AppColors.success;
-      case 'cancelled': return AppColors.error;
-      case 'rejected': return AppColors.error;
-      case 'confirmed': return AppColors.success;
-      case 'pending_confirmation': return AppColors.warning;
-      default: return AppColors.warning;
-    }
-  }
-
-  String get _statusLabel {
-    switch (item.status) {
-      case 'completed': return 'Concluída';
-      case 'cancelled': return 'Cancelada';
-      case 'rejected':
-        return item.cancelledByTutor ? 'Cancelada' : item.tutorTimedOut ? 'Encerrada' : 'Recusada';
-      case 'confirmed': return 'Confirmada ✓';
-      // Ainda não pago: o pedido nem chegou ao profissional (só chega depois do pagamento aprovado).
-      case 'pending_confirmation':
-        return item.awaitingPayment
-            ? 'Aguard. pagamento'
-            : item.paymentInReview
-                ? 'Pagamento em análise'
-                : 'Aguard. confirmação';
-      case 'pending_payment': return 'Aguard. pagamento';
-      default: return 'Agendada';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isCompleted = item.status == 'completed';
-    final isCancelled = item.status == 'cancelled' || item.status == 'rejected';
-    final statusColor = _statusColor;
-    final statusLabel = _statusLabel;
-
-    return GestureDetector(
-      onTap: () => Get.toNamed(Routes.consultaDetail, arguments: item),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 10,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Column(
-        children: [
-          // Topo com status
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.07),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isCompleted
-                      ? Icons.check_circle_outline
-                      : isCancelled
-                          ? Icons.cancel_outlined
-                          : Icons.schedule,
-                  color: statusColor,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  statusLabel,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-          // Conteúdo
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Avatar do pet
-                _buildPetAvatar(item.petPhotoBase64),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Pet em destaque
-                      Row(
-                        children: [
-                          const Text('🐾', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              item.petName.isNotEmpty
-                                  ? item.petName
-                                  : 'Pet',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                                color: AppColors.textDark,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      // Profissional
-                      Text(
-                        item.vetName,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary),
-                      ),
-                      const SizedBox(height: 3),
-                      // Procedimento
-                      if (item.serviceName.isNotEmpty)
-                        Text(
-                          item.serviceName,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textMedium),
-                        ),
-                      const SizedBox(height: 6),
-                      // Data + hora
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time_rounded,
-                              size: 13, color: AppColors.textLight),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.time.isNotEmpty
-                                ? '${item.date}  ·  ${item.time}'
-                                : item.date,
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.textMedium),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Ações
-          if (item.status == 'upcoming') ...[
-            const Divider(height: 1),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: _showCancelInfo,
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Cancelar'),
-                    style: TextButton.styleFrom(
-                        foregroundColor: AppColors.error),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          // Botão avaliar — concluídas sem avaliação
-          if (item.canRate) ...[
-            const Divider(height: 1),
-            TextButton.icon(
-              onPressed: () => Get.toNamed(Routes.rating, arguments: {
-                'consultationId': item.id,
-                'vetName': item.vetName,
-                'petName': item.petName,
-                'date': item.date,
-                'specialty': item.specialty,
-              }),
-              icon: const Icon(Icons.star_outline_rounded, size: 18),
-              label: const Text('Avaliar atendimento'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFFBBC05),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ],
-          // Rating already given
-          if (isCompleted && item.rating != null) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  ...List.generate(5, (i) => Icon(
-                        i < item.rating!
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        color: i < item.rating!
-                            ? const Color(0xFFFBBC05)
-                            : const Color(0xFFD1D5DB),
-                        size: 16,
-                      )),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.comment ?? 'Avaliado',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.textMedium),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-      ),
     );
   }
 }
@@ -429,33 +339,31 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.calendar_today_outlined,
-              size: 64, color: AppColors.textLight.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          const Text(
-            'Nenhuma consulta ainda',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMedium),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+      children: [
+        Center(
+          child: Container(
+            width: 88,
+            height: 88,
+            decoration: const BoxDecoration(
+                color: Vv2.pressedSurface, shape: BoxShape.circle),
+            child: const Center(
+              child: VvIcon(VvFn.navConsults,
+                  size: 40, color: Vv2.onPrimaryContainer),
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Busque um veterinário e agende\nsua primeira consulta',
+        ),
+        const SizedBox(height: 16),
+        Text('Nenhuma consulta ainda',
+            textAlign: TextAlign.center, style: Vv2.t(18, 24, 700)),
+        const SizedBox(height: 8),
+        Text('Busque um veterinário e agende\nsua primeira consulta',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textLight),
-          ),
-          const SizedBox(height: 24),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: ClaimPortalCard(),
-          ),
-        ],
-      ),
+            style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
+        const SizedBox(height: 24),
+        const ClaimPortalCard(),
+      ],
     );
   }
 }
