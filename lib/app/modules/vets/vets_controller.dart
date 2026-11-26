@@ -72,6 +72,7 @@ class VetsController extends GetxController {
       _lastUid = key(u);
       filterByArea.value = false;
       showOtherCities.value = false;
+      _lastAddrKey = null;
       _loadTutorAddress();
       _loadVets();
     });
@@ -89,15 +90,40 @@ class VetsController extends GetxController {
       // Lê direto do Firebase (não AuthService.isGuest): na troca de conta os
       // dois ouvintes de login disputam a ordem.
       if (user!.isAnonymous) {
+        await _userSub?.cancel();
+        _userSub = null;
+        _lastAddrKey = null;
         applyRegion();
         return;
       }
-      final doc = await FirebaseFirestore.instance
+      // Escuta o cadastro (não lê uma vez só): endereço salvo/trocado no
+      // Perfil reflete na Busca na hora.
+      await _userSub?.cancel();
+      _userSub = FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
-          .get();
-      final addrs =
-          List<Map<String, dynamic>>.from(doc.data()?['addresses'] ?? []);
+          .snapshots()
+          .listen((doc) => _applyUserAddress(doc.data()), onError: (_) {});
+    } catch (_) {
+      // Sem endereço: o filtro simplesmente fica indisponível.
+    }
+  }
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+
+  String? _lastAddrKey;
+
+  Future<void> _applyUserAddress(Map<String, dynamic>? data) async {
+    try {
+      final addrs = List<Map<String, dynamic>>.from(data?['addresses'] ?? []);
+      // O cadastro muda por outros motivos (pet, foto, token): só reaplica
+      // quando o endereço principal mudou, para não desfazer o filtro escolhido.
+      final f = addrs.isEmpty ? null : addrs.first;
+      final key = f == null
+          ? ''
+          : '${f['state']}|${f['city']}|${f['neighborhood']}';
+      if (key == _lastAddrKey) return;
+      _lastAddrKey = key;
       if (addrs.isEmpty) {
         // Conta sem endereço ainda: usa a cidade escolhida como visitante, se houver.
         applyRegion();
@@ -107,6 +133,14 @@ class VetsController extends GetxController {
       _tutorUf = _toUfSigla((a['state'] ?? '').toString());
       _tutorCity = (a['city'] ?? '').toString().trim();
       _tutorBairro = (a['neighborhood'] ?? '').toString().trim();
+      // Endereços antigos digitados à mão ("Rio", UF vazia/por extenso):
+      // troca pelo nome oficial do IBGE para bater com a área do profissional.
+      await MunicipiosCoords.ensureLoaded();
+      final oficial = MunicipiosCoords.canonical(_tutorUf, _tutorCity);
+      if (oficial != null) {
+        _tutorUf = oficial.$1;
+        _tutorCity = oficial.$2;
+      }
       if (_tutorCity.isNotEmpty) {
         tutorAddressLabel.value =
             _tutorBairro.isNotEmpty ? '$_tutorBairro, $_tutorCity' : _tutorCity;
@@ -500,6 +534,7 @@ class VetsController extends GetxController {
   void onClose() {
     _vetsSub?.cancel();
     _authSub?.cancel();
+    _userSub?.cancel();
     searchController.dispose();
     super.onClose();
   }

@@ -12,6 +12,16 @@ void main() {
     expect(MunicipiosCoords.ibgeOf('SP', 'Niterói'), isNull);
   });
 
+  test('reconhece nomes antigos/curtos de cidade', () {
+    expect(MunicipiosCoords.canonical('', 'Rio'), ('RJ', 'Rio de Janeiro'));
+    expect(MunicipiosCoords.canonical('RJ', 'rio'), ('RJ', 'Rio de Janeiro'));
+    expect(MunicipiosCoords.canonical('rj', 'niteroi'), ('RJ', 'Niterói'));
+    expect(MunicipiosCoords.canonical('Rio de Janeiro', 'Maricá'), ('RJ', 'Maricá'));
+    expect(MunicipiosCoords.canonical('', 'Rio de Janeiro/RJ'), ('RJ', 'Rio de Janeiro'));
+    // nome repetido em vários estados sem UF: não arrisca
+    expect(MunicipiosCoords.canonical('', 'Bom Jesus'), isNull);
+  });
+
   test('Rio–Niterói dentro do raio, Rio–São Paulo fora', () {
     final rioNit = MunicipiosCoords.distanceKm('3304557', '3303302')!;
     final rioSp = MunicipiosCoords.distanceKm('3304557', '3550308')!;

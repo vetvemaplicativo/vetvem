@@ -47,6 +47,47 @@ class MunicipiosCoords {
   static String? ibgeOf(String uf, String cidade) =>
       _ibgeByName['${uf.trim().toUpperCase()}|${normalizeSearchText(cidade)}'];
 
+  // Apelidos usados em endereços antigos, digitados à mão antes da busca
+  // por CEP (ex.: "Rio" em vez de "Rio de Janeiro").
+  static const _apelidos = {
+    'rio': ('RJ', 'Rio de Janeiro'),
+    'rj': ('RJ', 'Rio de Janeiro'),
+    'rio de janeiro rj': ('RJ', 'Rio de Janeiro'),
+    'sp': ('SP', 'São Paulo'),
+    'sao paulo sp': ('SP', 'São Paulo'),
+    'sampa': ('SP', 'São Paulo'),
+    'bh': ('MG', 'Belo Horizonte'),
+    'bhz': ('MG', 'Belo Horizonte'),
+    'poa': ('RS', 'Porto Alegre'),
+    'bsb': ('DF', 'Brasília'),
+  };
+
+  /// Nome oficial da cidade (e UF) a partir do que foi digitado no endereço.
+  /// Aceita a UF vazia ou por extenso quando o nome da cidade é único no país,
+  /// e apelidos comuns. Devolve null se não der para ter certeza.
+  static (String uf, String cidade)? canonical(String uf, String cidade) {
+    final ufN = uf.trim().toUpperCase();
+    var nome = normalizeSearchText(cidade.replaceAll(RegExp(r'[/\-–,]'), ' '));
+    nome = nome.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (nome.isEmpty) return null;
+    final ap = _apelidos[nome];
+    if (ap != null && (ufN.length != 2 || ufN == ap.$1)) return ap;
+    if (ufN.length == 2) {
+      final ibge = _ibgeByName['$ufN|$nome'];
+      if (ibge != null) return (ufN, _nomeDe(ufN, ibge));
+    }
+    // UF ausente/por extenso: só aceita se o nome for único no Brasil.
+    final hits = _ibgeByName.entries.where((e) => e.key.endsWith('|$nome'));
+    if (hits.length == 1) {
+      final u = hits.first.key.split('|').first;
+      return (u, _nomeDe(u, hits.first.value));
+    }
+    return null;
+  }
+
+  static String _nomeDe(String uf, String ibge) =>
+      (_byUf[uf] ?? const []).firstWhere((m) => m.$1 == ibge, orElse: () => (ibge, '')).$2;
+
   static (double, double)? coordOfIbge(String ibge) => _byIbge[ibge];
 
   /// Distância em km entre os centros de duas cidades (Haversine).

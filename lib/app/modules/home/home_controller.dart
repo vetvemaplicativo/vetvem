@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../../data/models/appointment_model.dart';
 import '../../services/analytics_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/region_service.dart';
+import '../../services/municipios_coords.dart';
 import '../vets/vets_controller.dart';
 import 'region_picker_sheet.dart';
 import '../profile/profile_controller.dart';
@@ -43,9 +45,54 @@ class HomeController extends GetxController {
     final profile = Get.find<ProfileController>();
     userName.value = profile.userName.value;
     profile.userName.listen((v) => userName.value = v);
-    _syncCity(profile);
-    ever(profile.addresses, (_) => _syncCity(profile));
+    // Cidade: vem do próprio cadastro no Firestore, não do ProfileController
+    // (ele é recriado na troca de conta — visitante → login — e a escuta
+    // ficava presa à instância antiga: endereço novo não aparecia na Home).
+    _listenUserDoc();
+    _authSub = FirebaseAuth.instance.userChanges().listen((_) => _listenUserDoc());
     _listenNotifications();
+  }
+
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+  String? _userDocUid;
+
+  void _listenUserDoc() {
+    final u = FirebaseAuth.instance.currentUser;
+    final uid = (u == null || u.isAnonymous) ? null : u.uid;
+    if (uid == _userDocUid) return;
+    _userDocUid = uid;
+    _userDocSub?.cancel();
+    _userDocSub = null;
+    if (uid == null) {
+      userCity.value = '';
+      return;
+    }
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((doc) async {
+      final d = doc.data();
+      final addrs = List<Map<String, dynamic>>.from(d?['addresses'] ?? []);
+      if (addrs.isEmpty) {
+        userCity.value = '';
+        return;
+      }
+      final a = addrs.first;
+      final cidade = (a['city'] ?? '').toString().trim();
+      await MunicipiosCoords.ensureLoaded();
+      userCity.value =
+          MunicipiosCoords.canonical((a['state'] ?? '').toString(), cidade)?.$2 ??
+              cidade;
+    }, onError: (_) {});
+  }
+
+  @override
+  void onClose() {
+    _authSub?.cancel();
+    _userDocSub?.cancel();
+    super.onClose();
   }
 
   @override
@@ -227,11 +274,6 @@ class HomeController extends GetxController {
     if (index == 1 && isGuest && !Get.find<RegionService>().hasRegion) {
       RegionPickerSheet.show();
     }
-  }
-
-  void _syncCity(ProfileController profile) {
-    userCity.value =
-        profile.addresses.isNotEmpty ? profile.addresses.first.city : '';
   }
 
   void _listenNotifications() {
