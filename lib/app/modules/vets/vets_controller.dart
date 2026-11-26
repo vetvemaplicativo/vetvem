@@ -14,6 +14,16 @@ import '../../widgets/guest_widgets.dart';
 import '../../services/taxonomy_service.dart';
 import '../../services/municipios_coords.dart';
 
+/// Estados da Busca (mockups aprovados 26/11).
+enum BuscaEstado {
+  carregando, // vitrine ou cobertura ainda pendentes
+  semRegiao, // visitante/conta sem endereço e sem cidade escolhida
+  resultados,
+  vazioFiltro, // há profissionais na área, mas não com o serviço/texto escolhido
+  vazioCidade, // ninguém na cidade (ou bairro), mas há em até 50 km
+  vazioRegiao, // ninguém em até 50 km, mesmo sem filtro
+}
+
 class VetsController extends GetxController {
   final searchController = TextEditingController();
   final allVets = <VetModel>[].obs;
@@ -43,6 +53,21 @@ class VetsController extends GetxController {
   String _tutorUf = '';
   String _tutorCity = '';
   String _tutorBairro = '';
+  // Endereço do cadastro (true) ou cidade do seletor Estado → Cidade (false).
+  bool _fromAddress = false;
+  bool get fromAddress => _fromAddress;
+  String get tutorBairro => _tutorBairro;
+  bool get hasRegion => _tutorCity.isNotEmpty;
+  /// "Niterói – RJ" (rótulo curto da região de referência).
+  String get regionLabel =>
+      _tutorCity.isEmpty ? '' : (_tutorUf.isEmpty ? _tutorCity : '$_tutorCity – $_tutorUf');
+  /// Filtro por bairro exato ligado (conta com endereço que tem bairro).
+  bool get bairroMode =>
+      filterByArea.value && _tutorBairro.isNotEmpty && !showOtherCities.value;
+
+  final estado = BuscaEstado.carregando.obs;
+  // Com o filtro de bairro sem resultados: a cidade toda tem alguém?
+  bool cidadeTemProfissional = false;
 
   // Vem do TaxonomyService (config/specialties no Firestore, editável pelo
   // painel admin) — 'Todos' sempre na frente para o filtro "sem seleção".
@@ -133,6 +158,7 @@ class VetsController extends GetxController {
       _tutorUf = _toUfSigla((a['state'] ?? '').toString());
       _tutorCity = (a['city'] ?? '').toString().trim();
       _tutorBairro = (a['neighborhood'] ?? '').toString().trim();
+      _fromAddress = true;
       // Endereços antigos digitados à mão ("Rio", UF vazia/por extenso):
       // troca pelo nome oficial do IBGE para bater com a área do profissional.
       await MunicipiosCoords.ensureLoaded();
@@ -162,6 +188,7 @@ class VetsController extends GetxController {
   /// Aplica a cidade escolhida no seletor (visitante, ou conta sem endereço):
   /// filtra a busca por quem atende a cidade, igual a um endereço sem bairro.
   void applyRegion() {
+    _fromAddress = false;
     final r = Get.find<RegionService>();
     if (!r.hasRegion) {
       _tutorUf = '';
@@ -242,7 +269,10 @@ class VetsController extends GetxController {
   /// Texto de distância do cartão no modo "perto de você", ex.:
   /// "Atende sua cidade" ou "Atende Niterói · a ~12 km". Nulo fora do modo.
   String? nearbyLabel(VetModel v) {
-    if (!showOtherCities.value) return null;
+    if (!showOtherCities.value) {
+      if (_tutorCity.isEmpty) return null;
+      return bairroMode ? 'Atende seu bairro' : 'Atende sua cidade';
+    }
     final n = _nearby[v.id];
     if (n == null) return null;
     if (n.$1 < 1) return 'Atende sua cidade';
@@ -285,6 +315,7 @@ class VetsController extends GetxController {
   // contém profissionais aprovados e não bloqueados.
   void _loadVets() {
     isLoading.value = true;
+    estado.value = BuscaEstado.carregando;
     _vetsSub?.cancel();
     _vetsSub = FirebaseFirestore.instance
         .collection('professionals_public')
@@ -388,10 +419,41 @@ class VetsController extends GetxController {
     update();
   }
 
+  /// "Ver todos os serviços": tira o serviço e o texto, mantém região e raio.
+  void clearServiceFilter() {
+    selectedSpecialty.value = '';
+    if (searchController.text.isNotEmpty) searchController.clear();
+    _filter();
+    update();
+  }
+
+  /// Área no modo atual: raio de 50 km, bairro exato ou cidade.
+  bool _matchesArea(VetModel v, {bool cidadeInteira = false}) {
+    if (showOtherCities.value && !cidadeInteira) return _nearby.containsKey(v.id);
+    if (_tutorCity.isEmpty) return true;
+    return v.areaAtuacao?.cobreEndereco(
+          uf: _tutorUf,
+          cidade: _tutorCity,
+          bairro: filterByArea.value && !cidadeInteira ? _tutorBairro : '',
+        ) ??
+        false;
+  }
+
+  bool _coordsPending = false;
+
   void _filter() {
     final query = searchController.text.toLowerCase();
     final specialty = selectedSpecialty.value;
-    if (showOtherCities.value) _computeNearby();
+    // O cálculo de proximidade também decide os vazios (há alguém em 50 km?).
+    if (!MunicipiosCoords.isLoaded && _tutorCity.isNotEmpty && !_coordsPending) {
+      _coordsPending = true;
+      MunicipiosCoords.ensureLoaded().whenComplete(() {
+        _coordsPending = false;
+        _filter();
+        update();
+      });
+    }
+    _computeNearby();
     var result = allVets.where((v) {
       final matchesSearch = query.isEmpty ||
           v.name.toLowerCase().contains(query) ||
@@ -399,26 +461,7 @@ class VetsController extends GetxController {
       final matchesSpecialty = specialty.isEmpty ||
           v.specialty == specialty ||
           v.specialtyTags.contains(specialty);
-      // Filtro por área: com o toggle ligado, exige bater o bairro exato do
-      // tutor. Desligado, continua restrito à cidade do tutor (nunca mostra
-      // o Brasil inteiro) — só mostra todo mundo se o tutor não tiver
-      // nenhum endereço cadastrado, caso em que não há cidade pra restringir.
-      final matchesArea = showOtherCities.value
-          ? _nearby.containsKey(v.id)
-          : (filterByArea.value
-          ? (v.areaAtuacao?.cobreEndereco(
-                uf: _tutorUf,
-                cidade: _tutorCity,
-                bairro: _tutorBairro,
-              ) ??
-              false)
-          : (_tutorCity.isEmpty ||
-              (v.areaAtuacao?.cobreEndereco(
-                    uf: _tutorUf,
-                    cidade: _tutorCity,
-                  ) ??
-                  false)));
-      return matchesSearch && matchesSpecialty && matchesArea;
+      return matchesSearch && matchesSpecialty && _matchesArea(v);
     }).toList();
 
     switch (sortIndex.value) {
@@ -443,7 +486,27 @@ class VetsController extends GetxController {
     }
 
     filteredVets.assignAll(result);
+    estado.value = _estado(result);
   }
+
+  BuscaEstado _estado(List<VetModel> result) {
+    if (isLoading.value) return BuscaEstado.carregando;
+    if (_tutorCity.isEmpty) return BuscaEstado.semRegiao;
+    if (result.isNotEmpty) return BuscaEstado.resultados;
+    // Sem resultados: confirma a cobertura sem o filtro de serviço/texto.
+    if (allVets.any(_matchesArea)) return BuscaEstado.vazioFiltro;
+    cidadeTemProfissional =
+        bairroMode && allVets.any((v) => _matchesArea(v, cidadeInteira: true));
+    if (cidadeTemProfissional) return BuscaEstado.vazioCidade;
+    if (!MunicipiosCoords.isLoaded) return BuscaEstado.carregando;
+    if (!showOtherCities.value && _nearby.isNotEmpty) {
+      return BuscaEstado.vazioCidade;
+    }
+    return BuscaEstado.vazioRegiao;
+  }
+
+  /// Quantos atendem a área atual sem o filtro de serviço (para os textos).
+  int get nearbyCount => _nearby.length;
 
   void reloadVets() => _loadVets();
 

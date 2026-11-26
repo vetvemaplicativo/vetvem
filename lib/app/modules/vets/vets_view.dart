@@ -6,11 +6,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../theme/app_theme.dart';
 import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import '../../data/models/vet_model.dart';
 import '../../widgets/shimmer.dart';
+import '../../widgets/auth_widgets.dart';
 import '../home/home_controller.dart';
 import 'vets_controller.dart';
 
@@ -20,85 +20,190 @@ class VetsView extends GetView<VetsController> {
   @override
   Widget build(BuildContext context) {
     return Column(
-        children: [
-          _VetsHeader(),
-          Expanded(
-            child: ColoredBox(
-              color: Vv2Pastel.cream,
-              child: DefaultTextStyle(
-                style: Vv2.bodyLarge.copyWith(
-                  decoration: TextDecoration.none,
-                ),
-                child: Obx(() {
-              if (controller.isLoading.value) {
-                return ListView.separated(
+      children: [
+        _VetsHeader(),
+        Expanded(
+          child: ColoredBox(
+            color: Vv2Pastel.cream,
+            child: DefaultTextStyle(
+              style: Vv2.bodyLarge.copyWith(decoration: TextDecoration.none),
+              child: Obx(() {
+                final estado = controller.estado.value;
+                final vets = controller.filteredVets.toList();
+                final nearby = controller.showOtherCities.value;
+                return ListView(
                   padding: const EdgeInsets.fromLTRB(
-                      Vv2.gutter, Vv2.gutter, Vv2.gutter, 20),
-                  itemCount: 4,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (_, __) => const VetCardSkeleton(),
+                      Vv2.gutter, 16, Vv2.gutter, 32),
+                  children: [
+                    _RegionRow(c: controller),
+                    const SizedBox(height: 20),
+                    ...switch (estado) {
+                      BuscaEstado.carregando => _loading(controller),
+                      BuscaEstado.semRegiao => [_ChooseRegion(c: controller)],
+                      BuscaEstado.resultados =>
+                        _results(context, controller, vets, nearby),
+                      _ => [_EmptyState(key: ValueKey(estado), estado: estado)],
+                    },
+                  ],
                 );
-              }
-              final vets = controller.filteredVets;
-              final filterActive = controller.filterByArea.value;
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(
-                    Vv2.gutter, 0, Vv2.gutter, 20),
-                children: [
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _AreaPill(
-                        active: filterActive,
-                        label: controller.showOtherCities.value
-                            ? 'Perto de ${controller.tutorCity} · até ${VetsController.nearbyRadiusKm.round()} km'
-                            : filterActive
-                            ? 'Atendem: ${controller.tutorAddressLabel.value}'
-                            : (controller.isGuest
-                                ? 'Escolher minha cidade'
-                                : 'Atendem meu endereço'),
-                        onTap: () => controller.isGuest
-                            ? RegionPickerSheet.show()
-                            : controller.toggleAreaFilter(),
-                      ),
-                      if (vets.isNotEmpty)
-                        GetBuilder<VetsController>(
-                          builder: (c) => _SortPill(
-                            label: _sortLabel(c.sortIndex.value),
-                            onTap: () => _showSortSheet(context, c),
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (vets.isEmpty) ...[
-                    const SizedBox(height: 24),
-                    _EmptyState(filterActive: filterActive),
-                  ] else ...[
-                  const SizedBox(height: 12),
-                  Padding(
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _loading(VetsController c) => [
+        Semantics(
+          liveRegion: true,
+          child: Text('Buscando profissionais…', style: Vv2.headlineSmall),
+        ),
+        if (c.hasRegion) ...[
+          const SizedBox(height: 4),
+          Text('Resultados para ${c.regionLabel}', style: Vv2.bodyMedium),
+        ],
+        const SizedBox(height: 16),
+        const ExcludeSemantics(
+          child: Column(children: [
+            VetCardSkeleton(),
+            SizedBox(height: 14),
+            VetCardSkeleton(),
+          ]),
+        ),
+      ];
+
+  List<Widget> _results(BuildContext context, VetsController c,
+      List<VetModel> vets, bool nearby) {
+    final n = vets.length;
+    final qtd = '$n ${n == 1 ? 'profissional' : 'profissionais'}';
+    final titulo = nearby
+        ? 'Perto de você'
+        : (c.bairroMode ? 'No seu bairro' : 'Na sua cidade');
+    final sub = nearby
+        ? '$qtd a até ${VetsController.nearbyRadiusKm.round()} km de ${c.regionLabel}'
+        : '$qtd em ${c.bairroMode ? c.tutorBairro : c.tutorCity}';
+    return [
+      Row(
+        children: [
+          Expanded(child: Text(titulo, style: Vv2.headlineSmall)),
+          GetBuilder<VetsController>(
+            builder: (c) => Semantics(
+              button: true,
+              label: 'Ordenar por: ${_sortLabel(c.sortIndex.value)}',
+              excludeSemantics: true,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Vv2.rControl),
+                onTap: () => _showSortSheet(context, c),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: Vv2.tapMin),
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      '${vets.length} ${vets.length != 1 ? 'profissionais disponíveis' : 'profissional disponível'}',
-                      style: Vv2.bodyMedium,
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(_sortLabel(c.sortIndex.value),
+                          style: Vv2.t(14, 20, 700, color: Vv2.primary)),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ...vets.map((v) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: VetCard(vet: v),
-                      )),
-                  ],
-                ],
-              );
-            }),
+                ),
               ),
             ),
           ),
         ],
+      ),
+      Text(sub, style: Vv2.bodyMedium),
+      const SizedBox(height: 16),
+      ...vets.map((v) => Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: VetCard(vet: v),
+          )),
+      if (!nearby) ...[
+        const SizedBox(height: 6),
+        VvPillButton(
+          label: 'Ampliar para ${VetsController.nearbyRadiusKm.round()} km',
+          kind: VvPillKind.outlined,
+          onTap: () => _ampliar(c),
+        ),
+      ],
+    ];
+  }
+}
+
+void _ampliar(VetsController c) {
+  Get.find<AnalyticsService>()
+      .logRegionAction('see_other_cities', c.tutorUf, c.tutorCity);
+  c.showAllCities();
+}
+
+/// Região de referência sempre visível + pílula do raio quando ativo.
+class _RegionRow extends StatelessWidget {
+  final VetsController c;
+  const _RegionRow({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    final nearby = c.showOtherCities.value;
+    // Seletor Estado → Cidade para visitante e conta sem endereço; com
+    // endereço, a pílula alterna entre o bairro e a cidade toda.
+    final seletor = !c.fromAddress;
+    final label = !c.hasRegion
+        ? 'Escolher região'
+        : (c.bairroMode
+            ? '${c.tutorBairro}, ${c.regionLabel}'
+            : c.regionLabel);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _AreaPill(
+          active: true,
+          label: label,
+          chevron: seletor,
+          onTap: () =>
+              seletor ? RegionPickerSheet.show() : c.toggleAreaFilter(),
+        ),
+        if (nearby)
+          _RadiusPill(
+            label: 'Até ${VetsController.nearbyRadiusKm.round()} km',
+            onTap: c.toggleAreaFilter,
+          ),
+      ],
+    );
+  }
+}
+
+class _RadiusPill extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _RadiusPill({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: true,
+      label: '$label. Toque para voltar à sua cidade',
+      excludeSemantics: true,
+      child: Material(
+        color: Vv2.surface,
+        shape: const StadiumBorder(side: BorderSide(color: Vv2.divider)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: Vv2.tapMin),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: Vv2.t(14, 20, 700)),
+                const SizedBox(width: 8),
+                const Icon(Icons.close_rounded, size: 18, color: Vv2.onBrand),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -106,16 +211,20 @@ class VetsView extends GetView<VetsController> {
 class _AreaPill extends StatelessWidget {
   final bool active;
   final String label;
+  final bool chevron;
   final VoidCallback onTap;
   const _AreaPill(
-      {required this.active, required this.label, required this.onTap});
+      {required this.active,
+      required this.label,
+      required this.onTap,
+      this.chevron = false});
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
       selected: active,
-      label: label,
+      label: chevron ? 'Região: $label. Toque para trocar' : 'Região: $label',
       excludeSemantics: true,
       child: Material(
         color: Vv2.pressedSurface,
@@ -139,6 +248,10 @@ class _AreaPill extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Vv2.t(14, 20, 700)),
                 ),
+                if (chevron) ...[
+                  const SizedBox(width: 6),
+                  const VvIcon(VvFn.expand, size: 16, color: Vv2.onBrand),
+                ],
               ],
             ),
           ),
@@ -148,37 +261,61 @@ class _AreaPill extends StatelessWidget {
   }
 }
 
-class _SortPill extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _SortPill({required this.label, required this.onTap});
+/// Visitante (ou conta sem endereço) sem cidade: Estado → Cidade, usando o
+/// seletor existente (cidades atendidas + "Minha cidade não aparece").
+class _ChooseRegion extends StatelessWidget {
+  final VetsController c;
+  const _ChooseRegion({required this.c});
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Ordenar por: $label',
-      excludeSemantics: true,
-      child: Material(
-        color: Vv2.surface,
-        borderRadius: BorderRadius.circular(Vv2.rPill),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Vv2.rPill),
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: Vv2.tapMin),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const VvIcon(VvFn.sort, size: 20, color: Vv2.onBrand),
-                const SizedBox(width: 8),
-                Text(label, style: Vv2.t(14, 20, 700)),
-              ],
+    Widget field(String label, String hint) => Semantics(
+          button: true,
+          label: '$label: $hint',
+          excludeSemantics: true,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Vv2.rControl),
+            onTap: RegionPickerSheet.show,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: Vv2.fieldMin),
+              padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+              decoration: BoxDecoration(
+                color: Vv2.surface,
+                borderRadius: BorderRadius.circular(Vv2.rControl),
+                border: Border.all(color: Vv2.outline),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(label,
+                          style: Vv2.t(12, 16, 600, color: Vv2.textSecondary)),
+                      Text(hint, style: Vv2.titleMedium),
+                    ],
+                  ),
+                ),
+                const VvIcon(VvFn.expand, size: 20, color: Vv2.onBrand),
+              ]),
             ),
           ),
-        ),
-      ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Onde você quer atendimento?', style: Vv2.headlineSmall),
+        const SizedBox(height: 8),
+        Text(
+            'Escolha o estado e depois a cidade para ver quem atende na sua região.',
+            style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
+        const SizedBox(height: 24),
+        field('Estado', 'Selecione o estado'),
+        const SizedBox(height: 12),
+        field('Cidade', 'Selecione a cidade'),
+        const SizedBox(height: 20),
+        VvPillButton(label: 'Ver profissionais', onTap: RegionPickerSheet.show),
+      ],
     );
   }
 }
@@ -198,7 +335,7 @@ class _VetsHeader extends StatelessWidget {
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-                Vv2.gutter, 12, Vv2.gutter, Vv2.gutter),
+                Vv2.gutter, 12, Vv2.gutter, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -230,11 +367,14 @@ class _VetsHeader extends StatelessWidget {
                           children: [
                             Text(
                               c.selectedSpecialty.value.isEmpty
-                                  ? 'Buscar profissional'
+                                  ? 'Buscar profissionais'
                                   : c.selectedSpecialty.value,
                               style: Vv2.t(26, 32, 700),
                             ),
-                            Text('Profissionais perto de você',
+                            Text(
+                                c.selectedSpecialty.value.isEmpty
+                                    ? 'Serviços veterinários'
+                                    : 'Profissionais por serviço',
                                 style: Vv2.bodyMedium
                                     .copyWith(color: Vv2.onBrand)),
                           ],
@@ -243,12 +383,14 @@ class _VetsHeader extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Busca centralizada entre o subtítulo e os chips (ajuste do
+                // Ronald): 16 acima; abaixo 8 + 8 de folga interna dos chips.
                 const SizedBox(height: 16),
                 TextField(
                   controller: c.searchController,
                   style: Vv2.bodyLarge,
                   decoration: InputDecoration(
-                    hintText: 'Buscar por nome ou especialidade...',
+                    hintText: 'Nome ou especialidade',
                     hintStyle: Vv2.t(15, 20, 400, color: Vv2.textSecondary),
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(14),
@@ -265,7 +407,7 @@ class _VetsHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 GetBuilder<VetsController>(
                   builder: (c) => SizedBox(
                     height: Vv2.tapMin,
@@ -407,6 +549,7 @@ class VetCard extends GetView<VetsController> {
   @override
   Widget build(BuildContext context) {
     final price = 'R\$ ${vet.startingPrice.toStringAsFixed(0)}';
+    final etiqueta = controller.nearbyLabel(vet);
     return Semantics(
       button: true,
       child: GestureDetector(
@@ -414,10 +557,12 @@ class VetCard extends GetView<VetsController> {
         child: Opacity(
           opacity: vet.isAvailable ? 1.0 : 0.55,
           child: Container(
-            padding: const EdgeInsets.all(Vv2.gutter),
+            // Mais respiro embaixo: a etiqueta não fica colada na borda.
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
             decoration: BoxDecoration(
               color: Vv2.surface,
               borderRadius: BorderRadius.circular(Vv2.rOverlay),
+              border: Border.all(color: Vv2.pressedSurface),
               boxShadow: Vv2.cardShadow,
             ),
             child: Row(
@@ -428,26 +573,19 @@ class VetCard extends GetView<VetsController> {
                   children: [
                     _VetAvatar(vet: vet, size: 56),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBC2),
-                        borderRadius: BorderRadius.circular(Vv2.rPill),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const VvIcon(VvFn.ratingBadge,
-                              size: 14, color: Vv2.onBrand),
-                          const SizedBox(width: 3),
-                          Text('${vet.rating}', style: Vv2.t(13, 18, 700)),
-                        ],
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const VvIcon(VvFn.ratingBadge,
+                            size: 14, color: Vv2.onBrand),
+                        const SizedBox(width: 3),
+                        Text(vet.rating.toStringAsFixed(1).replaceAll('.', ','),
+                            style: Vv2.t(13, 18, 700)),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,51 +614,56 @@ class VetCard extends GetView<VetsController> {
                           ],
                         ],
                       ),
+                      const SizedBox(height: 2),
                       Text(vet.specialty,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Vv2.bodyMedium),
-                      if (controller.nearbyLabel(vet) case final perto?) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const VvIcon(VvFn.location,
-                                size: 16, color: Vv2.primary),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(perto,
-                                  style: Vv2.t(13, 18, 600,
-                                      color: Vv2.primary)),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Vv2.pressedSurface,
-                          borderRadius: BorderRadius.circular(Vv2.rCard),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                vet.hasMultipleServices
-                                    ? 'A partir de $price'
-                                    : price,
-                                style: Vv2.price),
-                            Text(
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.end,
+                        children: [
+                          Text(
+                              vet.hasMultipleServices
+                                  ? 'A partir de $price'
+                                  : price,
+                              style: Vv2.t(18, 24, 700, color: Vv2.primary)),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
                                 vet.hasMultipleServices
                                     ? 'por serviço'
                                     : 'por visita',
                                 style: Vv2.t(12, 16, 600,
                                     color: Vv2.textSecondary)),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+                      if (etiqueta != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Vv2.pressedSurface,
+                            borderRadius: BorderRadius.circular(Vv2.rPill),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const VvIcon(VvFn.location,
+                                  size: 14, color: Vv2.onPrimaryContainer),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(etiqueta,
+                                    style: Vv2.t(13, 18, 700,
+                                        color: Vv2.onPrimaryContainer)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -533,11 +676,11 @@ class VetCard extends GetView<VetsController> {
   }
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// ─── Estados vazios ───────────────────────────────────────────────────────────
 
 class _EmptyState extends StatefulWidget {
-  final bool filterActive;
-  const _EmptyState({this.filterActive = false});
+  final BuscaEstado estado;
+  const _EmptyState({super.key, required this.estado});
 
   @override
   State<_EmptyState> createState() => _EmptyStateState();
@@ -554,8 +697,8 @@ class _EmptyStateState extends State<_EmptyState> {
   @override
   void initState() {
     super.initState();
-    // Só registra quando a busca vazia é de região (não de texto digitado).
-    if (_hasRegion && widget.filterActive) {
+    // Só registra demanda quando está confirmado que não há cobertura em 50 km.
+    if (_hasRegion && widget.estado == BuscaEstado.vazioRegiao) {
       Get.find<AnalyticsService>().logSearchNoResults(_c.tutorUf, _c.tutorCity);
       _recordDemand();
     }
@@ -584,7 +727,13 @@ class _EmptyStateState extends State<_EmptyState> {
   Future<void> _join() async {
     final user = FirebaseAuth.instance.currentUser;
     final contact = user?.email ?? '';
-    if (user == null || contact.length < 5 || !_hasRegion) return;
+    if (user == null || contact.length < 5 || !_hasRegion) {
+      // Visitante sem e-mail: o WhatsApp continua disponível.
+      Get.snackbar('Entre na sua conta',
+          'Precisamos do seu e-mail para avisar quando chegarmos aí.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
     setState(() => _joining = true);
     try {
       await FirebaseFirestore.instance.collection('waitlist_regiao').add({
@@ -618,115 +767,110 @@ class _EmptyStateState extends State<_EmptyState> {
 
   @override
   Widget build(BuildContext context) {
-    // Busca vazia por texto/especialidade: mensagem simples.
-    if (!widget.filterActive || !_hasRegion) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              VvIcon(VvFn.emptySearch, size: 64, color: AppColors.textLight),
-              SizedBox(height: 16),
-              Text('Nenhum profissional encontrado',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textMedium)),
-            ],
+    final c = _c;
+    final raio = VetsController.nearbyRadiusKm.round();
+    final nearby = c.showOtherCities.value;
+    final onde = nearby ? 'em até $raio km de ${c.tutorCity}' : 'em ${c.tutorCity}';
+    final servico = c.selectedSpecialty.value;
+    final texto = c.searchController.text.trim();
+
+    late final VvFn icon;
+    late final String titulo;
+    late final String corpo;
+    final acoes = <Widget>[];
+
+    switch (widget.estado) {
+      case BuscaEstado.vazioFiltro:
+        icon = VvFn.emptySearch;
+        titulo = servico.isNotEmpty
+            ? 'Nenhum profissional de $servico $onde ainda'
+            : 'Nenhum resultado para “$texto”';
+        corpo = nearby
+            ? 'Há profissionais de outros serviços perto de você.'
+            : (c.bairroMode
+                ? 'Há profissionais de outros serviços no seu bairro.'
+                : 'Há profissionais de outros serviços na sua cidade.');
+        acoes.add(VvPillButton(
+            label: 'Ver todos os serviços', onTap: c.clearServiceFilter));
+        if (!nearby) {
+          acoes.add(VvPillButton(
+              label: 'Ampliar para $raio km',
+              kind: VvPillKind.outlined,
+              onTap: () => _ampliar(c)));
+        }
+      case BuscaEstado.vazioCidade:
+        icon = VvFn.emptyRegion;
+        if (c.cidadeTemProfissional) {
+          titulo = 'Nenhum profissional em ${c.tutorBairro} ainda';
+          corpo = 'Há profissionais que atendem outros bairros de ${c.tutorCity}.';
+          acoes.add(VvPillButton(
+              label: 'Ver toda a cidade', onTap: c.toggleAreaFilter));
+        } else {
+          titulo = 'Nenhum profissional em ${c.tutorCity} ainda';
+          corpo = 'Encontramos profissionais em até $raio km da sua cidade.';
+          acoes.add(VvPillButton(
+              label: 'Ampliar para $raio km', onTap: () => _ampliar(c)));
+        }
+      default: // vazioRegiao
+        icon = VvFn.emptyRegion;
+        titulo = 'Ainda não atendemos sua região';
+        corpo = 'Não encontramos profissionais em até $raio km de ${c.tutorCity}.';
+        acoes.add(_joined
+            ? Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Vv2.successBg,
+                  borderRadius: BorderRadius.circular(Vv2.rCard),
+                ),
+                child: Text('Pronto! Avisaremos você quando chegarmos aí.',
+                    textAlign: TextAlign.center,
+                    style: Vv2.t(14, 20, 600, color: Vv2.successFg)),
+              )
+            : VvPillButton(
+                label: 'Avise-me quando chegar',
+                loading: _joining,
+                onTap: _joining ? null : _join));
+        acoes.add(VvPillButton(
+            label: 'Falar com o VetVem no WhatsApp',
+            kind: VvPillKind.outlined,
+            onTap: _openWhatsapp));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          liveRegion: true,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            decoration: BoxDecoration(
+              color: Vv2.surface,
+              borderRadius: BorderRadius.circular(Vv2.rOverlay),
+              border: Border.all(color: Vv2.pressedSurface),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ExcludeSemantics(
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                        color: Vv2.pressedSurface, shape: BoxShape.circle),
+                    child: VvIcon(icon, size: 24, color: Vv2.onBrand),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(titulo, style: Vv2.t(20, 28, 700)),
+                const SizedBox(height: 8),
+                Text(corpo, style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
+              ],
+            ),
           ),
         ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: [
-          // Já no modo "perto de você" e mesmo assim vazio: não oferece de novo.
-          if (!_c.showOtherCities.value) ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Get.find<AnalyticsService>().logRegionAction('see_other_cities', _c.tutorUf, _c.tutorCity);
-                _c.showAllCities();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(50),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                elevation: 2,
-                shadowColor: Colors.black.withValues(alpha: 0.18),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/icone_proximos.png', width: 22, height: 22),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      'Ver profissionais perto de você (até ${VetsController.nearbyRadiusKm.round()} km)',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(height: 1.2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-          ],
-          const VvIcon(VvFn.emptyRegion, size: 56, color: AppColors.textLight),
-          const SizedBox(height: 14),
-          const Text(
-            'Estamos chegando em novas regiões.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: _joined
-                ? Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text('Pronto! Avisaremos você quando chegarmos aí.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF166534), fontSize: 13)),
-                  )
-                : ElevatedButton(
-                    onPressed: _joining ? null : _join,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      elevation: 2,
-                      shadowColor: Colors.black.withValues(alpha: 0.18),
-                    ),
-                    child: Text(_joining ? 'Enviando…' : 'Avise-me quando chegar'),
-                  ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _openWhatsapp,
-              icon: const VvIcon(VvFn.chat, size: 18, color: Vv2.primary),
-              label: const Text('Falar com o VetVem no WhatsApp'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                backgroundColor: Colors.white,
-                elevation: 2,
-                shadowColor: Colors.black.withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-        ],
-      ),
+        for (final a in acoes) ...[const SizedBox(height: 14), a],
+      ],
     );
   }
 }
