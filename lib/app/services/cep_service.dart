@@ -30,7 +30,10 @@ Future<CepResult?> lookupCep(String cep) async {
         .timeout(const Duration(seconds: 6));
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['erro'] != true) {
+      // ViaCEP responde {"erro": true} ou {"erro": "true"} (texto) para CEP
+      // inexistente; sem cidade também é "não encontrado".
+      final erro = data['erro'] == true || data['erro'].toString() == 'true';
+      if (!erro && (data['localidade'] ?? '').toString().isNotEmpty) {
         return CepResult(
           street: data['logradouro'] ?? '',
           neighborhood: data['bairro'] ?? '',

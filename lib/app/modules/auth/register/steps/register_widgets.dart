@@ -11,10 +11,8 @@ const kRegError = Color(0xFFB3261E);
 /// O erro aparece em texto logo abaixo (não depende só da cor).
 InputDecoration regDecoration(String label,
     {String? errorText, Widget? suffix, String? hint}) {
-  OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: c, width: w),
-      );
+  InputBorder b(Color c, double w) =>
+      _BoxBorder(BorderSide(color: c, width: w));
   return InputDecoration(
     labelText: label,
     hintText: hint,
@@ -28,7 +26,7 @@ InputDecoration regDecoration(String label,
     filled: true,
     fillColor: Vv2.surface,
     counterText: '',
-    contentPadding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+    contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
     suffixIcon: suffix,
     enabledBorder: b(_kFieldBorder, 1),
     focusedBorder: b(Vv2.primary, 2),
@@ -260,5 +258,44 @@ class RegScroll extends StatelessWidget {
           24 + MediaQuery.paddingOf(context).bottom),
       child: child,
     );
+  }
+}
+
+
+/// Caixa arredondada que não é "outline" para o Flutter: assim o rótulo
+/// flutua DENTRO do campo (topo), como nos mockups, sem recorte na borda.
+class _BoxBorder extends InputBorder {
+  const _BoxBorder(BorderSide side) : super(borderSide: side);
+  static const _r = BorderRadius.all(Radius.circular(14));
+
+  @override
+  bool get isOutline => false;
+
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.all(borderSide.width);
+
+  @override
+  _BoxBorder copyWith({BorderSide? borderSide}) =>
+      _BoxBorder(borderSide ?? this.borderSide);
+
+  @override
+  ShapeBorder scale(double t) => _BoxBorder(borderSide.scale(t));
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      Path()..addRRect(_r.toRRect(rect).deflate(borderSide.width));
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) =>
+      Path()..addRRect(_r.toRRect(rect));
+
+  @override
+  void paint(Canvas canvas, Rect rect,
+      {double? gapStart,
+      double gapExtent = 0.0,
+      double gapPercentage = 0.0,
+      TextDirection? textDirection}) {
+    final rr = _r.toRRect(rect).deflate(borderSide.width / 2);
+    canvas.drawRRect(rr, borderSide.toPaint());
   }
 }
