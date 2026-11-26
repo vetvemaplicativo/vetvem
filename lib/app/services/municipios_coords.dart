@@ -16,6 +16,11 @@ class MunicipiosCoords {
 
   static final Map<String, (double, double)> _byIbge = {};
   static final Map<String, String> _ibgeByName = {}; // "RJ|rio de janeiro" → ibge
+  static final Map<String, List<(String, String)>> _byUf = {}; // UF → (ibge, nome)
+
+  /// Municípios da UF em ordem alfabética (reserva quando a API do IBGE falha).
+  static List<(String, String)> municipiosDaUf(String uf) =>
+      _byUf[uf.trim().toUpperCase()] ?? const [];
   static Future<void>? _loading;
 
   static bool get isLoaded => _byIbge.isNotEmpty;
@@ -31,6 +36,10 @@ class MunicipiosCoords {
       final ibge = r[0].toString();
       _byIbge[ibge] = ((r[3] as num).toDouble(), (r[4] as num).toDouble());
       _ibgeByName['${r[1]}|${normalizeSearchText(r[2] as String)}'] = ibge;
+      _byUf.putIfAbsent(r[1] as String, () => []).add((ibge, r[2] as String));
+    }
+    for (final l in _byUf.values) {
+      l.sort((a, b) => a.$2.compareTo(b.$2));
     }
   }
 

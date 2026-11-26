@@ -53,6 +53,16 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
     Get.back(result: true);
   }
 
+  /// "Minha cidade não aparece": com o estado já escolhido na lista de
+  /// cidades atendidas, carrega logo os municípios dele (antes ficava vazio
+  /// até a pessoa trocar o estado de novo).
+  void _openOther() {
+    setState(() => _other = true);
+    if (_uf.isNotEmpty && _municipios.isEmpty && !_loadingMunicipios) {
+      _loadMunicipios(_uf);
+    }
+  }
+
   Future<void> _loadMunicipios(String uf) async {
     setState(() {
       _loadingMunicipios = true;
@@ -71,15 +81,22 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final maxH = MediaQuery.of(context).size.height * 0.85;
-    return Container(
+    // A folha (isScrollControlled) já sobe acima do teclado; antes o código
+    // somava o teclado de novo como padding e espremia tudo — campo de busca e
+    // resultados sumiam com o teclado aberto. Aqui só limitamos a altura ao
+    // espaço visível.
+    final mq = MediaQuery.of(context);
+    final teclado = mq.viewInsets.bottom;
+    final maxH = (mq.size.height - teclado - mq.padding.top) * 0.92;
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Container(
       constraints: BoxConstraints(maxHeight: maxH),
       decoration: const BoxDecoration(
         color: Vv2.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
       ),
-      padding: EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter,
-          12 + MediaQuery.of(context).viewInsets.bottom),
+      padding: const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 12),
       child: SafeArea(
         top: false,
         child: Column(
@@ -107,6 +124,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -122,7 +140,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
         );
       }
       if (coverage.isEmpty) {
-        return _OtherButton(onTap: () => setState(() => _other = true));
+        return _OtherButton(onTap: _openOther);
       }
       final ufs = coverage.keys.toList()
         ..sort((a, b) => _stateName(a).compareTo(_stateName(b)));
@@ -171,7 +189,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                       const Divider(height: 1, color: Vv2.divider),
                   ]),
                 const SizedBox(height: 4),
-                _OtherButton(onTap: () => setState(() => _other = true)),
+                _OtherButton(onTap: _openOther),
               ],
             ),
           ),
@@ -193,6 +211,8 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Com o teclado aberto o aviso sai, para sobrar espaço aos resultados.
+        if (MediaQuery.of(context).viewInsets.bottom == 0) ...[
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -206,6 +226,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
           ),
         ),
         const SizedBox(height: 12),
+        ],
         DropdownButtonFormField<String>(
           initialValue: _uf.isEmpty ? null : _uf,
           decoration: _dec('Estado'),
@@ -244,7 +265,11 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
           ),
         if (!_loadingMunicipios && _uf.isNotEmpty)
           Flexible(
-            child: ListView(
+            // Material próprio: o ListTile precisa dele para pintar o toque
+            // sobre o fundo da folha (sem isso, erro no modo de depuração).
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListView(
               shrinkWrap: true,
               children: [
                 for (final m in shown)
@@ -254,6 +279,7 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                     onTap: () => _choose(_uf, m.nome, 'fora_da_lista'),
                   ),
               ],
+            ),
             ),
           ),
         TextButton(

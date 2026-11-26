@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'municipios_coords.dart';
+
 class IbgeMunicipio {
   final String id;
   final String nome;
@@ -60,6 +62,12 @@ class IbgeService extends GetxService {
       // Sem rede: cache vencido ainda é melhor que nada.
       final stale = _readCache(uf, ignoreTtl: true);
       if (stale != null) return stale;
+      // Sem rede e sem cache: tabela de municípios embutida no app.
+      await MunicipiosCoords.ensureLoaded();
+      final local = MunicipiosCoords.municipiosDaUf(uf)
+          .map((m) => IbgeMunicipio(id: m.$1, nome: m.$2))
+          .toList();
+      if (local.isNotEmpty) return local;
       rethrow;
     }
   }
