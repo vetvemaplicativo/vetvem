@@ -6,7 +6,8 @@ import '../../data/models/vet_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
 import '../../services/public_reads_service.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
 import '../profile/profile_controller.dart';
 import '../vets/vets_controller.dart';
 import 'travel_quote.dart';
@@ -546,61 +547,75 @@ class _PayNextStepSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Vv2.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 14, 24, 24 + MediaQuery.of(context).padding.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 20),
-          Image.asset('assets/images/pagamento_celular.png', width: 96, height: 96),
-          const SizedBox(height: 16),
-          const Text('Falta só o pagamento',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-          const SizedBox(height: 10),
-          const Text(
-            'Para confirmar o agendamento, é necessário efetuar o pagamento na próxima etapa (PIX ou cartão). É o pagamento que envia o seu pedido ao veterinário.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.textMedium),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Se o veterinário não puder atender, o valor é devolvido automaticamente.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
-          ),
-          const SizedBox(height: 22),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(Vv2.gutter + 4, 12, Vv2.gutter + 4,
+            16 + MediaQuery.of(context).padding.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Vv2.brand, borderRadius: BorderRadius.circular(2)),
               ),
-              child: const Text('Ir para o pagamento',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Voltar',
-                style: TextStyle(fontSize: 15, color: AppColors.textMedium)),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                    color: Vv2.pressedSurface, shape: BoxShape.circle),
+                child: const Icon(Icons.medical_services_outlined,
+                    size: 30, color: Vv2.onPrimaryContainer),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Semantics(
+              header: true,
+              child: Text('Falta só o pagamento', style: Vv2.t(26, 32, 700)),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Para confirmar o agendamento, é necessário efetuar o pagamento na próxima etapa (PIX ou cartão). É o pagamento que envia o seu pedido ao veterinário.',
+              style: Vv2.t(16, 24, 400, color: Vv2.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1C7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                'Se o veterinário não puder atender, o valor é devolvido automaticamente.',
+                style: Vv2.t(15, 22, 600, color: const Color(0xFF6B4E00)),
+              ),
+            ),
+            const SizedBox(height: 28),
+            VvPillButton(
+              label: 'Ir para o pagamento',
+              onTap: () => Navigator.of(context).pop(true),
+            ),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(Vv2.tapMin)),
+              child: Text('Voltar',
+                  style: Vv2.t(16, 22, 700, color: Vv2.primary)),
+            ),
+          ],
+        ),
       ),
     );
   }

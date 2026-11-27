@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
 import '../profile/profile_controller.dart';
 import 'payment_controller.dart';
 
@@ -995,108 +997,177 @@ class _ApprovedView extends GetView<PaymentController> {
 
   @override
   Widget build(BuildContext context) {
+    final valor = 'R\$ ${controller.price.toStringAsFixed(2).replaceAll('.', ',')}';
+    final quando = controller.appointmentTime.isNotEmpty
+        ? '${controller.appointmentDate} às ${controller.appointmentTime}'
+        : controller.appointmentDate;
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 16),
-              Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: AppColors.success, size: 64),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Pagamento realizado!',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Aguardando confirmação do profissional.\nVocê será notificado assim que ele confirmar.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.textMedium, height: 1.5),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.schedule_rounded, size: 14, color: Color(0xFFD97706)),
-                    SizedBox(width: 6),
-                    Text(
-                      'O valor fica retido até a confirmação',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.cardShadow,
-                        blurRadius: 12,
-                        offset: const Offset(0, 4))
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _InfoRow(icon: Icons.person_outline, label: 'Veterinário', value: controller.vetName),
-                    const Divider(height: 20),
-                    if (controller.serviceName.isNotEmpty) ...[
-                      _InfoRow(icon: Icons.medical_services_outlined, label: 'Serviço', value: controller.serviceName),
-                      const Divider(height: 20),
+      backgroundColor: Vv2Pastel.cream,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(Vv2.gutter, 28, Vv2.gutter, 28),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: const BoxDecoration(
+                            color: Vv2.pressedSurface, shape: BoxShape.circle),
+                        child: const Icon(Icons.check_rounded,
+                            size: 48, color: Vv2.onPrimaryContainer),
+                      ),
+                      const SizedBox(height: 18),
+                      Semantics(
+                        header: true,
+                        child: Text('Agendamento enviado!',
+                            textAlign: TextAlign.center, style: Vv2.t(28, 34, 700)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Pagamento aprovado. Seu pedido foi enviado ao profissional.',
+                          textAlign: TextAlign.center,
+                          style: Vv2.t(16, 22, 500, color: Vv2.onBrand)),
                     ],
-                    _InfoRow(icon: Icons.pets, label: 'Pet', value: controller.petName),
-                    const Divider(height: 20),
-                    _InfoRow(icon: Icons.calendar_today, label: 'Data', value: controller.appointmentDate),
-                    const Divider(height: 20),
-                    _InfoRow(icon: Icons.access_time, label: 'Horário', value: controller.appointmentTime),
-                    const Divider(height: 20),
-                    _InfoRow(
-                      icon: Icons.attach_money,
-                      label: 'Valor pago',
-                      value: 'R\$ ${controller.price.toStringAsFixed(2).replaceAll('.', ',')}',
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: controller.goToConsultas,
-                child: const Text('Ver minhas consultas'),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter,
+                  24 + MediaQuery.paddingOf(context).bottom),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _WhiteCard(
+                    child: Column(
+                      children: const [
+                        _StepRow(done: true, title: 'Pedido enviado',
+                            text: 'O profissional recebeu a solicitação'),
+                        SizedBox(height: 14),
+                        _StepRow(done: false, title: 'Aguardando confirmação',
+                            text: 'O profissional irá aceitar ou recusar'),
+                        SizedBox(height: 14),
+                        _StepRow(done: false, title: 'Você será notificado',
+                            text: 'Receberá um aviso quando ele confirmar'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1C7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'O valor fica retido até a confirmação. Se o profissional não puder atender, ele é devolvido automaticamente.',
+                      style: Vv2.t(15, 22, 600, color: const Color(0xFF6B4E00)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _WhiteCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SumLine('Profissional', controller.vetName),
+                        if (controller.serviceName.isNotEmpty)
+                          _SumLine('Serviço', controller.serviceName),
+                        _SumLine('Pet', controller.petName),
+                        _SumLine('Data', quando),
+                        _SumLine('Valor pago', valor, last: true),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  VvPillButton(label: 'Ir para início', onTap: controller.goToHome),
+                  const SizedBox(height: 12),
+                  VvPillButton(
+                    label: 'Ver minhas consultas',
+                    kind: VvPillKind.outlined,
+                    onTap: controller.goToConsultas,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: controller.goToHome,
-                child: const Text('Ir para início'),
-              ),
-              const SizedBox(height: 24),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WhiteCard extends StatelessWidget {
+  final Widget child;
+  const _WhiteCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Vv2.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1E0D6)),
+        ),
+        child: child,
+      );
+}
+
+class _StepRow extends StatelessWidget {
+  final bool done;
+  final String title, text;
+  const _StepRow({required this.done, required this.title, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: done ? Vv2.successBg : const Color(0xFFFFF1C7),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(done ? Icons.check_rounded : Icons.schedule_rounded,
+              size: 22, color: done ? Vv2.successFg : const Color(0xFF6B4E00)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Vv2.t(16, 22, 700)),
+              Text(text, style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _SumLine extends StatelessWidget {
+  final String label, value;
+  final bool last;
+  const _SumLine(this.label, this.value, {this.last = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: last ? 0 : 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Vv2.t(13, 18, 500, color: Vv2.textSecondary)),
+          Text(value, style: Vv2.t(16, 22, 700)),
+        ],
       ),
     );
   }
@@ -1162,36 +1233,6 @@ class _RejectedView extends GetView<PaymentController> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(width: 12),
-        Text('$label:',
-            style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: AppColors.textDark),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _CardNumberFormatter extends TextInputFormatter {
   @override

@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../profile/profile_controller.dart';
 import 'scheduling_controller.dart';
 
@@ -41,8 +43,8 @@ class MultiPetPicker extends StatelessWidget {
               children: [
                 Expanded(
                   child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (hasCats && hasDogs) ...[
                         _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
@@ -52,27 +54,23 @@ class MultiPetPicker extends StatelessWidget {
                     ],
                   ),
                 ),
-                InkWell(
-                  onTap: shown.isEmpty ? null : c.toggleAllFiltered,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    child: Text(allShownSelected ? 'Limpar' : 'Selecionar todos',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: shown.isEmpty ? AppColors.textLight : AppColors.primary)),
-                  ),
+                TextButton(
+                  onPressed: shown.isEmpty ? null : c.toggleAllFiltered,
+                  style: TextButton.styleFrom(minimumSize: const Size(48, Vv2.tapMin)),
+                  child: Text(allShownSelected ? 'Limpar' : 'Selecionar todos',
+                      style: Vv2.t(15, 20, 700,
+                          color: shown.isEmpty ? Vv2.outline : Vv2.primary)),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final i in shown)
-                  _PetChip(
-                    name: pets[i].name,
+                  PetToggleChip(
+                    label: pets[i].name,
                     species: pets[i].species,
                     selected: c.selectedPetIndexes.contains(i),
                     onTap: () => c.togglePet(i),
@@ -107,37 +105,41 @@ class MultiPetPicker extends StatelessWidget {
             ),
           // Quantidade para quem não cadastrou os animais
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              color: Vv2.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF1E0D6)),
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Mais animais sem cadastro',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
+                      Text('Mais animais sem cadastro', style: Vv2.t(16, 22, 700)),
+                      const SizedBox(height: 2),
                       Text('Além dos marcados acima: só a quantidade, sem cadastrar cada um.',
-                          style: TextStyle(fontSize: 11, color: AppColors.textMedium)),
+                          style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: c.extraAnimals.value > 0
+                _RoundStep(
+                  icon: Icons.remove_rounded,
+                  label: 'Diminuir',
+                  onTap: c.extraAnimals.value > 0
                       ? () => c.setExtraAnimals(c.extraAnimals.value - 1)
                       : null,
-                  icon: const Icon(Icons.remove_circle_outline),
                 ),
-                Text('${c.extraAnimals.value}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                IconButton(
-                  onPressed: () => c.setExtraAnimals(c.extraAnimals.value + 1),
-                  icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                SizedBox(
+                  width: 36,
+                  child: Text('${c.extraAnimals.value}',
+                      textAlign: TextAlign.center, style: Vv2.t(18, 24, 700)),
+                ),
+                _RoundStep(
+                  icon: Icons.add_rounded,
+                  label: 'Aumentar',
+                  onTap: () => c.setExtraAnimals(c.extraAnimals.value + 1),
                 ),
               ],
             ),
@@ -155,66 +157,96 @@ class _FilterChip extends StatelessWidget {
   const _FilterChip(this.label, this.selected, this.onTap);
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: selected ? AppColors.primary : const Color(0xFFE5E7EB)),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.textMedium)),
-        ),
-      );
+  Widget build(BuildContext context) => _Pill(label: label, selected: selected, onTap: onTap);
 }
 
-class _PetChip extends StatelessWidget {
-  final String name, species;
+/// Pílula de escolha (alvo de 48): fundo claro + borda quando marcada.
+class _Pill extends StatelessWidget {
+  final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _PetChip(
-      {required this.name,
+  final Widget? leading;
+  const _Pill({required this.label, required this.selected, required this.onTap, this.leading});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? Vv2.pressedSurface : Vv2.surface,
+        shape: StadiumBorder(
+          side: BorderSide(
+              color: selected ? Vv2.primary : const Color(0xFFE8D5CA),
+              width: selected ? 1.5 : 1),
+        ),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: Vv2.tapMin, minWidth: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 6)],
+                Flexible(
+                  child: Text(label,
+                      style: Vv2.t(15, 20, selected ? 700 : 600)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pet marcável (nome + ícone da espécie). Usado na lista de animais e em
+/// "Para quais animais?" de cada serviço.
+class PetToggleChip extends StatelessWidget {
+  final String label, species;
+  final bool selected;
+  final VoidCallback onTap;
+  const PetToggleChip(
+      {super.key,
+      required this.label,
       required this.species,
       required this.selected,
       required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final emoji = species == 'cat' ? '🐱' : species == 'dog' ? '🐶' : '🐾';
-    return GestureDetector(
+    final sp = species == 'cat' ? 'Gato' : species == 'dog' ? 'Cão' : 'Pet';
+    return _Pill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-              width: selected ? 2 : 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
-            Text(name,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.primary : AppColors.textDark)),
-            if (selected) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.check_circle, size: 16, color: AppColors.primary),
-            ],
-          ],
-        ),
+      leading: VvIcon.species(species, sp, size: 22, color: Vv2.onPrimaryContainer),
+    );
+  }
+}
+
+class _RoundStep extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const _RoundStep({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: label,
+      onPressed: onTap,
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      style: IconButton.styleFrom(
+        backgroundColor: Vv2.pressedSurface,
+        disabledBackgroundColor: const Color(0xFFF3F1EF),
       ),
+      icon: Icon(icon, size: 22, color: onTap == null ? Vv2.outline : Vv2.onPrimaryContainer),
     );
   }
 }
@@ -248,24 +280,26 @@ class MultiPriceSummary extends StatelessWidget {
       }
       final tooMany = n > SchedulingController.maxAnimalsBeforeQuote;
       return Container(
+        width: double.infinity,
         margin: const EdgeInsets.only(top: 4),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
+          color: Vv2.pressedSurface.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1D3C2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final s in list)
-              Text(lineOf(s), style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+              Text(lineOf(s), style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
             if (!byKm && fixed > 0)
               Text('Deslocamento (taxa fixa por visita): ${_money(fixed)}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                  style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
             if (byKm) _TravelLine(c.travelQuote.value),
-            const SizedBox(height: 2),
+            const SizedBox(height: 6),
             Text('Total: ${_money(c.totalPrice)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                style: Vv2.t(20, 26, 700, color: Vv2.onPrimaryContainer)),
             if (tooMany) ...[
               const SizedBox(height: 10),
               Text(
@@ -306,19 +340,18 @@ class ServiceInstructionsNotice extends StatelessWidget {
       return Container(
         width: double.infinity,
         margin: const EdgeInsets.only(top: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF3C7),
-          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFFFFF1C7),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('⚠️ Orientação do veterinário para este serviço',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFB45309))),
+            Text('Orientação do veterinário',
+                style: Vv2.t(15, 20, 700, color: const Color(0xFF6B4E00))),
             const SizedBox(height: 4),
-            Text(text,
-                style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFB45309))),
+            Text(text, style: Vv2.t(15, 22, 400, color: const Color(0xFF6B4E00))),
           ],
         ),
       );
@@ -333,9 +366,9 @@ class _TravelLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const base = TextStyle(fontSize: 12, color: AppColors.textMedium);
+    final base = Vv2.t(14, 20, 400, color: Vv2.textSecondary);
     if (q.isLoading) {
-      return const Text('Deslocamento: calculando pelo seu endereço…', style: base);
+      return Text('Deslocamento: calculando pelo seu endereço…', style: base);
     }
     if (q.isOk) {
       final km = q.km.toStringAsFixed(1).replaceAll('.', ',');
@@ -345,7 +378,7 @@ class _TravelLine extends StatelessWidget {
           style: base);
     }
     if (q.state == 'idle') {
-      return const Text('Deslocamento: escolha o endereço para calcular.', style: base);
+      return Text('Deslocamento: escolha o endereço para calcular.', style: base);
     }
     return Padding(
       padding: const EdgeInsets.only(top: 2),

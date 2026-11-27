@@ -3,6 +3,10 @@ import 'multi_pet_picker.dart';
 import 'package:get/get.dart';
 import '../../data/models/vet_model.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv_icons.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
+import '../auth/register/steps/register_widgets.dart' show regDecoration;
 import '../profile/profile_controller.dart';
 import '../profile/profile_view.dart' show AddAddressSheet;
 import '../../data/models/service_area_model.dart' show normalizeSearchText;
@@ -24,297 +28,307 @@ class _SchedulingForm extends GetView<SchedulingController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text('Agendar consulta'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Pet ──────────────────────────────────────────────────
-            // Qualquer serviço aceita vários animais (o valor é multiplicado
-            // para quem não tem o cadastro "por animal").
-            const _SectionTitle('Quais animais serão atendidos?'),
-            const SizedBox(height: 12),
-            const MultiPetPicker(),
+      backgroundColor: Vv2Pastel.cream,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _Header(),
+          Expanded(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(Vv2.gutter, 20, Vv2.gutter,
+                  24 + MediaQuery.paddingOf(context).bottom),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Pet ──────────────────────────────────────────────────
+                  // Qualquer serviço aceita vários animais (o valor é multiplicado
+                  // para quem não tem o cadastro "por animal").
+                  const _SectionTitle('Quais animais serão atendidos?'),
+                  const SizedBox(height: 12),
+                  const MultiPetPicker(),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-            // ── Serviço ───────────────────────────────────────────────
-            const _SectionTitle('Quais serviços?'),
-            const SizedBox(height: 4),
-            const Text('Você pode marcar mais de um (ex.: consulta e vacina) na mesma visita.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
-            const SizedBox(height: 12),
-            _ServiceSelector(),
-            const MultiPriceSummary(),
-            const ServiceInstructionsNotice(),
+                  // ── Serviço ───────────────────────────────────────────────
+                  const _SectionTitle('Quais serviços?'),
+                  const SizedBox(height: 4),
+                  Text('Você pode marcar mais de um na mesma visita.',
+                      style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
+                  const SizedBox(height: 14),
+                  _ServiceSelector(),
+                  const MultiPriceSummary(),
+                  const ServiceInstructionsNotice(),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-            // ── Data ─────────────────────────────────────────────────
-            const _SectionTitle('Data e Horário'),
-            const SizedBox(height: 12),
-            GetBuilder<SchedulingController>(
-              builder: (c) => GestureDetector(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: c.firstSelectableDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 60)),
-                    selectableDayPredicate: c.isDayAvailable,
-                    builder: (ctx, child) => Theme(
-                      data: Theme.of(ctx).copyWith(
-                        colorScheme: const ColorScheme.light(primary: AppColors.primary),
-                      ),
-                      child: child!,
-                    ),
-                  );
-                  if (date != null) {
-                    c.selectDate(date);
-                    c.update();
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: c.selectedDate.value != null
-                          ? AppColors.primary
-                          : const Color(0xFFE5E7EB),
-                      width: c.selectedDate.value != null ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        color: c.selectedDate.value != null
-                            ? AppColors.primary
-                            : AppColors.textLight,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        c.formattedDate,
-                        style: TextStyle(
-                          color: c.selectedDate.value != null
-                              ? AppColors.textDark
-                              : AppColors.textLight,
-                          fontWeight: c.selectedDate.value != null
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(Icons.arrow_forward_ios,
-                          size: 14, color: AppColors.textLight),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            const Text(
-              'Horário',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-                color: AppColors.textDark,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Obx(() {
-              final c = controller;
-              final groups = c.timesByPeriod;
-              const icons = {
-                'Manhã': Icons.wb_sunny_outlined,
-                'Tarde': Icons.wb_cloudy_outlined,
-                'Noite': Icons.nights_stay_outlined,
-              };
-              return Column(
-                children: groups.entries.map((entry) {
-                  final period = entry.key;
-                  final times = entry.value;
-                  final isExpanded = c.expandedPeriod.value == period;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isExpanded
-                            ? AppColors.primary.withValues(alpha: 0.4)
-                            : const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        // Cabeçalho do período
-                        InkWell(
-                          onTap: () {
-                            c.togglePeriod(period);
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            child: Row(
-                              children: [
-                                Icon(icons[period],
-                                    size: 18, color: AppColors.primary),
-                                const SizedBox(width: 10),
-                                Text(
-                                  period,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: AppColors.textDark,
+                  // ── Data ─────────────────────────────────────────────────
+                  const _SectionTitle('Data e Horário'),
+                  const SizedBox(height: 12),
+                  GetBuilder<SchedulingController>(
+                    builder: (c) {
+                      final has = c.selectedDate.value != null;
+                      return Semantics(
+                        button: true,
+                        label: has ? 'Data: ${c.formattedDate}' : 'Escolher data',
+                        excludeSemantics: true,
+                        child: Material(
+                          color: Vv2.surface,
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: has ? Vv2.primary : const Color(0xFFE8D5CA),
+                              width: has ? 1.5 : 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            customBorder: const StadiumBorder(),
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: c.firstSelectableDate,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(const Duration(days: 60)),
+                                selectableDayPredicate: c.isDayAvailable,
+                                builder: (ctx, child) => Theme(
+                                  data: Theme.of(ctx).copyWith(
+                                    colorScheme: const ColorScheme.light(primary: Vv2.primary),
                                   ),
+                                  child: child!,
                                 ),
-                                const Spacer(),
-                                Text(
-                                  '${times.length} horário${times.length > 1 ? 's' : ''}',
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textMedium),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  isExpanded
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  color: AppColors.textMedium,
-                                  size: 20,
-                                ),
-                              ],
+                              );
+                              if (date != null) {
+                                c.selectDate(date);
+                                c.update();
+                              }
+                            },
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: Vv2.fieldMin),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined,
+                                      color: has ? Vv2.onPrimaryContainer : Vv2.outline, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      c.formattedDate,
+                                      style: Vv2.t(16, 22, has ? 600 : 400,
+                                          color: has ? Vv2.text : Vv2.textSecondary),
+                                    ),
+                                  ),
+                                  const VvIcon(VvFn.forward, size: 20, color: Vv2.outline),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        // Horários (visíveis ao expandir)
-                        if (isExpanded)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: times.map((t) {
-                                final selected = t == c.selectedTime.value;
-                                final booked = c.isTimeBooked(t);
-                                return GestureDetector(
-                                  onTap: () => c.selectTime(t),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 18, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: booked
-                                          ? const Color(0xFFF3F4F6)
-                                          : selected
-                                              ? AppColors.primary
-                                              : const Color(0xFFF9FAFB),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: booked
-                                            ? const Color(0xFFE5E7EB)
-                                            : selected
-                                                ? AppColors.primary
-                                                : const Color(0xFFE5E7EB),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                  Obx(() {
+                    final c = controller;
+                    final groups = c.timesByPeriod;
+                    const icons = {
+                      'Manhã': VvFn.periodMorning,
+                      'Tarde': VvFn.periodAfternoon,
+                      'Noite': VvFn.periodNight,
+                    };
+                    return Column(
+                      children: groups.entries.map((entry) {
+                        final period = entry.key;
+                        final times = entry.value;
+                        final isExpanded = c.expandedPeriod.value == period;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: Vv2.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isExpanded
+                                  ? Vv2.primary.withValues(alpha: 0.5)
+                                  : const Color(0xFFF1E0D6),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              InkWell(
+                                onTap: () => c.togglePeriod(period),
+                                child: Container(
+                                  constraints: const BoxConstraints(minHeight: Vv2.tapMin + 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      VvIcon(icons[period] ?? VvFn.periodMorning,
+                                          size: 20, color: Vv2.onPrimaryContainer),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(period, style: Vv2.t(16, 22, 700)),
                                       ),
-                                    ),
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        Text(
-                                          t,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                            color: booked
-                                                ? const Color(0xFFD1D5DB)
-                                                : selected
-                                                    ? Colors.white
-                                                    : AppColors.textDark,
+                                      Text(
+                                        '${times.length} horário${times.length > 1 ? 's' : ''}',
+                                        style: Vv2.t(14, 20, 500, color: Vv2.textSecondary),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Vv2.textSecondary,
+                                        size: 22,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (isExpanded)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: times.map((t) {
+                                      final selected = t == c.selectedTime.value;
+                                      final booked = c.isTimeBooked(t);
+                                      return Semantics(
+                                        button: true,
+                                        selected: selected,
+                                        label: booked ? '$t, ocupado' : t,
+                                        excludeSemantics: true,
+                                        child: Material(
+                                          color: booked
+                                              ? const Color(0xFFF3F1EF)
+                                              : selected
+                                                  ? Vv2.pressedSurface
+                                                  : Vv2.surface,
+                                          shape: StadiumBorder(
+                                            side: BorderSide(
+                                              color: booked
+                                                  ? Vv2.divider
+                                                  : selected
+                                                      ? Vv2.primary
+                                                      : const Color(0xFFE8D5CA),
+                                              width: selected ? 1.5 : 1,
+                                            ),
                                           ),
-                                        ),
-                                        if (booked)
-                                          Positioned.fill(
-                                            child: Center(
-                                              child: Container(
-                                                height: 1.5,
-                                                color: const Color(0xFFD1D5DB),
+                                          child: InkWell(
+                                            customBorder: const StadiumBorder(),
+                                            onTap: () => c.selectTime(t),
+                                            child: Container(
+                                              constraints: const BoxConstraints(
+                                                  minHeight: Vv2.tapMin, minWidth: 84),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                t,
+                                                style: Vv2.t(16, 22, selected ? 700 : 600,
+                                                        color: booked ? Vv2.outline : Vv2.text)
+                                                    .copyWith(
+                                                        decoration: booked
+                                                            ? TextDecoration.lineThrough
+                                                            : null),
                                               ),
                                             ),
                                           ),
-                                      ],
-                                    ),
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
-                                );
-                              }).toList(),
-                            ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              );
-            }),
+                        );
+                      }).toList(),
+                    );
+                  }),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            // ── Endereço ─────────────────────────────────────────────
-            const _SectionTitle('Endereço para atendimento'),
-            const SizedBox(height: 8),
-            const Text(
-              'O profissional vai até você — selecione onde será o atendimento.',
-              style: TextStyle(fontSize: 12, color: AppColors.textMedium),
-            ),
-            const SizedBox(height: 12),
-            _AddressSelector(),
+                  // ── Endereço ─────────────────────────────────────────────
+                  const _SectionTitle('Endereço para atendimento'),
+                  const SizedBox(height: 4),
+                  Text(
+                    'O profissional vai até você. Selecione onde será o atendimento.',
+                    style: Vv2.t(15, 22, 400, color: Vv2.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  _AddressSelector(),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            // ── Observações ──────────────────────────────────────────
-            const _SectionTitle('Observações'),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: controller.notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Ex: meu pet é assustado com barulho... (opcional)',
-                prefixIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 48),
-                  child: Icon(Icons.note_outlined, color: AppColors.textLight),
-                ),
+                  // ── Observações ──────────────────────────────────────────
+                  TextFormField(
+                    controller: controller.notesController,
+                    maxLines: 3,
+                    minLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: Vv2.bodyLarge,
+                    decoration: regDecoration('Observações',
+                        hint: 'Ex.: meu pet é assustado com barulho (opcional)'),
+                  ),
+
+                  const SizedBox(height: 24),
+                  Obx(() => VvPillButton(
+                        label: 'Confirmar agendamento',
+                        loading: controller.isLoading.value,
+                        onTap: controller.isLoading.value
+                            ? null
+                            : () => controller.confirmScheduling(),
+                      )),
+                ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 16),
-            const SizedBox(height: 20),
-            Obx(() => ElevatedButton(
-              onPressed: controller.isLoading.value ? null : () => controller.confirmScheduling(),
-              child: controller.isLoading.value
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Confirmar agendamento'),
-            )),
-            const SizedBox(height: 24),
-          ],
+/// Cabeçalho em degradê: voltar redondo + "Agendar consulta".
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Vv2.gutter, 8, Vv2.gutter, 18),
+          child: Row(
+            children: [
+              Semantics(
+                button: true,
+                label: 'Voltar',
+                excludeSemantics: true,
+                child: Material(
+                  color: Vv2.surface.withValues(alpha: 0.85),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Get.back(),
+                    child: const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                          child: VvIcon(VvFn.back, size: 22, color: Vv2.onBrand)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text('Agendar consulta', style: Vv2.t(26, 32, 700)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -331,108 +345,69 @@ class _AddressSelector extends GetView<SchedulingController> {
       final addresses = profileCtrl.addresses;
       final selected = controller.selectedAddress.value;
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ...addresses.map((addr) {
             final isSelected = selected?.street == addr.street &&
                 selected?.number == addr.number;
-            return GestureDetector(
-              onTap: () => controller.selectAddress(addr),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
-                    width: isSelected ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.12)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        addr.label == 'Casa'
-                            ? Icons.home_outlined
-                            : addr.label == 'Trabalho'
-                                ? Icons.work_outline_rounded
-                                : Icons.location_on_outlined,
-                        color: isSelected ? AppColors.primary : AppColors.textMedium,
-                        size: 20,
-                      ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Semantics(
+                button: true,
+                selected: isSelected,
+                label: '${addr.label}, ${addr.fullLine}',
+                excludeSemantics: true,
+                child: Material(
+                  color: isSelected ? const Color(0xFFFFF7F2) : Vv2.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected ? Vv2.primary : const Color(0xFFF1E0D6),
+                      width: isSelected ? 1.5 : 1,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => controller.selectAddress(addr),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+                      child: Row(
                         children: [
-                          Text(
-                            addr.label,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: isSelected ? AppColors.primary : AppColors.textDark,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(addr.label, style: Vv2.t(16, 22, 700)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  addr.fullLine,
+                                  style: Vv2.t(14, 20, 400, color: Vv2.textSecondary),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            addr.fullLine,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textMedium),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          const SizedBox(width: 8),
+                          if (isSelected)
+                            const VvIcon(VvFn.check, size: 22, color: Vv2.primary),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    if (isSelected)
-                      const Icon(Icons.check_circle_rounded,
-                          color: AppColors.primary, size: 22),
-                  ],
+                  ),
                 ),
               ),
             );
           }),
-          // Botão adicionar novo endereço
-          GestureDetector(
-            onTap: () => _showAddAddressSheet(context, profileCtrl),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_location_alt_outlined,
-                      color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Adicionar novo endereço',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
+          TextButton.icon(
+            onPressed: () => _showAddAddressSheet(context, profileCtrl),
+            style: TextButton.styleFrom(
+              foregroundColor: Vv2.primary,
+              minimumSize: const Size.fromHeight(Vv2.tapMin),
             ),
+            icon: const Icon(Icons.add_rounded, size: 22),
+            label: Text('Adicionar novo endereço',
+                style: Vv2.t(16, 22, 700, color: Vv2.primary)),
           ),
         ],
       );
@@ -459,13 +434,9 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textDark,
-      ),
+    return Semantics(
+      header: true,
+      child: Text(title, style: Vv2.t(20, 26, 700)),
     );
   }
 }
@@ -565,140 +536,109 @@ class _ServiceSelectorState extends State<_ServiceSelector> {
             ),
           ...visible.map((s) {
           final isSelected = selected.contains(s.name);
-          final card = GestureDetector(
-            onTap: () => controller.toggleService(s),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.only(bottom: isSelected && controller.animalCount > 1 ? 6 : 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Ícone de pacote ou serviço
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.12)
-                          : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      s.isPackage
-                          ? Icons.card_giftcard_outlined
-                          : Icons.medical_services_outlined,
-                      color: isSelected ? AppColors.primary : AppColors.textMedium,
-                      size: 20,
-                    ),
+          final note = Vv2.t(14, 20, 400, color: Vv2.textSecondary);
+          final card = Padding(
+            padding: EdgeInsets.only(bottom: isSelected && controller.animalCount > 1 ? 6 : 12),
+            child: Semantics(
+              button: true,
+              checked: isSelected,
+              label: '${s.name}, ${s.priceLabel}',
+              child: Material(
+                color: isSelected ? const Color(0xFFFFF7F2) : Vv2.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected ? Vv2.primary : const Color(0xFFF1E0D6),
+                    width: isSelected ? 1.5 : 1,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => controller.toggleService(s),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                s.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.textDark,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(s.name, style: Vv2.t(17, 24, 700)),
+                              if (s.isPackage) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Vv2.pressedSurface,
+                                    borderRadius: BorderRadius.circular(Vv2.rPill),
+                                  ),
+                                  child: Text('${s.packageSessions} sessões',
+                                      style: Vv2.t(13, 18, 700, color: Vv2.onPrimaryContainer)),
                                 ),
-                              ),
-                            ),
-                            if (s.isPackage)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${s.packageSessions} sessões',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
+                              ],
+                              if (s.description.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(s.description, style: note),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(s.priceLabel,
+                                  style: Vv2.t(17, 24, 700, color: Vv2.primary)),
+                              if (s.travel > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    '+ Deslocamento R\$ ${s.travel.toStringAsFixed(2).replaceAll('.', ',')} · taxa fixa por visita',
+                                    style: note,
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          s.description,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textMedium),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.priceLabel,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                              if (controller.vetChargesByKm && s.travelByKm)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    '+ Deslocamento calculado pela distância até o seu endereço',
+                                    style: note,
+                                  ),
+                                ),
+                              if (s.instructions.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text('Tem orientação do veterinário',
+                                      style: Vv2.t(14, 20, 700, color: const Color(0xFF6B4E00))),
+                                ),
+                              if (s.perAnimal)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    s.additionalPrice != null
+                                        ? 'Por animal · cada adicional R\$ ${s.additionalPrice!.toStringAsFixed(2).replaceAll('.', ',')}'
+                                        : 'Por animal · mesmo valor em cada um',
+                                    style: note,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        if (s.travel > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(
-                              '+ Deslocamento R\$ ${s.travel.toStringAsFixed(2).replaceAll('.', ',')} (taxa fixa por visita)',
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppColors.textMedium),
-                            ),
+                        const SizedBox(width: 8),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF6B3A20) : Vv2.surface,
+                            borderRadius: BorderRadius.circular(7),
+                            border: Border.all(
+                                color: isSelected ? const Color(0xFF6B3A20) : Vv2.outline,
+                                width: 1.5),
                           ),
-                        if (controller.vetChargesByKm && s.travelByKm)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 3),
-                            child: Text(
-                              '+ Deslocamento calculado pela distância até o seu endereço',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMedium),
-                            ),
-                          ),
-                        if (s.instructions.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(
-                              '⚠️ Tem orientação do veterinário (veja abaixo)',
-                              style: const TextStyle(
-                                  fontSize: 11, color: Color(0xFFB45309)),
-                            ),
-                          ),
-                        if (s.perAnimal)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(
-                              s.additionalPrice != null
-                                  ? 'Por animal · cada adicional R\$ ${s.additionalPrice!.toStringAsFixed(2).replaceAll('.', ',')}'
-                                  : 'Por animal · mesmo valor em cada um',
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppColors.textMedium),
-                            ),
-                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, size: 20, color: Colors.white)
+                              : null,
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                    color: isSelected ? AppColors.primary : AppColors.textLight,
-                    size: 22,
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -732,15 +672,15 @@ class _ServiceAnimalsPicker extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
+          color: Vv2.pressedSurface.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Para quais animais? ($k de ${c.animalCount})',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              style: Vv2.t(14, 20, 700),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -749,7 +689,7 @@ class _ServiceAnimalsPicker extends StatelessWidget {
               children: [
                 for (final i in all)
                   _AnimalToggle(
-                    emoji: pets[i].species == 'cat' ? '🐱' : pets[i].species == 'dog' ? '🐶' : '🐾',
+                    species: pets[i].species,
                     label: pets[i].name,
                     selected: mine.contains(i),
                     onTap: () => c.togglePetForService(service, i),
@@ -762,7 +702,7 @@ class _ServiceAnimalsPicker extends StatelessWidget {
                 children: [
                   const Expanded(
                     child: Text('Animais sem cadastro neste serviço',
-                        style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                        style: TextStyle(fontSize: 14, color: Vv2.textSecondary)),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
@@ -787,40 +727,14 @@ class _ServiceAnimalsPicker extends StatelessWidget {
 }
 
 class _AnimalToggle extends StatelessWidget {
-  final String emoji, label;
+  final String species, label;
   final bool selected;
   final VoidCallback onTap;
-  const _AnimalToggle({required this.emoji, required this.label, required this.selected, required this.onTap});
+  const _AnimalToggle({required this.species, required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: selected ? AppColors.primary : const Color(0xFFE5E7EB), width: selected ? 2 : 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 15)),
-            const SizedBox(width: 6),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.primary : AppColors.textMedium)),
-            const SizedBox(width: 4),
-            Icon(selected ? Icons.check_circle : Icons.circle_outlined,
-                size: 16, color: selected ? AppColors.primary : AppColors.textLight),
-          ],
-        ),
-      ),
-    );
+    return PetToggleChip(species: species, label: label, selected: selected, onTap: onTap);
   }
 }
 
