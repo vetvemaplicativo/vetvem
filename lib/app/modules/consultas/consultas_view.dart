@@ -190,7 +190,11 @@ class _ConsultaCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ConsultaPetAvatar(photo: item.petPhotoBase64, size: 52),
+                        ConsultaPetAvatar(
+                            photo: item.petPhotoBase64,
+                            petCount: item.petCount,
+                            species: item.petSpecies,
+                            size: 52),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -298,14 +302,21 @@ class _ConsultaCard extends StatelessWidget {
   }
 }
 
-/// Foto do pet (base64) ou ícone de calendário num círculo creme.
+/// Um pet: a foto (ou o ícone da espécie). Vários pets: ícone de agendamento.
 class ConsultaPetAvatar extends StatelessWidget {
   final String photo;
   final double size;
-  const ConsultaPetAvatar({super.key, required this.photo, this.size = 48});
+  final int petCount;
+  final String species;
+  const ConsultaPetAvatar(
+      {super.key, required this.photo, this.size = 48, this.petCount = 1, this.species = ''});
 
   @override
   Widget build(BuildContext context) {
+    if (petCount > 1) {
+      return Image.asset('assets/icons/vv_agendamento.png',
+          width: size, height: size, excludeFromSemantics: true);
+    }
     ImageProvider? img;
     if (photo.isNotEmpty) {
       try {
@@ -313,6 +324,7 @@ class ConsultaPetAvatar extends StatelessWidget {
             photo.contains(',') ? photo.split(',').last : photo));
       } catch (_) {}
     }
+    final label = species == 'cat' ? 'Gato' : species == 'dog' ? 'Cão' : 'Pet';
     return Container(
       width: size,
       height: size,
@@ -325,8 +337,11 @@ class ConsultaPetAvatar extends StatelessWidget {
       ),
       child: img == null
           ? Center(
-              child: VvIcon(VvFn.navConsults,
-                  size: size * 0.48, color: Vv2.onPrimaryContainer))
+              child: species.isEmpty
+                  ? VvIcon(VvFn.petFallback,
+                      size: size * 0.48, color: Vv2.onPrimaryContainer)
+                  : VvIcon.species(species, label,
+                      size: size * 0.6, color: Vv2.onPrimaryContainer))
           : null,
     );
   }

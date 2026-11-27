@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../routes/app_routes.dart';
@@ -7,6 +6,7 @@ import '../../theme/vv2/vv2_tokens.dart';
 import '../../widgets/auth_widgets.dart';
 import '../profile/profile_controller.dart';
 import 'consulta_status.dart';
+import 'consultas_view.dart' show ConsultaPetAvatar;
 import 'paid_extras_card.dart';
 import 'proposal_card.dart';
 import 'relocation_card.dart';
@@ -183,7 +183,7 @@ class ConsultaDetailView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _PetPhoto(base64Photo: item.petPhotoBase64),
+                                ConsultaPetAvatar(photo: item.petPhotoBase64, petCount: item.petCount, species: item.petSpecies, size: 48),
                                 const SizedBox(height: 8),
                                 const Text(
                                   'Pet',
@@ -922,47 +922,6 @@ class _Card extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF1E0D6)),
       ),
       child: child,
-    );
-  }
-}
-
-/// Foto do pet no cartão do detalhe (ícone de patinha se não houver foto).
-class _PetPhoto extends StatelessWidget {
-  final String base64Photo;
-  const _PetPhoto({required this.base64Photo});
-
-  @override
-  Widget build(BuildContext context) {
-    if (base64Photo.isNotEmpty) {
-      try {
-        final bytes = base64Decode(base64Photo.split(',').last);
-        return Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            image: DecorationImage(
-              image: MemoryImage(bytes),
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      } catch (_) {}
-    }
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        color: Vv2.pressedSurface,
-        shape: BoxShape.circle,
-      ),
-      child: const Center(
-        child: VvIcon(
-          VvFn.petFallback,
-          size: 24,
-          color: Vv2.onPrimaryContainer,
-        ),
-      ),
     );
   }
 }

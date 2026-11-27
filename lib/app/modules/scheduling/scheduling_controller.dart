@@ -570,14 +570,8 @@ class _PayNextStepSheet extends StatelessWidget {
             const SizedBox(height: 20),
             Align(
               alignment: Alignment.centerLeft,
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                    color: Vv2.pressedSurface, shape: BoxShape.circle),
-                child: const Icon(Icons.medical_services_outlined,
-                    size: 30, color: Vv2.onPrimaryContainer),
-              ),
+              child: Image.asset('assets/icons/vv_pagamento.png',
+                  width: 72, height: 72, excludeFromSemantics: true),
             ),
             const SizedBox(height: 16),
             Semantics(

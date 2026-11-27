@@ -1608,7 +1608,11 @@ class _ConsultationCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
             child: Row(
               children: [
-                ConsultaPetAvatar(photo: item.petPhotoBase64, size: 48),
+                ConsultaPetAvatar(
+                    photo: item.petPhotoBase64,
+                    petCount: item.petCount,
+                    species: item.petSpecies,
+                    size: 48),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

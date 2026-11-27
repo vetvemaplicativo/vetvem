@@ -74,6 +74,8 @@ class ConsultationHistory {
   final String vetId;
   final String rejectReason; // motivo do encerramento (relocation_declined, no_response...)
   final String petPhotoBase64;
+  final int petCount; // animais no pedido (1 = um só)
+  final String petSpecies;
   final String paymentStatus;
   // Sugestão de novos horários do profissional (proposalStatus = awaiting_tutor)
   final String proposalStatus;
@@ -108,6 +110,8 @@ class ConsultationHistory {
     this.vetId = '',
     this.rejectReason = '',
     this.petPhotoBase64 = '',
+    this.petCount = 1,
+    this.petSpecies = '',
     this.paymentStatus = '',
     this.proposalStatus = '',
     this.proposals = const [],
@@ -541,6 +545,8 @@ class ProfileController extends GetxController {
           vetId: (d['vetId'] ?? '').toString(),
           rejectReason: (d['rejectReason'] ?? '').toString(),
           petPhotoBase64: photo,
+          petCount: (d['petCount'] as num?)?.toInt() ?? 1,
+          petSpecies: (d['petSpecies'] ?? '').toString(),
           prontuario: d['prontuario'] != null
               ? {
                   ...(d['prontuario'] as Map<String, dynamic>),
