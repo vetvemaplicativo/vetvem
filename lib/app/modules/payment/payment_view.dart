@@ -148,6 +148,31 @@ class _Box extends StatelessWidget {
       );
 }
 
+/// Wrap que ocupa a largura toda (valor à direita; quebra para baixo a 130%).
+class _SpreadWrap extends StatelessWidget {
+  final List<Widget> children;
+  final WrapCrossAlignment crossAxisAlignment;
+  final double spacing, runSpacing;
+  const _SpreadWrap(
+      {required this.children,
+      WrapAlignment alignment = WrapAlignment.spaceBetween,
+      this.crossAxisAlignment = WrapCrossAlignment.start,
+      this.spacing = 0,
+      this.runSpacing = 0});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: crossAxisAlignment,
+          spacing: spacing,
+          runSpacing: runSpacing,
+          children: children,
+        ),
+      );
+}
+
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
@@ -186,7 +211,7 @@ class _AppointmentSummary extends GetView<PaymentController> {
             Text(linha2, style: Vv2.t(15, 20, 400, color: Vv2.textSecondary)),
           ],
           const SizedBox(height: 4),
-          Wrap(
+          _SpreadWrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.end,
             spacing: 12,
@@ -514,7 +539,7 @@ class _PixView extends GetView<PaymentController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Box(
-              child: Wrap(
+              child: _SpreadWrap(
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 12,
@@ -783,7 +808,7 @@ class _TotalLine extends GetView<PaymentController> {
       final o = controller.chosenInstallment;
       final total = o?.total ?? controller.price;
       return _Box(
-        child: Wrap(
+        child: _SpreadWrap(
           alignment: WrapAlignment.spaceBetween,
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 12,
