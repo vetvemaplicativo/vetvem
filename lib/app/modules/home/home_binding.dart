@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'home_controller.dart';
 import '../vets/vets_controller.dart';
@@ -23,8 +24,10 @@ class HomeBinding extends Bindings {
       // Já existe: aplica a aba pedida na navegação (ex.: pagamento → Consultas).
       final args = Get.arguments;
       final home = Get.find<HomeController>();
-      home.currentIndex.value =
-          (args is Map && args['tab'] is int) ? args['tab'] as int : 0;
+      final tab = (args is Map && args['tab'] is int) ? args['tab'] as int : 0;
+      // Depois do quadro: o binding roda durante o build da rota, e mudar o Rx
+      // aqui reconstruía a Home antiga no meio do build (tela vermelha).
+      WidgetsBinding.instance.addPostFrameCallback((_) => home.currentIndex.value = tab);
     }
     if (!Get.isRegistered<ProntuarioController>()) {
       Get.put<ProntuarioController>(ProntuarioController(), permanent: true);

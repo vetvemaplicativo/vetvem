@@ -39,21 +39,16 @@ class MultiPetPicker extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (pets.isNotEmpty) ...[
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (hasCats && hasDogs) ...[
-                        _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
-                        _FilterChip('Gatos', filter == 'cat', () => c.petFilter.value = 'cat'),
-                        _FilterChip('Cães', filter == 'dog', () => c.petFilter.value = 'dog'),
-                      ],
-                    ],
-                  ),
-                ),
+                if (hasCats && hasDogs) ...[
+                  _FilterChip('Todos', filter == 'all', () => c.petFilter.value = 'all'),
+                  _FilterChip('Gatos', filter == 'cat', () => c.petFilter.value = 'cat'),
+                  _FilterChip('Cães', filter == 'dog', () => c.petFilter.value = 'dog'),
+                ],
                 TextButton(
                   onPressed: shown.isEmpty ? null : c.toggleAllFiltered,
                   style: TextButton.styleFrom(minimumSize: const Size(48, Vv2.tapMin)),
@@ -186,8 +181,8 @@ class _Pill extends StatelessWidget {
           customBorder: const StadiumBorder(),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: Vv2.tapMin, minWidth: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            constraints: const BoxConstraints(minHeight: Vv2.tapMin, minWidth: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -220,8 +220,10 @@ class _SchedulingForm extends GetView<SchedulingController> {
                                               constraints: const BoxConstraints(
                                                   minHeight: Vv2.tapMin, minWidth: 84),
                                               padding: const EdgeInsets.symmetric(horizontal: 16),
-                                              alignment: Alignment.center,
-                                              child: Text(
+                                              child: Center(
+                                                widthFactor: 1,
+                                                heightFactor: 1,
+                                                child: Text(
                                                 t,
                                                 style: Vv2.t(16, 22, selected ? 700 : 600,
                                                         color: booked ? Vv2.outline : Vv2.text)
@@ -229,6 +231,7 @@ class _SchedulingForm extends GetView<SchedulingController> {
                                                         decoration: booked
                                                             ? TextDecoration.lineThrough
                                                             : null),
+                                              ),
                                               ),
                                             ),
                                           ),
