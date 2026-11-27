@@ -149,7 +149,7 @@ class AuthShell extends StatelessWidget {
 
 /// Botão em pílula: variantes degradê (principal), branco com contorno
 /// (Google) e preto (Apple). Mantém a largura no estado de carregamento.
-enum VvPillKind { primary, outlined, black }
+enum VvPillKind { primary, outlined, black, danger }
 
 class VvPillButton extends StatelessWidget {
   final String label;
@@ -171,7 +171,9 @@ class VvPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = kind == VvPillKind.black ? Colors.white : Vv2.onBrand;
+    final fg = kind == VvPillKind.black || kind == VvPillKind.danger
+        ? Colors.white
+        : Vv2.onBrand;
     final disabled = onTap == null;
     return Semantics(
       button: true,
@@ -193,7 +195,9 @@ class VvPillButton extends StatelessWidget {
                   ? Colors.white
                   : kind == VvPillKind.black
                       ? const Color(0xFF1A1A1A)
-                      : null,
+                      : kind == VvPillKind.danger
+                          ? const Color(0xFF9B2C2C)
+                          : null,
               border: kind == VvPillKind.outlined
                   ? Border.all(color: _kBorder)
                   : null,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'vv2/vv2_tokens.dart';
+
 class AppColors {
   static const primary = Color(0xFFFF6B2B);
   static const primaryDark = Color(0xFFE55A1C);
@@ -74,59 +76,94 @@ class AppTheme {
             color: AppColors.textDark,
           ),
         ),
+        // Redesign 2.0: botões em pílula, campos creme, folhas e diálogos
+        // com a fonte e os raios do Design System (ver Vv2).
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            backgroundColor: Vv2.brand,
+            foregroundColor: Vv2.onBrand,
+            disabledBackgroundColor: Vv2.brand.withValues(alpha: 0.5),
+            disabledForegroundColor: Vv2.onBrand.withValues(alpha: 0.6),
+            minimumSize: const Size(double.infinity, 56),
+            shape: const StadiumBorder(),
             elevation: 0,
-            textStyle: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            textStyle: Vv2.t(16, 22, 700),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            minimumSize: const Size(double.infinity, 52),
-            side: const BorderSide(color: AppColors.primary, width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            textStyle: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            foregroundColor: Vv2.onPrimaryContainer,
+            backgroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 56),
+            side: const BorderSide(color: Color(0xFF6E4B3E)),
+            shape: const StadiumBorder(),
+            textStyle: Vv2.t(16, 22, 700),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Vv2.primary,
+            minimumSize: const Size(48, 48),
+            textStyle: Vv2.t(14, 20, 700),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          fillColor: Vv2Pastel.cream,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            borderRadius: BorderRadius.circular(Vv2.rControl),
+            borderSide: const BorderSide(color: Vv2.pressedSurface),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            borderRadius: BorderRadius.circular(Vv2.rControl),
+            borderSide: const BorderSide(color: Vv2.pressedSurface),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderRadius: BorderRadius.circular(Vv2.rControl),
+            borderSide: const BorderSide(color: Vv2.brand, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Vv2.rControl),
             borderSide: const BorderSide(color: AppColors.error),
           ),
-          hintStyle: GoogleFonts.poppins(
-            fontSize: 14,
-            color: AppColors.textLight,
+          labelStyle: Vv2.t(14, 20, 600, color: Vv2.textSecondary),
+          floatingLabelStyle: Vv2.t(14, 20, 700, color: Vv2.primary),
+          hintStyle: Vv2.t(14, 20, 400, color: Vv2.outline),
+          prefixIconColor: Vv2.primary,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Vv2.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Vv2.rOverlay)),
+          titleTextStyle: Vv2.t(20, 28, 700),
+          contentTextStyle: Vv2.t(14, 20, 400, color: Vv2.textSecondary),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Vv2.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
           ),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : Vv2.outline),
+          trackColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Vv2.primary : Vv2.divider),
+          trackOutlineColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Vv2.primary : Vv2.outline),
+        ),
+        checkboxTheme: CheckboxThemeData(
+          fillColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Vv2.primary : null),
+        ),
+        radioTheme: RadioThemeData(
+          fillColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Vv2.primary : Vv2.outline),
         ),
         cardTheme: CardThemeData(
           color: Colors.white,

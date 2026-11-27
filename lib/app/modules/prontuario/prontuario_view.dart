@@ -5,6 +5,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/vv_header.dart';
 import '../profile/profile_controller.dart';
 import '../consultas/paid_extras_card.dart';
 import 'anexos_links.dart';
@@ -28,53 +30,24 @@ class ProntuarioView extends StatelessWidget {
         List<Map<String, dynamic>>.from(p['complementos'] ?? []);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: Column(
         children: [
-          // Header
-          Material(
-            color: AppColors.primary,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 20, 20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 20),
-                      onPressed: () => Get.back(),
-                    ),
-                    const Text('🐾', style: TextStyle(fontSize: 22)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Prontuário de ${item.petName}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins')),
-                          Text('${item.vetName} · ${item.date}',
-                              style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontFamily: 'Poppins')),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Baixar / Compartilhar PDF',
-                      icon: const Icon(Icons.picture_as_pdf_rounded,
-                          color: Colors.white, size: 22),
-                      onPressed: () => _openPdfPreview(
-                          context, item, peso, vacinas, medicamentos,
-                          observacoes, complementos),
-                    ),
-                  ],
-                ),
+          VvGradientHeader(
+            title: 'Prontuário',
+            onBack: () => Get.back(),
+            trailing: Material(
+              color: Vv2.surface,
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'Baixar / Compartilhar PDF',
+                constraints:
+                    const BoxConstraints(minWidth: 48, minHeight: 48),
+                icon: const Icon(Icons.picture_as_pdf_rounded,
+                    color: Vv2.onPrimaryContainer, size: 22),
+                onPressed: () => _openPdfPreview(
+                    context, item, peso, vacinas, medicamentos,
+                    observacoes, complementos),
               ),
             ),
           ),
@@ -82,8 +55,12 @@ class ProntuarioView extends StatelessWidget {
           // Conteúdo
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(
+                  Vv2.gutter, 20, Vv2.gutter, Vv2.gutter),
               children: [
+                Text('${item.petName} · ${item.vetName} · ${item.date}',
+                    style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
+                const SizedBox(height: 12),
                 // Banner VetVem
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -804,27 +781,28 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(Vv2.rCard),
+        border: Border.all(color: Vv2.pressedSurface),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Text(title,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: color)),
+              Icon(icon, size: 18, color: Vv2.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(title, style: Vv2.t(15, 20, 700)),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           child,
         ],
       ),

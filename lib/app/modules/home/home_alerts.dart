@@ -125,6 +125,7 @@ class _RelocationAlertState extends State<_RelocationAlert> {
     final r = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => ConfirmSheet(
         icon: Icons.undo_rounded,
         color: AppColors.error,
@@ -243,6 +244,7 @@ class _ProposalAlertState extends State<_ProposalAlert> {
     final ok = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => ConfirmSheet(
         icon: icon,
         color: color,

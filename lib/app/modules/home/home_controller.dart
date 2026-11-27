@@ -1,3 +1,5 @@
+import '../../widgets/auth_widgets.dart';
+import '../../widgets/vv_sheet.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -254,24 +256,27 @@ class HomeController extends GetxController {
       final doc = pick.first.value;
       final d = doc.data();
       await Future.delayed(const Duration(seconds: 2));
-      if (Get.isDialogOpen == true) return;
+      if (Get.isDialogOpen == true || Get.isBottomSheetOpen == true) return;
       box.write('last', DateTime.now().millisecondsSinceEpoch);
       final vet = (d['vetName'] as String?)?.trim() ?? '';
-      final go = await Get.dialog<bool>(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Como foi o atendimento?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-          content: Text(
-            vet.isEmpty
-                ? 'Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.'
-                : 'Conte como foi a consulta com $vet. Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.',
-            style: const TextStyle(fontSize: 14, height: 1.4),
-          ),
+      final go = await Get.bottomSheet<bool>(
+        VvSheet(
+          title: 'Como foi o atendimento?',
+          subtitle: vet.isEmpty
+              ? 'Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.'
+              : 'Conte como foi a consulta com $vet. Sua avaliação leva menos de um minuto e ajuda outros tutores a escolher bem.',
           actions: [
-            TextButton(onPressed: () => Get.back(result: false), child: const Text('Agora não')),
-            ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('Avaliar agora')),
+            VvPillButton(
+                label: 'Avaliar agora',
+                onTap: () => Get.back(result: true)),
+            VvPillButton(
+                label: 'Agora não',
+                kind: VvPillKind.outlined,
+                onTap: () => Get.back(result: false)),
           ],
         ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
       );
       if (go == true) {
         Get.toNamed(Routes.rating, arguments: {

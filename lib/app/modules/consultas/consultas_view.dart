@@ -1,3 +1,4 @@
+import '../../widgets/vv_sheet.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -131,35 +132,35 @@ class _ConsultaCard extends StatelessWidget {
 
   // O cancelamento pelo tutor é tratado pelo suporte (Termos 3.6): o botão
   // explica a regra e abre o e-mail já preenchido com os dados da consulta.
-  void _showCancelInfo() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Cancelar consulta'),
-        content: const Text(
+  Future<void> _showCancelInfo(BuildContext context) async {
+    final ok = await vvConfirm(
+      context,
+      title: 'Cancelar consulta',
+      message:
           'Para cancelar, fale com o nosso suporte. Cancelamentos depois do '
           'pagamento são analisados caso a caso. Se o profissional recusar, '
           'não responder ou não comparecer, o valor é devolvido.',
+      confirmLabel: 'Falar com o suporte',
+      details: [
+        VvInfoCard(
+          label: item.serviceName.isNotEmpty ? item.serviceName : item.vetName,
+          value: [
+            if (item.serviceName.isNotEmpty) item.vetName,
+            item.time.isNotEmpty ? '${item.date} às ${item.time}' : item.date,
+          ].join(' · '),
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Voltar')),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              final quando = item.time.isNotEmpty ? '${item.date} às ${item.time}' : item.date;
-              final assunto = Uri.encodeComponent('Cancelamento de consulta');
-              final corpo = Uri.encodeComponent(
-                'Olá! Gostaria de cancelar a consulta com ${item.vetName}'
-                '${item.serviceName.isNotEmpty ? ' (${item.serviceName})' : ''} '
-                'marcada para $quando.\n\nCódigo da consulta: ${item.id}',
-              );
-              await launchUrl(
-                Uri.parse('mailto:suporte@vetvem.com.br?subject=$assunto&body=$corpo'),
-              );
-            },
-            child: const Text('Falar com o suporte'),
-          ),
-        ],
-      ),
+      ],
+    );
+    if (!ok) return;
+    final quando = item.time.isNotEmpty ? '${item.date} às ${item.time}' : item.date;
+    final assunto = Uri.encodeComponent('Cancelamento de consulta');
+    final corpo = Uri.encodeComponent(
+      'Olá! Gostaria de cancelar a consulta com ${item.vetName}'
+      '${item.serviceName.isNotEmpty ? ' (${item.serviceName})' : ''} '
+      'marcada para $quando.\n\nCódigo da consulta: ${item.id}',
+    );
+    await launchUrl(
+      Uri.parse('mailto:suporte@vetvem.com.br?subject=$assunto&body=$corpo'),
     );
   }
 
@@ -239,7 +240,7 @@ class _ConsultaCard extends StatelessWidget {
               if (item.status == 'upcoming') ...[
                 const Divider(height: 1, color: Vv2.divider),
                 TextButton.icon(
-                  onPressed: _showCancelInfo,
+                  onPressed: () => _showCancelInfo(context),
                   icon: const Icon(Icons.close, size: 18),
                   label: Text('Cancelar', style: Vv2.t(15, 20, 700, color: const Color(0xFF8C1D18))),
                   style: TextButton.styleFrom(

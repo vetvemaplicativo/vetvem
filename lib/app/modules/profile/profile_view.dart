@@ -8,6 +8,8 @@ import '../../services/cep_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/vv2/vv_icons.dart';
 import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
+import '../../widgets/vv_sheet.dart';
 import '../consultas/consulta_status.dart';
 import '../consultas/consultas_view.dart' show ConsultaPetAvatar;
 
@@ -322,30 +324,38 @@ class ProfileView extends GetView<ProfileController> {
         maxChildSize: 0.95,
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            color: Vv2.surface,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)),
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 32,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Vv2.brand,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
               ),
-              const SizedBox(height: 16),
-              const Text('Histórico de consultas',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark)),
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Vv2.gutter),
+                child: Semantics(
+                  header: true,
+                  child: Text('Histórico de consultas',
+                      style: Vv2.t(22, 28, 700)),
+                ),
+              ),
               const SizedBox(height: 16),
               Expanded(
                 child: Obx(() => ListView.builder(
                       controller: scrollCtrl,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.fromLTRB(
+                          Vv2.gutter, 0, Vv2.gutter, Vv2.gutter),
                       itemCount:
                           controller.recentConsultations.length,
                       itemBuilder: (_, i) => _ConsultationCard(
@@ -361,92 +371,66 @@ class ProfileView extends GetView<ProfileController> {
 
   // ── Logout ────────────────────────────────────────────────────────
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sair da conta'),
-        content: const Text('Tem certeza que deseja sair?'),
-        actions: [
-          TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancelar')),
-          TextButton(
-            onPressed: controller.logout,
-            child: const Text('Sair',
-                style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    final ok = await vvConfirm(
+      context,
+      title: 'Sair da conta',
+      message: 'Tem certeza que deseja sair?',
+      confirmLabel: 'Sair',
+      cancelLabel: 'Cancelar',
     );
+    if (ok) controller.logout();
   }
 
   // ── Encerrar conta (LGPD / Apple 5.1.1(v)) ───────────────────────────
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Encerrar conta'),
-        content: const Text(
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    final ok = await vvConfirm(
+      context,
+      title: 'Encerrar conta',
+      message:
           'Isso vai apagar seus dados pessoais e cancelar consultas em '
           'aberto (com estorno, se já pagas). Consultas já concluídas ficam '
           'guardadas de forma anônima só pelo prazo exigido por lei fiscal. '
           'Essa ação não pode ser desfeita.\n\nTem certeza que deseja continuar?',
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _confirmDeleteAccount(context);
-            },
-            child: const Text('Continuar',
-                style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
+      confirmLabel: 'Continuar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
     );
+    if (ok && context.mounted) _confirmDeleteAccount(context);
   }
 
   // Segunda confirmação (ação destrutiva e irreversível) antes de chamar a
   // Cloud Function de verdade.
   void _confirmDeleteAccount(BuildContext context) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Tem certeza mesmo?'),
-        content: const Text(
-          'Sua conta será encerrada definitivamente e você será desconectado.',
-        ),
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => VvSheet(
+        title: 'Tem certeza mesmo?',
+        subtitle:
+            'Sua conta será encerrada definitivamente e você será desconectado.',
         actions: [
-          TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancelar')),
-          Obx(() => TextButton(
-                onPressed: controller.isDeletingAccount.value
+          Obx(() => VvPillButton(
+                label: 'Encerrar conta',
+                kind: VvPillKind.danger,
+                loading: controller.isDeletingAccount.value,
+                onTap: controller.isDeletingAccount.value
                     ? null
                     : () async {
                         final ok = await controller.deleteAccount();
-                        if (!ok && Get.isDialogOpen == true) Get.back();
+                        if (!ok && ctx.mounted) Navigator.of(ctx).pop();
                       },
-                child: controller.isDeletingAccount.value
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Encerrar conta',
-                        style: TextStyle(color: AppColors.error)),
+              )),
+          Obx(() => VvPillButton(
+                label: 'Cancelar',
+                kind: VvPillKind.outlined,
+                onTap: controller.isDeletingAccount.value
+                    ? null
+                    : () => Navigator.of(ctx).pop(),
               )),
         ],
       ),
@@ -474,60 +458,32 @@ class ProfileView extends GetView<ProfileController> {
       );
 
   void _showPhotoOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            const Text('Foto de perfil',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.camera_alt_outlined,
-                    color: AppColors.primary),
-              ),
-              title: const Text('Tirar foto'),
-              subtitle: const Text('Usar a câmera do dispositivo'),
-              onTap: () async {
-                Get.back();
-                await controller.pickAndUploadPhoto(camera: true);
-              },
-            ),
-            ListTile(
-              leading: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.primary),
-              ),
-              title: const Text('Escolher da galeria'),
-              subtitle: const Text('Selecionar uma foto existente'),
-              onTap: () async {
-                Get.back();
-                await controller.pickAndUploadPhoto(camera: false);
-              },
-            ),
-          ],
-        ),
+    showVvSheet(
+      context,
+      (_) => VvSheet(
+        title: 'Foto de perfil',
+        children: [
+          VvInfoCard(
+            leading: const Icon(Icons.camera_alt_outlined,
+                color: Vv2.primary),
+            label: 'Tirar foto',
+            value: 'Usar a câmera do dispositivo',
+            onTap: () async {
+              Get.back();
+              await controller.pickAndUploadPhoto(camera: true);
+            },
+          ),
+          VvInfoCard(
+            leading: const Icon(Icons.photo_library_outlined,
+                color: Vv2.primary),
+            label: 'Escolher da galeria',
+            value: 'Selecionar uma foto existente',
+            onTap: () async {
+              Get.back();
+              await controller.pickAndUploadPhoto(camera: false);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -656,34 +612,36 @@ class _PetCard extends StatelessWidget {
         expand: false,
         builder: (_, sc) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            color: Vv2.surface,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
           ),
           child: Column(
             children: [
-              const SizedBox(height: 12),
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
+              Container(width: 32, height: 4, decoration: BoxDecoration(color: Vv2.brand, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 18),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(children: [
-                  const Icon(Icons.event_note_rounded, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text('Consultas de ${pet.name}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                ]),
+                padding: const EdgeInsets.symmetric(horizontal: Vv2.gutter),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Semantics(
+                    header: true,
+                    child: Text('Consultas de ${pet.name}',
+                        style: Vv2.t(22, 28, 700)),
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
+              const SizedBox(height: 8),
               if (consultations.isEmpty)
                 Expanded(
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 48, color: AppColors.textLight),
+                        Icon(Icons.calendar_today_outlined, size: 48, color: Vv2.outline),
                         const SizedBox(height: 12),
-                        const Text('Nenhuma consulta concluída', style: TextStyle(color: AppColors.textMedium)),
+                        const Text('Nenhuma consulta concluída', style: TextStyle(color: Vv2.textSecondary)),
                       ],
                     ),
                   ),
@@ -697,11 +655,14 @@ class _PetCard extends StatelessWidget {
                     itemBuilder: (_, i) {
                       final item = consultations[i];
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 1,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        color: Vv2Pastel.cream,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(Vv2.rControl),
+                            side: const BorderSide(color: Vv2.pressedSurface)),
+                        elevation: 0,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(Vv2.rControl),
                           onTap: item.prontuario != null
                               ? () {
                                   Get.back();
@@ -716,13 +677,13 @@ class _PetCard extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(item.vetName,
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark)),
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Vv2.text)),
                                     const SizedBox(height: 2),
                                     Text(item.specialty,
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                                        style: const TextStyle(fontSize: 12, color: Vv2.textSecondary)),
                                     const SizedBox(height: 4),
                                     Text(item.date,
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                                        style: const TextStyle(fontSize: 12, color: Vv2.outline)),
                                   ],
                                 ),
                               ),
@@ -730,14 +691,14 @@ class _PetCard extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: Vv2.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Text('Prontuário',
-                                      style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                      style: TextStyle(fontSize: 11, color: Vv2.primary, fontWeight: FontWeight.w600)),
                                 )
                               else
-                                const Icon(Icons.lock_outline, size: 16, color: AppColors.textLight),
+                                const Icon(Icons.lock_outline, size: 16, color: Vv2.outline),
                             ]),
                           ),
                         ),
@@ -753,52 +714,29 @@ class _PetCard extends StatelessWidget {
   }
 
   void _showPetOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 20),
-            Text(pet.name,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 20),
-            _OptionTile(
-              icon: Icons.edit_outlined,
-              label: 'Editar informações',
-              onTap: () {
-                Get.back();
-                _showEditPet(context);
-              },
-            ),
-            const Divider(height: 1),
-            _OptionTile(
-              icon: Icons.delete_outline,
-              label: 'Remover pet',
-              color: AppColors.error,
-              onTap: () {
-                Get.back();
-                _confirmRemove(context);
-              },
-            ),
-          ],
-        ),
+    showVvSheet(
+      context,
+      (_) => VvSheet(
+        title: pet.name,
+        children: [
+          VvInfoCard(
+            leading: const Icon(Icons.edit_outlined, color: Vv2.primary),
+            label: 'Editar informações',
+            onTap: () {
+              Get.back();
+              _showEditPet(context);
+            },
+          ),
+          VvInfoCard(
+            leading: const Icon(Icons.delete_outline, color: _kRed),
+            label: 'Remover pet',
+            labelColor: _kRed,
+            onTap: () {
+              Get.back();
+              _confirmRemove(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -811,36 +749,23 @@ class _PetCard extends StatelessWidget {
       builder: (_) => _EditPetSheet(pet: pet, controller: controller),
     );
   }
-  void _confirmRemove(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Remover ${pet.name}'),
-        content: Text(
-            'Tem certeza que deseja remover ${pet.name} da sua conta?'),
-        actions: [
-          TextButton(
-              onPressed: () => Get.back(), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () {
-              controller.removePet(pet);
-              Get.back();
-            },
-            child: const Text('Remover',
-                style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
+  Future<void> _confirmRemove(BuildContext context) async {
+    final ok = await vvConfirm(
+      context,
+      title: 'Remover ${pet.name}',
+      message: 'Tem certeza que deseja remover ${pet.name} da sua conta?',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      destructive: true,
     );
+    if (ok) controller.removePet(pet);
   }
 }
 
 class _MiniChip extends StatelessWidget {
   final String label;
   final Color color;
-  const _MiniChip(this.label, {this.color = AppColors.textMedium});
+  const _MiniChip(this.label, {this.color = Vv2.textSecondary});
 
   @override
   Widget build(BuildContext context) {
@@ -958,10 +883,10 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: sel ? AppColors.primary : (disabled ? const Color(0xFFF3F4F6) : const Color(0xFFF9FAFB)),
+                        color: sel ? Vv2.primary : (disabled ? const Color(0xFFF3F4F6) : Vv2Pastel.cream),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: sel ? AppColors.primary : const Color(0xFFE5E7EB),
+                          color: sel ? Vv2.primary : Vv2.pressedSurface,
                         ),
                       ),
                       child: Text(
@@ -969,7 +894,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                          color: sel ? Colors.white : (disabled ? const Color(0xFFD1D5DB) : AppColors.textDark),
+                          color: sel ? Colors.white : (disabled ? const Color(0xFFD1D5DB) : Vv2.text),
                         ),
                       ),
                     ),
@@ -981,7 +906,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(backgroundColor: Vv2.primary),
               onPressed: () {
                 setState(() {
                   _birthYear = selectedYear;
@@ -1031,7 +956,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: Vv2.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(20),
                       image: hasPhoto
                           ? DecorationImage(
@@ -1053,7 +978,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                     child: Container(
                       width: 24, height: 24,
                       decoration: const BoxDecoration(
-                          color: AppColors.primary, shape: BoxShape.circle),
+                          color: Vv2.primary, shape: BoxShape.circle),
                       child: const Icon(Icons.camera_alt,
                           color: Colors.white, size: 13),
                     ),
@@ -1065,7 +990,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
           const SizedBox(height: 6),
           const Center(
             child: Text('Toque para alterar a foto',
-                style: TextStyle(fontSize: 11, color: AppColors.textLight)),
+                style: TextStyle(fontSize: 11, color: Vv2.outline)),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -1086,12 +1011,12 @@ class _EditPetSheetState extends State<_EditPetSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(color: Vv2.pressedSurface),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.cake_outlined, color: AppColors.primary, size: 20),
+                  const Icon(Icons.cake_outlined, color: Vv2.primary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -1100,7 +1025,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                           : 'Mês e ano de nascimento',
                       style: TextStyle(
                         fontSize: 14,
-                        color: _birthYear != null ? AppColors.textDark : AppColors.textLight,
+                        color: _birthYear != null ? Vv2.text : Vv2.outline,
                       ),
                     ),
                   ),
@@ -1109,19 +1034,19 @@ class _EditPetSheetState extends State<_EditPetSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: Vv2.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _calcAge(_birthYear!, _birthMonth!),
                         style: const TextStyle(
                             fontSize: 12,
-                            color: AppColors.primary,
+                            color: Vv2.primary,
                             fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
-                  const Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
+                  const Icon(Icons.chevron_right, color: Vv2.outline, size: 20),
                 ],
               ),
             ),
@@ -1286,16 +1211,16 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: sel ? AppColors.primary : (disabled ? const Color(0xFFF3F4F6) : const Color(0xFFF9FAFB)),
+                        color: sel ? Vv2.primary : (disabled ? const Color(0xFFF3F4F6) : Vv2Pastel.cream),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: sel ? AppColors.primary : const Color(0xFFE5E7EB)),
+                        border: Border.all(color: sel ? Vv2.primary : Vv2.pressedSurface),
                       ),
                       child: Text(
                         _months[i].substring(0, 3),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                          color: sel ? Colors.white : (disabled ? const Color(0xFFD1D5DB) : AppColors.textDark),
+                          color: sel ? Colors.white : (disabled ? const Color(0xFFD1D5DB) : Vv2.text),
                         ),
                       ),
                     ),
@@ -1307,7 +1232,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(backgroundColor: Vv2.primary),
               onPressed: () {
                 setState(() {
                   _birthYear = selectedYear;
@@ -1350,9 +1275,9 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                       height: 88,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: Vv2.primary.withValues(alpha: 0.08),
                         border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3),
+                            color: Vv2.primary.withValues(alpha: 0.3),
                             width: 2),
                         image: _photoBase64.isNotEmpty
                             ? DecorationImage(
@@ -1365,7 +1290,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                           ? _pickingPhoto
                               ? const CircularProgressIndicator(strokeWidth: 2)
                               : const Icon(Icons.pets,
-                                  color: AppColors.primary, size: 36)
+                                  color: Vv2.primary, size: 36)
                           : null,
                     ),
                     Positioned(
@@ -1373,7 +1298,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                       child: Container(
                         width: 26, height: 26,
                         decoration: const BoxDecoration(
-                            color: AppColors.primary, shape: BoxShape.circle),
+                            color: Vv2.primary, shape: BoxShape.circle),
                         child: const Icon(Icons.camera_alt,
                             color: Colors.white, size: 14),
                       ),
@@ -1385,7 +1310,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
             const SizedBox(height: 8),
             const Center(
               child: Text('Foto do pet (opcional)',
-                  style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                  style: TextStyle(fontSize: 12, color: Vv2.outline)),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -1395,7 +1320,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
             ),
             const SizedBox(height: 14),
             const Text('Espécie',
-                style: TextStyle(fontSize: 13, color: AppColors.textMedium)),
+                style: TextStyle(fontSize: 13, color: Vv2.textSecondary)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1414,12 +1339,12 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: _species == s.$1 ? AppColors.primary : Colors.white,
+                            color: _species == s.$1 ? Vv2.primary : Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color: _species == s.$1
-                                    ? AppColors.primary
-                                    : const Color(0xFFE5E7EB)),
+                                    ? Vv2.primary
+                                    : Vv2.pressedSurface),
                           ),
                           child: Text(s.$2,
                               textAlign: TextAlign.center,
@@ -1427,7 +1352,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                                   fontSize: 12,
                                   color: _species == s.$1
                                       ? Colors.white
-                                      : AppColors.textDark)),
+                                      : Vv2.text)),
                         ),
                       ),
                     ),
@@ -1446,12 +1371,12 @@ class _AddPetSheetState extends State<_AddPetSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  border: Border.all(color: Vv2.pressedSurface),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.cake_outlined, color: AppColors.primary, size: 20),
+                    const Icon(Icons.cake_outlined, color: Vv2.primary, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -1460,7 +1385,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                             : 'Mês e ano de nascimento',
                         style: TextStyle(
                           fontSize: 14,
-                          color: _birthYear != null ? AppColors.textDark : AppColors.textLight,
+                          color: _birthYear != null ? Vv2.text : Vv2.outline,
                         ),
                       ),
                     ),
@@ -1469,24 +1394,24 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: Vv2.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           _calcAge(_birthYear!, _birthMonth!),
                           style: const TextStyle(
-                              fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+                              fontSize: 12, color: Vv2.primary, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
-                    const Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
+                    const Icon(Icons.chevron_right, color: Vv2.outline, size: 20),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 14),
             const Text('Sexo',
-                style: TextStyle(fontSize: 13, color: AppColors.textMedium)),
+                style: TextStyle(fontSize: 13, color: Vv2.textSecondary)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1500,12 +1425,12 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: _sex == sx ? AppColors.primary : Colors.white,
+                            color: _sex == sx ? Vv2.primary : Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color: _sex == sx
-                                    ? AppColors.primary
-                                    : const Color(0xFFE5E7EB)),
+                                    ? Vv2.primary
+                                    : Vv2.pressedSurface),
                           ),
                           child: Text(sx,
                               textAlign: TextAlign.center,
@@ -1514,7 +1439,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                                   fontWeight: FontWeight.w500,
                                   color: _sex == sx
                                       ? Colors.white
-                                      : AppColors.textDark)),
+                                      : Vv2.text)),
                         ),
                       ),
                     ),
@@ -1531,11 +1456,11 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: _castrated ? AppColors.primary : Colors.white,
+                      color: _castrated ? Vv2.primary : Colors.white,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                           color: _castrated
-                              ? AppColors.primary
+                              ? Vv2.primary
                               : const Color(0xFFD1D5DB),
                           width: 2),
                     ),
@@ -1545,7 +1470,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
                   ),
                   const SizedBox(width: 10),
                   const Text('Castrado/a',
-                      style: TextStyle(fontSize: 14, color: AppColors.textDark)),
+                      style: TextStyle(fontSize: 14, color: Vv2.text)),
                 ],
               ),
             ),
@@ -1834,7 +1759,7 @@ class _SettingsList extends StatelessWidget {
                 await launchUrl(uri);
               },
             ),
-            const Divider(height: 1),
+            const SizedBox(height: 8),
             _HelpTile(
               icon: Icons.quiz_outlined,
               title: 'Perguntas frequentes',
@@ -1875,30 +1800,39 @@ class _SettingsList extends StatelessWidget {
         maxChildSize: 0.95,
         builder: (_, scroll) => Container(
           decoration: const BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            color: Vv2.surface,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Vv2.rOverlay)),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)),
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 32, height: 4,
+                  decoration: BoxDecoration(
+                      color: Vv2.brand,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Vv2.gutter),
+                child: Semantics(
+                  header: true,
+                  child: Text('Perguntas frequentes',
+                      style: Vv2.t(22, 28, 700)),
+                ),
               ),
               const SizedBox(height: 16),
-              const Text('Perguntas frequentes',
-                  style: TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w700,
-                      color: AppColors.textDark)),
-              const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
                   controller: scroll,
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(
+                      Vv2.gutter, 0, Vv2.gutter, 32),
                   itemCount: faqs.length,
-                  separatorBuilder: (context2, i2) => const SizedBox(height: 10),
+                  separatorBuilder: (context2, i2) => const SizedBox(height: 8),
                   itemBuilder: (context2, i) => _FaqItem(q: faqs[i].$1, a: faqs[i].$2),
                 ),
               ),
@@ -1910,71 +1844,21 @@ class _SettingsList extends StatelessWidget {
   }
 
   void _showPrivacy(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        builder: (_, scroll) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text('Privacidade',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                      color: AppColors.textDark)),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  controller: scroll,
-                  children: const [
-                    Text('Coleta de dados',
-                        style: TextStyle(fontWeight: FontWeight.w700,
-                            color: AppColors.textDark)),
-                    SizedBox(height: 8),
-                    Text(
-                      'Coletamos apenas os dados necessários para o funcionamento do app: nome, e-mail, telefone e localização aproximada para encontrar veterinários próximos.',
-                      style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.6),
-                    ),
-                    SizedBox(height: 16),
-                    Text('Compartilhamento',
-                        style: TextStyle(fontWeight: FontWeight.w700,
-                            color: AppColors.textDark)),
-                    SizedBox(height: 8),
-                    Text(
-                      'Seus dados são compartilhados apenas com o veterinário agendado, exclusivamente para fins do atendimento.',
-                      style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.6),
-                    ),
-                    SizedBox(height: 16),
-                    Text('Exclusão de dados',
-                        style: TextStyle(fontWeight: FontWeight.w700,
-                            color: AppColors.textDark)),
-                    SizedBox(height: 8),
-                    Text(
-                      'Você pode solicitar a exclusão da sua conta e de todos os dados a qualquer momento pelo suporte.',
-                      style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.6),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    const sections = [
+      ('Coleta de dados',
+          'Coletamos apenas os dados necessários para o funcionamento do app: nome, e-mail, telefone e localização aproximada para encontrar veterinários próximos.'),
+      ('Compartilhamento',
+          'Seus dados são compartilhados apenas com o veterinário agendado, exclusivamente para fins do atendimento.'),
+      ('Exclusão de dados',
+          'Você pode solicitar a exclusão da sua conta e de todos os dados a qualquer momento pelo suporte.'),
+    ];
+    showVvSheet(
+      context,
+      (_) => VvSheet(
+        title: 'Privacidade',
+        children: [
+          for (final (t, body) in sections) VvInfoCard(label: t, value: body),
+        ],
       ),
     );
   }
@@ -2074,26 +1958,13 @@ class AddAddressSheetState extends State<AddAddressSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(24, 12, 24, 32 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
+    return VvSheet(
+      title: 'Adicionar endereço',
+      children: [
+        Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            const Text('Adicionar endereço',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 20),
             // Label chips
             Row(children: ['Casa', 'Trabalho', 'Outro'].map((l) {
               final sel = l == _label;
@@ -2103,14 +1974,16 @@ class AddAddressSheetState extends State<AddAddressSheet> {
                   onTap: () => setState(() => _label = l),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    constraints: const BoxConstraints(minHeight: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(
-                      color: sel ? AppColors.primary : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(20),
+                      color: sel ? Vv2.primary : Vv2Pastel.cream,
+                      borderRadius: BorderRadius.circular(Vv2.rPill),
+                      border: Border.all(
+                          color: sel ? Vv2.primary : Vv2.pressedSurface),
                     ),
-                    child: Text(l, style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600,
-                        color: sel ? Colors.white : AppColors.textMedium)),
+                    child: Text(l, style: Vv2.t(14, 20, 700,
+                        color: sel ? Colors.white : Vv2.textSecondary)),
                   ),
                 ),
               );
@@ -2185,7 +2058,7 @@ class AddAddressSheetState extends State<AddAddressSheet> {
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -2213,26 +2086,13 @@ class _AddCardSheetState extends State<_AddCardSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(24, 12, 24, 32 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
+    return VvSheet(
+      title: 'Adicionar cartão',
+      children: [
+        Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            const Text('Adicionar cartão',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 20),
             _Field(ctrl: _number, label: 'Número do cartão',
                 hint: '0000 0000 0000 0000', keyboard: TextInputType.number,
                 inputFormatters: [_CardNumberFmt()]),
@@ -2241,15 +2101,22 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 hint: 'Como está no cartão',
                 textCapitalization: TextCapitalization.characters),
             const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _Field(ctrl: _expiry, label: 'Validade',
-                  hint: 'MM/AA', keyboard: TextInputType.number,
-                  inputFormatters: [_ExpiryFmt()])),
-              const SizedBox(width: 12),
-              Expanded(child: _Field(ctrl: _cvv, label: 'CVV',
-                  hint: '•••', keyboard: TextInputType.number,
-                  obscure: true)),
-            ]),
+            Flex(
+              direction: MediaQuery.textScalerOf(context).scale(10) > 12.5
+                  ? Axis.vertical
+                  : Axis.horizontal,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(fit: FlexFit.loose, child: _Field(ctrl: _expiry, label: 'Validade',
+                    hint: 'MM/AA', keyboard: TextInputType.number,
+                    inputFormatters: [_ExpiryFmt()])),
+                const SizedBox(width: 12, height: 12),
+                Flexible(fit: FlexFit.loose, child: _Field(ctrl: _cvv, label: 'CVV',
+                    hint: '•••', keyboard: TextInputType.number,
+                    obscure: true)),
+              ],
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
@@ -2287,7 +2154,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -2323,7 +2190,7 @@ class _AddressesSheet extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.textMedium, size: 20),
+                      color: Vv2.textSecondary, size: 20),
                   onPressed: () {
                     Navigator.pop(context);
                     showModalBottomSheet(
@@ -2343,7 +2210,7 @@ class _AddressesSheet extends StatelessWidget {
               ],
             ),
           )),
-          OutlinedButton.icon(
+          ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
               showModalBottomSheet(
@@ -2353,7 +2220,7 @@ class _AddressesSheet extends StatelessWidget {
                 builder: (_) => AddAddressSheet(controller: controller),
               );
             },
-            icon: const Icon(Icons.add, size: 16),
+            icon: const Icon(Icons.add, size: 20),
             label: const Text('Adicionar endereço'),
           ),
         ],
@@ -2368,33 +2235,17 @@ class _PaymentMethodsSheet extends StatelessWidget {
   final ProfileController controller;
   const _PaymentMethodsSheet({required this.controller});
 
-  void _confirmRemove(BuildContext context, SavedCard card) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Excluir cartão?',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-        content: Text(
-            '${card.brand} •••• ${card.lastFour} será removido dos seus métodos de pagamento.',
-            style: const TextStyle(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.textMedium)),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.removeCard(card);
-            },
-            child: const Text('Excluir',
-                style: TextStyle(
-                    color: AppColors.error, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+  Future<void> _confirmRemove(BuildContext context, SavedCard card) async {
+    final ok = await vvConfirm(
+      context,
+      title: 'Excluir cartão?',
+      message:
+          '${card.brand} •••• ${card.lastFour} será removido dos seus métodos de pagamento.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      destructive: true,
     );
+    if (ok) controller.removeCard(card);
   }
 
   @override
@@ -2424,7 +2275,7 @@ class _PaymentMethodsSheet extends StatelessWidget {
             ),
           )),
           if (controller.savedCards.length < ProfileController.maxCards)
-            OutlinedButton.icon(
+            ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
                 showModalBottomSheet(
@@ -2434,7 +2285,7 @@ class _PaymentMethodsSheet extends StatelessWidget {
                   builder: (_) => _AddCardSheet(controller: controller),
                 );
               },
-              icon: const Icon(Icons.add, size: 16),
+              icon: const Icon(Icons.add, size: 20),
               label: const Text('Adicionar cartão'),
             )
           else
@@ -2443,7 +2294,7 @@ class _PaymentMethodsSheet extends StatelessWidget {
               child: Text(
                 'Limite de 5 cartões atingido. Exclua um para adicionar outro.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                style: TextStyle(fontSize: 12, color: Vv2.outline),
               ),
             ),
         ],
@@ -2481,7 +2332,7 @@ class _Field extends StatelessWidget {
       children: [
         Text(label, style: const TextStyle(
             fontSize: 12, fontWeight: FontWeight.w600,
-            color: AppColors.textMedium)),
+            color: Vv2.textSecondary)),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
@@ -2499,10 +2350,10 @@ class _Field extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                borderSide: const BorderSide(color: Vv2.pressedSurface)),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                borderSide: const BorderSide(color: Vv2.pressedSurface)),
           ),
         ),
       ],
@@ -2576,10 +2427,10 @@ class _FaqItemState extends State<_FaqItem> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: Vv2Pastel.cream,
+        borderRadius: BorderRadius.circular(Vv2.rControl),
         border: Border.all(
-            color: _open ? AppColors.primary.withValues(alpha: 0.3) : const Color(0xFFE5E7EB)),
+            color: _open ? Vv2.primary.withValues(alpha: 0.4) : Vv2.pressedSurface),
       ),
       child: Column(
         children: [
@@ -2591,11 +2442,10 @@ class _FaqItemState extends State<_FaqItem> {
               child: Row(
                 children: [
                   Expanded(child: Text(widget.q,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14,
-                          color: _open ? AppColors.primary : AppColors.textDark))),
+                      style: Vv2.t(14, 20, 700,
+                          color: _open ? Vv2.primary : Vv2.text))),
                   Icon(_open ? Icons.expand_less : Icons.expand_more,
-                      color: _open ? AppColors.primary : AppColors.textLight),
+                      color: _open ? Vv2.primary : Vv2.outline),
                 ],
               ),
             ),
@@ -2604,8 +2454,8 @@ class _FaqItemState extends State<_FaqItem> {
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Text(widget.a, style: const TextStyle(
-                  fontSize: 13, color: AppColors.textMedium, height: 1.6)),
+              child: Text(widget.a,
+                  style: Vv2.t(14, 22, 400, color: Vv2.textSecondary)),
             ),
           ],
         ],
@@ -2615,33 +2465,6 @@ class _FaqItemState extends State<_FaqItem> {
 }
 
 // ─── Option Tile ──────────────────────────────────────────────────────────────
-
-class _OptionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color color;
-
-  const _OptionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color = AppColors.textDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: color, size: 22),
-      title: Text(label, style: TextStyle(color: color, fontSize: 15)),
-      onTap: onTap,
-    );
-  }
-}
-
-// ─── Bottom Sheet wrapper ─────────────────────────────────────────────────────
-
-// ─── Notifications Sheet ──────────────────────────────────────────────────────
 
 class _NotificationsSheet extends StatefulWidget {
   @override
@@ -2659,10 +2482,10 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
       children: [
         _SwitchTile('Confirmações de consulta', _consultas,
             (v) => setState(() => _consultas = v)),
-        const Divider(height: 1),
+        const SizedBox(height: 8),
         _SwitchTile('Lembretes de agendamento', _lembretes,
             (v) => setState(() => _lembretes = v)),
-        const Divider(height: 1),
+        const SizedBox(height: 8),
         _SwitchTile('Promoções e novidades', _promocoes,
             (v) => setState(() => _promocoes = v)),
         const SizedBox(height: 20),
@@ -2691,15 +2514,14 @@ class _SwitchTile extends StatelessWidget {
   const _SwitchTile(this.label, this.value, this.onChanged);
 
   @override
-  Widget build(BuildContext context) {
-    return SwitchListTile(
-      title: Text(label,
-          style: const TextStyle(fontSize: 14, color: AppColors.textDark)),
-      value: value,
-      onChanged: onChanged,
-      activeThumbColor: AppColors.primary,
-    );
-  }
+  Widget build(BuildContext context) => MergeSemantics(
+        child: VvInfoCard(
+          label: label,
+          value: value ? 'Ativado' : 'Desativado',
+          onTap: () => onChanged(!value),
+          trailing: Switch(value: value, onChanged: onChanged),
+        ),
+      );
 }
 
 class _InfoTile extends StatelessWidget {
@@ -2709,38 +2531,11 @@ class _InfoTile extends StatelessWidget {
   const _InfoTile({required this.icon, required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.textDark)),
-                const SizedBox(height: 2),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMedium)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => VvInfoCard(
+        leading: Icon(icon, color: Vv2.primary, size: 20),
+        label: label,
+        value: value,
+      );
 }
 
 class _HelpTile extends StatelessWidget {
@@ -2755,18 +2550,13 @@ class _HelpTile extends StatelessWidget {
       required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary, size: 22),
-      title: Text(title,
-          style: const TextStyle(fontSize: 14, color: AppColors.textDark)),
-      subtitle: Text(subtitle,
-          style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
-      trailing: const Icon(Icons.arrow_forward_ios,
-          size: 13, color: AppColors.textLight),
-      onTap: onTap,
-    );
-  }
+  Widget build(BuildContext context) => VvInfoCard(
+        leading: Icon(icon, color: Vv2.primary, size: 22),
+        label: title,
+        value: subtitle,
+        trailing: const Icon(Icons.chevron_right, color: Vv2.outline),
+        onTap: onTap,
+      );
 }
 
 // ─── Bottom Sheet wrapper ─────────────────────────────────────────────────────
@@ -2777,40 +2567,6 @@ class _BottomSheet extends StatelessWidget {
   const _BottomSheet({required this.title, required this.child});
 
   @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      // padding dinâmico empurra conteúdo acima do teclado
-      padding: EdgeInsets.fromLTRB(24, 12, 24, 32 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 20),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      VvSheet(title: title, children: [child]);
 }

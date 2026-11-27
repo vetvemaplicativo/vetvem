@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/auth_widgets.dart';
+import '../../theme/vv2/vv2_tokens.dart';
 import '../profile/profile_controller.dart';
 import 'proposal_card.dart';
 import 'vet_photo.dart';
@@ -106,6 +108,7 @@ class _RelocationCardState extends State<RelocationCard> {
     final r = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => ConfirmSheet(
         icon: Icons.undo_rounded,
         color: AppColors.error,
@@ -136,9 +139,9 @@ class _RelocationCardState extends State<RelocationCard> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        color: Vv2Pastel.cream,
+        borderRadius: BorderRadius.circular(Vv2.rCard),
+        border: Border.all(color: Vv2.pressedSurface),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,15 +150,15 @@ class _RelocationCardState extends State<RelocationCard> {
             children: [
               Image.asset('assets/images/troca.png', width: 34, height: 34),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text('Escolha outro profissional',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    style: Vv2.t(20, 26, 700)),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Text('$who não pôde atender a sua consulta.',
-              style: const TextStyle(fontSize: 14, height: 1.4, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              style: const TextStyle(fontSize: 14, height: 1.4, fontWeight: FontWeight.w600, color: Vv2.text)),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -163,23 +166,20 @@ class _RelocationCardState extends State<RelocationCard> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-              boxShadow: [
-                BoxShadow(color: AppColors.primary.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
+              border: Border.all(color: Vv2.pressedSurface),
             ),
             child: Column(
               children: [
                 const Text('Estes profissionais podem atender no mesmo dia e horário',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium)),
+                    style: TextStyle(fontSize: 12, height: 1.4, color: Vv2.textSecondary)),
                 const SizedBox(height: 8),
                 Text(item.date,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Vv2.text)),
                 Text('às ${item.time}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Vv2.primary)),
               ],
             ),
           ),
@@ -191,32 +191,20 @@ class _RelocationCardState extends State<RelocationCard> {
           const Text(
             'Se o valor da consulta for menor, a diferença será devolvida a você.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMedium),
+            style: TextStyle(fontSize: 12, height: 1.4, color: Vv2.textSecondary),
           ),
           const SizedBox(height: 18),
           const Divider(height: 1),
           const SizedBox(height: 14),
           const Text('Nenhum profissional serve?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Vv2.text)),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton.icon(
-              onPressed: _busy ? null : _cancel,
-              icon: const Icon(Icons.undo_rounded, size: 20),
-              label: const Text('Cancelar consulta e devolver meu pagamento',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(54),
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
+          VvPillButton(
+            label: 'Cancelar consulta e devolver meu pagamento',
+            kind: VvPillKind.danger,
+            leading: const Icon(Icons.undo_rounded, size: 20, color: Colors.white),
+            onTap: _busy ? null : _cancel,
           ),
         ],
       ),
@@ -238,11 +226,9 @@ class _OptionTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Color(0x22000000), blurRadius: 12, offset: Offset(0, 5)),
-        ],
+        color: Vv2.surface,
+        borderRadius: BorderRadius.circular(Vv2.rCard),
+        border: Border.all(color: Vv2.pressedSurface),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,10 +244,10 @@ class _OptionTile extends StatelessWidget {
                     Text('${option['vetName']}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Vv2.text)),
                     if (crmv.isNotEmpty)
                       Text('CRMV $crmv',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                          style: const TextStyle(fontSize: 12, color: Vv2.textSecondary)),
                   ],
                 ),
               ),
@@ -272,7 +258,7 @@ class _OptionTile extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.07),
+              color: Vv2Pastel.cream,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -282,30 +268,18 @@ class _OptionTile extends StatelessWidget {
                   child: Text('${option['serviceName']}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Vv2.text)),
                 ),
                 const SizedBox(width: 8),
                 Text(_brl(price),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Vv2.primary)),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: busy ? null : onChoose,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Escolher este profissional',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            ),
+          VvPillButton(
+            label: 'Escolher este profissional',
+            onTap: busy ? null : onChoose,
           ),
         ],
       ),

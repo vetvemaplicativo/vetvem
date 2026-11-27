@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../../theme/app_theme.dart';
+import '../../theme/vv2/vv2_tokens.dart';
+import '../../widgets/auth_widgets.dart';
+import '../../widgets/vv_sheet.dart';
 import '../profile/profile_controller.dart';
 
 const _amber = Color(0xFFF59E0B);
@@ -79,6 +82,7 @@ class _ProposalCardState extends State<ProposalCard> {
     final ok = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => ConfirmSheet(
         icon: icon,
         color: color,
@@ -283,7 +287,8 @@ class InstructionsCard extends StatelessWidget {
   }
 }
 
-/// Folha de confirmação que sobe de baixo (ícone, destaque e botões grandes).
+/// Folha de confirmação (padrão VvSheet): título, mensagem, destaque em
+/// cartão creme e ações em pílula.
 class ConfirmSheet extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -305,76 +310,41 @@ class ConfirmSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(24, 14, 24, 24 + MediaQuery.of(context).padding.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 32, color: color),
-          ),
-          const SizedBox(height: 16),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          Text(highlight,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
-          const SizedBox(height: 10),
-          Text(message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textMedium)),
-          const SizedBox(height: 22),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(confirmLabel,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            ),
-          ),
-          const SizedBox(height: 8),
+    final destructive = color == AppColors.error;
+    final accent = destructive ? const Color(0xFF9B2C2C) : Vv2.primary;
+    return VvSheet(
+      title: title,
+      subtitle: message,
+      actions: [
+        VvPillButton(
+          label: confirmLabel,
+          kind: destructive ? VvPillKind.danger : VvPillKind.primary,
+          onTap: () => Navigator.of(context).pop(true),
+        ),
+        VvPillButton(
+          label: 'Voltar',
+          kind: VvPillKind.outlined,
+          onTap: () => Navigator.of(context).pop(false),
+        ),
+        if (extraLabel != null)
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Voltar',
-                style: TextStyle(fontSize: 15, color: AppColors.textMedium)),
+            onPressed: () => Navigator.of(context).pop('extra'),
+            child: Text(extraLabel!,
+                textAlign: TextAlign.center,
+                style: Vv2.t(14, 20, 700,
+                    color: extraColor == null ||
+                            extraColor == AppColors.error
+                        ? const Color(0xFF9B2C2C)
+                        : extraColor!)),
           ),
-          if (extraLabel != null)
-            TextButton(
-              onPressed: () => Navigator.of(context).pop('extra'),
-              child: Text(extraLabel!,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: extraColor ?? AppColors.error)),
-            ),
-        ],
-      ),
+      ],
+      children: [
+        VvInfoCard(
+          leading: Icon(icon, color: accent, size: 22),
+          label: highlight,
+          labelColor: accent,
+        ),
+      ],
     );
   }
 }
