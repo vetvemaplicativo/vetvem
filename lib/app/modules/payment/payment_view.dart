@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../../theme/app_theme.dart';
 import '../../theme/vv2/vv2_tokens.dart';
 import '../../widgets/auth_widgets.dart';
+import '../auth/register/steps/register_widgets.dart';
 import '../profile/profile_controller.dart';
 import 'payment_controller.dart';
 
@@ -33,6 +33,133 @@ class PaymentView extends GetView<PaymentController> {
   }
 }
 
+// ─── Base visual ──────────────────────────────────────────────────────────────
+
+const _kBorder = Color(0xFFF1E0D6);
+const _kRedBg = Color(0xFFFBE3E1);
+const _kRedFg = Color(0xFF8C1D18);
+const _kAmberBg = Color(0xFFFFF1C7);
+const _kAmberFg = Color(0xFF6B4E00);
+
+/// Cabeçalho em gradiente com botão de voltar circular (padrão do Agendamento).
+class _PayHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onBack;
+  const _PayHeader({required this.title, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(gradient: Vv2.headerGradient),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter, 40),
+          child: Row(
+            children: [
+              Material(
+                color: Vv2.surface,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Voltar',
+                  onPressed: onBack,
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      size: 20, color: Vv2.onPrimaryContainer),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(title, style: Vv2.t(26, 32, 700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tela padrão do pagamento: cabeçalho + conteúdo que sobe sobre o gradiente.
+class _PayScaffold extends StatelessWidget {
+  final String title;
+  final VoidCallback onBack;
+  final Widget child;
+  /// true: o voltar do sistema volta para a escolha do método (Pix/cartão).
+  final bool interceptBack;
+  const _PayScaffold(
+      {required this.title, required this.onBack, required this.child, this.interceptBack = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !interceptBack,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) onBack();
+      },
+      child: Scaffold(
+        backgroundColor: Vv2Pastel.cream,
+        body: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PayHeader(title: title, onBack: onBack),
+              Transform.translate(
+                offset: const Offset(0, -24),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(Vv2.gutter, 0, Vv2.gutter,
+                      8 + MediaQuery.paddingOf(context).bottom),
+                  child: child,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Box extends StatelessWidget {
+  final Widget child;
+  final Color color;
+  final Color border;
+  final EdgeInsets padding;
+  const _Box(
+      {required this.child,
+      this.color = Vv2.surface,
+      this.border = _kBorder,
+      this.padding = const EdgeInsets.all(16)});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: padding,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border),
+        ),
+        child: child,
+      );
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 20, bottom: 10),
+        child: Semantics(
+            header: true, child: Text(text, style: Vv2.t(18, 24, 700))),
+      );
+}
+
 // ─── Resumo do agendamento ────────────────────────────────────────────────────
 
 class _AppointmentSummary extends GetView<PaymentController> {
@@ -40,60 +167,35 @@ class _AppointmentSummary extends GetView<PaymentController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
+    final quando = controller.appointmentTime.isNotEmpty
+        ? '${controller.appointmentDate} · ${controller.appointmentTime}'
+        : controller.appointmentDate;
+    final linha2 = [
+      if (controller.serviceName.isNotEmpty) controller.serviceName,
+      if (controller.petName.isNotEmpty) controller.petName,
+    ].join(' · ');
+    return _Box(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.pets, color: AppColors.primary, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  controller.vetName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                if (controller.serviceName.isNotEmpty)
-                  Text(
-                    controller.serviceName,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                Text(
-                  '${controller.petName} · ${controller.appointmentDate} às ${controller.appointmentTime}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            'R\$ ${controller.price.toStringAsFixed(2).replaceAll('.', ',')}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: AppColors.primary,
-            ),
+          Text('Resumo do agendamento', style: Vv2.t(18, 24, 700)),
+          const SizedBox(height: 8),
+          Text(controller.vetName, style: Vv2.t(16, 22, 700)),
+          if (linha2.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(linha2, style: Vv2.t(15, 20, 400, color: Vv2.textSecondary)),
+          ],
+          const SizedBox(height: 4),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              Text(quando, style: Vv2.t(15, 20, 400, color: Vv2.textSecondary)),
+              Text(_brl(controller.price),
+                  style: Vv2.t(20, 26, 700, color: Vv2.onPrimaryContainer)),
+            ],
           ),
         ],
       ),
@@ -108,71 +210,41 @@ class _MethodSelectView extends GetView<PaymentController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Pagamento'),
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _AppointmentSummary(),
-            const SizedBox(height: 28),
-
-            // ── PIX ──────────────────────────────────────────────────
-            const Text('Pix', style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: AppColors.textMedium)),
-            const SizedBox(height: 8),
-            _MethodCard(
-              icon: Icons.pix_outlined,
-              title: 'Pagar com Pix',
-              subtitle: 'Aprovação imediata',
-              badge: 'Recomendado',
-              onTap: controller.selectPix,
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Cartão de crédito ────────────────────────────────────
-            const Text('Cartão de crédito', style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: AppColors.textMedium)),
-            const SizedBox(height: 8),
-            _SavedCardsSection(),
-
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.lock_outline, color: AppColors.success, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Pagamento seguro. Seus dados são criptografados e protegidos.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMedium),
-                    ),
+    return _PayScaffold(
+      title: 'Pagamento',
+      onBack: Get.back,
+      interceptBack: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _AppointmentSummary(),
+          const _SectionTitle('Pix'),
+          _MethodCard(
+            title: 'Pagar com Pix',
+            subtitle: 'Aprovação imediata',
+            badge: 'Recomendado',
+            onTap: controller.selectPix,
+          ),
+          const _SectionTitle('Cartão de crédito'),
+          _SavedCardsSection(),
+          const SizedBox(height: 20),
+          _Box(
+            color: Vv2.successBg,
+            border: Vv2.successBg,
+            child: Row(
+              children: [
+                const Icon(Icons.lock_outline_rounded, size: 22, color: Vv2.successFg),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Pagamento seguro. Seus dados são criptografados e protegidos.',
+                    style: Vv2.t(15, 22, 500, color: Vv2.successFg),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -183,72 +255,70 @@ class _MethodSelectView extends GetView<PaymentController> {
 class _SavedCardsSection extends GetView<PaymentController> {
   void _showCvvSheet(BuildContext context, SavedCard card) {
     final cvvCtrl = TextEditingController();
+    final erro = RxnString();
     controller.loadInstallments(paymentMethodId: card.paymentMethodId);
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.fromLTRB(
-            24, 20, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Vv2.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('${card.brand} •••• ${card.lastFour}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                    fontFamily: 'Poppins')),
-            const SizedBox(height: 4),
-            const Text('Digite o código de segurança para confirmar',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMedium,
-                    fontFamily: 'Poppins')),
-            const SizedBox(height: 16),
-            TextField(
-              controller: cvvCtrl,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              maxLength: 4,
-              obscureText: true,
-              style: const TextStyle(fontSize: 20, letterSpacing: 8),
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: 'CVV',
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14)),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(Vv2.gutter, 12, Vv2.gutter,
+              24 + MediaQuery.of(context).viewInsets.bottom +
+                  MediaQuery.paddingOf(context).bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Vv2.divider, borderRadius: BorderRadius.circular(2)),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const _InstallmentPicker(),
-            ElevatedButton(
-              onPressed: () {
-                final cvv = cvvCtrl.text.trim();
-                if (cvv.length < 3) return;
-                Get.back();
-                controller.payWithSavedCard(card, cvv);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 18),
+              Semantics(
+                header: true,
+                child: Text('${card.brand} •••• ${card.lastFour}',
+                    style: Vv2.t(22, 28, 700)),
               ),
-              child: const Text('Confirmar pagamento',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Poppins')),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text('Digite o código de segurança para confirmar',
+                  style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
+              const SizedBox(height: 16),
+              Obx(() => TextField(
+                    controller: cvvCtrl,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    maxLength: 4,
+                    obscureText: true,
+                    style: Vv2.t(18, 24, 600),
+                    decoration: regDecoration('CVV', hint: '123', errorText: erro.value)
+                        .copyWith(counterText: ''),
+                  )),
+              const SizedBox(height: 16),
+              const _InstallmentPicker(),
+              const _TotalLine(),
+              const SizedBox(height: 16),
+              Obx(() => VvPillButton(
+                    label: _payLabel(controller),
+                    onTap: () {
+                      final cvv = cvvCtrl.text.trim();
+                      if (cvv.length < 3) {
+                        erro.value = 'CVV inválido';
+                        return;
+                      }
+                      Get.back();
+                      controller.payWithSavedCard(card, cvv);
+                    },
+                  )),
+            ],
+          ),
         ),
       ),
       isScrollControlled: true,
@@ -260,115 +330,76 @@ class _SavedCardsSection extends GetView<PaymentController> {
     final profile = Get.find<ProfileController>();
     return Obx(() {
       final cards = profile.savedCards;
-      return Column(
-        children: [
-          ...cards.map((card) {
-            return GestureDetector(
-              onTap: () => card.canQuickPay
-                  ? _showCvvSheet(context, card)
-                  : controller.selectCard(),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.cardShadow,
-                        blurRadius: 8,
-                        offset: const Offset(0, 2))
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Icon(Icons.credit_card_rounded,
-                          color: AppColors.textMedium, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${card.brand} •••• ${card.lastFour}',
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textDark)),
-                          Text(
-                              card.canQuickPay
-                                  ? 'Pague só com o CVV · Validade ${card.expiry}'
-                                  : '${card.holderName} · Validade ${card.expiry}',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: card.canQuickPay
-                                      ? AppColors.success
-                                      : AppColors.textMedium)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios,
-                        size: 14, color: AppColors.textLight),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-
-          // Adicionar novo cartão
-          GestureDetector(
-            onTap: controller.selectCard,
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_card_outlined,
-                      color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Adicionar novo cartão',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+      return Container(
+        decoration: BoxDecoration(
+          color: Vv2.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _kBorder),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final card in cards) ...[
+                InkWell(
+                  onTap: () => card.canQuickPay
+                      ? _showCvvSheet(context, card)
+                      : controller.selectCard(),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 64),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${card.brand} •••• ${card.lastFour}',
+                                  style: Vv2.t(18, 24, 700)),
+                              const SizedBox(height: 2),
+                              Text(
+                                  card.canQuickPay
+                                      ? 'Pague só com o CVV · Validade ${card.expiry}'
+                                      : '${card.holderName} · Validade ${card.expiry}',
+                                  style: Vv2.t(14, 20, 400, color: Vv2.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded,
+                            size: 26, color: Vv2.textSecondary),
+                      ],
                     ),
                   ),
-                ],
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16, color: Vv2.divider),
+              ],
+              InkWell(
+                onTap: controller.selectCard,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  alignment: Alignment.centerLeft,
+                  child: Text('+ Adicionar novo cartão',
+                      style: Vv2.t(16, 22, 700, color: Vv2.onPrimaryContainer)),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       );
     });
   }
 }
 
 class _MethodCard extends StatelessWidget {
-  final IconData icon;
   final String title;
   final String subtitle;
   final String? badge;
   final VoidCallback onTap;
 
   const _MethodCard({
-    required this.icon,
     required this.title,
     required this.subtitle,
     this.badge,
@@ -377,78 +408,65 @@ class _MethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      label: '$title. $subtitle${badge != null ? '. $badge' : ''}',
+      excludeSemantics: true,
+      child: Material(
+        color: Vv2.successBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFCFE3CF)),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                      color: Vv2.surface, shape: BoxShape.circle),
+                  child: const Icon(Icons.pix_rounded, size: 26, color: Vv2.successFg),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      if (badge != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            badge!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.success,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(title, style: Vv2.t(18, 24, 700)),
+                          if (badge != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD5E8D4),
+                                borderRadius: BorderRadius.circular(Vv2.rPill),
+                              ),
+                              child: Text(badge!,
+                                  style: Vv2.t(13, 18, 700, color: Vv2.successFg)),
                             ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          style: Vv2.t(15, 20, 400, color: Vv2.textSecondary)),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
-                  ),
-                ],
-              ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 26, color: Vv2.successFg),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textLight),
-          ],
+          ),
         ),
       ),
     );
@@ -460,176 +478,130 @@ class _MethodCard extends StatelessWidget {
 class _PixView extends GetView<PaymentController> {
   const _PixView();
 
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: controller.pixCopyPaste.value));
+    Get.snackbar('Copiado!', 'Código PIX copiado',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Vv2.successFg,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 16);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Pagar com Pix'),
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => controller.status.value = PaymentStatus.selecting,
-        ),
-      ),
-      body: Obx(() {
+    return _PayScaffold(
+      title: 'Pagar com Pix',
+      onBack: () => controller.status.value = PaymentStatus.selecting,
+      child: Obx(() {
         if (controller.pixLoading.value) {
-          return const Center(
+          return _Box(
+            padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
-                SizedBox(height: 20),
-                Text('Gerando PIX...', style: TextStyle(color: AppColors.textMedium)),
+                const CircularProgressIndicator(color: Vv2.primary, strokeWidth: 3),
+                const SizedBox(height: 20),
+                Text('Gerando PIX...',
+                    style: Vv2.t(16, 22, 500, color: Vv2.textSecondary)),
               ],
             ),
           );
         }
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const _AppointmentSummary(),
-              const SizedBox(height: 28),
-
-              // QR Code real (base64 do Mercado Pago)
-              if (controller.pixQrCodeBase64.value.isNotEmpty)
-                Container(
-                  width: 210,
-                  height: 210,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-                    boxShadow: [
-                      BoxShadow(color: AppColors.cardShadow, blurRadius: 12, offset: const Offset(0, 4)),
+        final qr = controller.pixQrCodeBase64.value;
+        final code = controller.pixCopyPaste.value;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Box(
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Valor a pagar',
+                          style: Vv2.t(15, 20, 500, color: Vv2.textSecondary)),
+                      Text(_brl(controller.price), style: Vv2.t(26, 32, 700)),
                     ],
                   ),
-                  child: Image.memory(
-                    base64Decode(controller.pixQrCodeBase64.value),
-                    fit: BoxFit.contain,
-                  ),
-                )
-              else
-                Container(
-                  width: 210,
-                  height: 210,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-                  ),
-                  child: const Icon(Icons.pix, color: AppColors.primary, size: 64),
-                ),
-
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.timer_outlined, size: 16, color: AppColors.textMedium),
-                  const SizedBox(width: 4),
-                  Obx(() => Text(
-                    'Expira em ${controller.pixFormattedCountdown}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMedium),
-                  )),
+                  Obx(() => Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _kAmberBg,
+                          borderRadius: BorderRadius.circular(Vv2.rPill),
+                        ),
+                        child: Text('Expira em ${controller.pixFormattedCountdown}',
+                            style: Vv2.t(14, 20, 700, color: _kAmberFg)),
+                      )),
                 ],
               ),
-              const SizedBox(height: 8),
-
-              // Aguardando confirmação
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.success,
-                      ),
+            ),
+            const SizedBox(height: 16),
+            _Box(
+              child: Column(
+                children: [
+                  Text('QR Code Pix', style: Vv2.t(18, 24, 700)),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: 220,
+                    height: 220,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE8D5CA)),
                     ),
-                    SizedBox(width: 8),
-                    Text('Aguardando confirmação do pagamento...',
-                        style: TextStyle(fontSize: 12, color: AppColors.success)),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Copia e cola
-              if (controller.pixCopyPaste.value.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    child: qr.isNotEmpty
+                        ? Semantics(
+                            label: 'QR Code do Pix',
+                            image: true,
+                            child: Image.memory(base64Decode(qr), fit: BoxFit.contain),
+                          )
+                        : const Icon(Icons.pix_rounded, color: Vv2.primary, size: 64),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Pix copia e cola',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      Text(
-                        controller.pixCopyPaste.value,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textMedium),
-                        maxLines: 3,
+                  if (code.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text('Pix copia e cola', style: Vv2.t(16, 22, 700)),
+                    const SizedBox(height: 6),
+                    Text(code,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Vv2.t(13, 18, 400, color: Vv2.textSecondary)),
+                  ],
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Vv2.successFg),
                       ),
-                      const SizedBox(height: 10),
-                      GestureDetector(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: controller.pixCopyPaste.value));
-                          Get.snackbar('Copiado!', 'Código PIX copiado',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: AppColors.success,
-                              colorText: Colors.white,
-                              duration: const Duration(seconds: 2),
-                              margin: const EdgeInsets.all(16),
-                              borderRadius: 12);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.copy, size: 16, color: AppColors.primary),
-                              SizedBox(width: 6),
-                              Text('Copiar código PIX',
-                                  style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13)),
-                            ],
-                          ),
-                        ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text('Aguardando confirmação do pagamento…',
+                            style: Vv2.t(14, 20, 500, color: Vv2.textSecondary)),
                       ),
                     ],
                   ),
-                ),
-
+                ],
+              ),
+            ),
+            if (code.isNotEmpty) ...[
               const SizedBox(height: 20),
-              const _PixSteps(),
-              const SizedBox(height: 16),
+              VvPillButton(label: 'Copiar código PIX', onTap: _copy),
             ],
-          ),
+            const SizedBox(height: 24),
+            const _PixSteps(),
+          ],
         );
       }),
     );
@@ -642,60 +614,42 @@ class _PixSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const steps = [
-      (Icons.smartphone, 'Abra o app do seu banco'),
-      (Icons.pix_outlined, 'Escolha pagar com Pix'),
-      (Icons.qr_code_scanner, 'Escaneie o QR Code ou cole a chave'),
-      (Icons.check_circle_outline, 'Confirme o valor e pague'),
+      'Abra o app do seu banco',
+      'Escolha pagar com Pix',
+      'Escaneie o QR Code ou cole o código',
+      'Confirme o valor e pague',
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Como pagar',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: AppColors.textDark,
-          ),
-        ),
+        Semantics(header: true, child: Text('Como pagar', style: Vv2.t(18, 24, 700))),
         const SizedBox(height: 10),
-        ...steps.indexed.map(((int, (IconData, String)) e) {
-          final (i, (icon, text)) = e;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+        for (var i = 0; i < steps.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${i + 1}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                      color: Vv2.pressedSurface, shape: BoxShape.circle),
+                  child: Text('${i + 1}',
+                      style: Vv2.t(14, 18, 700, color: Vv2.onPrimaryContainer)),
                 ),
                 const SizedBox(width: 10),
-                Icon(icon, size: 16, color: AppColors.textMedium),
-                const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    text,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMedium),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(steps[i],
+                        style: Vv2.t(15, 22, 400, color: Vv2.textSecondary)),
                   ),
                 ),
               ],
             ),
-          );
-        }),
+          ),
       ],
     );
   }
@@ -708,145 +662,146 @@ class _CardFormView extends GetView<PaymentController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Cartão de crédito'),
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => controller.status.value = PaymentStatus.selecting,
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: controller.formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _AppointmentSummary(),
-              const SizedBox(height: 28),
-              // Card visual
-              const _CardPreview(),
-              const SizedBox(height: 28),
-              TextFormField(
-                controller: controller.cardNumberController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [_CardNumberFormatter()],
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Informe o número do cartão';
-                  if (v.replaceAll(RegExp(r'\D'), '').length < 16) return 'Número inválido';
-                  return null;
-                },
-                decoration: const InputDecoration(
-                  hintText: '0000 0000 0000 0000',
-                  labelText: 'Número do cartão',
-                  prefixIcon: Icon(Icons.credit_card_outlined, color: AppColors.textLight),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: controller.cardHolderController,
-                textCapitalization: TextCapitalization.characters,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
-                decoration: const InputDecoration(
-                  hintText: 'NOME COMO NO CARTÃO',
-                  labelText: 'Nome do titular',
-                  prefixIcon: Icon(Icons.person_outlined, color: AppColors.textLight),
-                ),
-              ),
-              const SizedBox(height: 14),
+    final expiry = TextFormField(
+      controller: controller.expiryController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [_ExpiryFormatter()],
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Validade';
+        if (v.length < 5) return 'MM/AA inválido';
+        return null;
+      },
+      style: Vv2.t(17, 24, 500),
+      decoration: regDecoration('Validade', hint: 'MM/AA'),
+    );
+    final cvv = TextFormField(
+      controller: controller.cvvController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      obscureText: true,
+      maxLength: 4,
+      onTap: () => controller.isCardFlipped.value = true,
+      onEditingComplete: () => controller.isCardFlipped.value = false,
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'CVV';
+        if (v.length < 3) return 'CVV inválido';
+        return null;
+      },
+      style: Vv2.t(17, 24, 500),
+      decoration: regDecoration('CVV', hint: '123').copyWith(counterText: ''),
+    );
+    final big = MediaQuery.textScalerOf(context).scale(10) > 12.5;
+    return _PayScaffold(
+      title: 'Cartão de crédito',
+      onBack: () => controller.status.value = PaymentStatus.selecting,
+      child: Form(
+        key: controller.formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _CardPreview(),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: controller.cardNumberController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [_CardNumberFormatter()],
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Informe o número do cartão';
+                if (v.replaceAll(RegExp(r'\D'), '').length < 16) return 'Número inválido';
+                return null;
+              },
+              style: Vv2.t(17, 24, 500),
+              decoration: regDecoration('Número do cartão', hint: '0000 0000 0000 0000'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: controller.cardHolderController,
+              textCapitalization: TextCapitalization.characters,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
+              style: Vv2.t(17, 24, 500),
+              decoration: regDecoration('Nome do titular', hint: 'NOME COMO NO CARTÃO'),
+            ),
+            const SizedBox(height: 12),
+            if (big) ...[
+              expiry,
+              const SizedBox(height: 12),
+              cvv,
+            ] else
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.expiryController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [_ExpiryFormatter()],
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Validade';
-                        if (v.length < 5) return 'MM/AA inválido';
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                        hintText: 'MM/AA',
-                        labelText: 'Validade',
-                        prefixIcon: Icon(Icons.calendar_today, color: AppColors.textLight, size: 18),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: expiry),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.cvvController,
-                      keyboardType: TextInputType.number,
-                      obscureText: true,
-                      maxLength: 4,
-                      onTap: () => controller.isCardFlipped.value = true,
-                      onEditingComplete: () => controller.isCardFlipped.value = false,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'CVV';
-                        if (v.length < 3) return 'CVV inválido';
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                        hintText: '123',
-                        labelText: 'CVV',
-                        counterText: '',
-                        prefixIcon: Icon(Icons.lock_outline, color: AppColors.textLight, size: 18),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: cvv),
                 ],
               ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: controller.cpfController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [_CpfFormatter()],
-                // CPF continua opcional; se preenchido, precisa ser válido (evita recusa por dado errado).
-                validator: (v) => (v == null || v.trim().isEmpty || isValidCpf(v)) ? null : 'CPF inválido',
-                decoration: const InputDecoration(
-                  hintText: '000.000.000-00',
-                  labelText: 'CPF do titular',
-                  prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textLight, size: 20),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: controller.cpfController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [_CpfFormatter()],
+              // CPF continua opcional; se preenchido, precisa ser válido (evita recusa por dado errado).
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty || isValidCpf(v)) ? null : 'CPF inválido',
+              style: Vv2.t(17, 24, 500),
+              decoration: regDecoration('CPF do titular', hint: '000.000.000-00'),
+            ),
+            const SizedBox(height: 12),
+            const _InstallmentPicker(),
+            const _TotalLine(),
+            const SizedBox(height: 20),
+            Obx(() => VvPillButton(
+                  label: _payLabel(controller),
+                  onTap: controller.submitCard,
+                )),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline_rounded, size: 16, color: Vv2.textSecondary),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text('Pagamento seguro com criptografia SSL',
+                      style: Vv2.t(13, 18, 400, color: Vv2.textSecondary)),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const _InstallmentPicker(),
-              const SizedBox(height: 24),
-              Obx(() {
-                final o = controller.chosenInstallment;
-                return ElevatedButton(
-                  onPressed: controller.submitCard,
-                  child: Text(o == null || o.count == 1
-                      ? 'Pagar ${_brl(o?.total ?? controller.price)}'
-                      : 'Pagar ${o.count}x de ${_brl(o.each)}'),
-                );
-              }),
-              const SizedBox(height: 16),
-              const Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock_outline, size: 13, color: AppColors.textLight),
-                    SizedBox(width: 4),
-                    Text(
-                      'Pagamento seguro com criptografia SSL',
-                      style: TextStyle(fontSize: 11, color: AppColors.textLight),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// Total efetivo (com juros do parcelamento, quando houver).
+class _TotalLine extends GetView<PaymentController> {
+  const _TotalLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final o = controller.chosenInstallment;
+      final total = o?.total ?? controller.price;
+      return _Box(
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          children: [
+            Text('Total', style: Vv2.t(18, 24, 700)),
+            Text(_brl(total), style: Vv2.t(20, 26, 700, color: Vv2.onPrimaryContainer)),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+String _payLabel(PaymentController c) {
+  final o = c.chosenInstallment;
+  return o == null || o.count == 1
+      ? 'Pagar ${_brl(o?.total ?? c.price)}'
+      : 'Pagar ${o.count}x de ${_brl(o.each)}';
 }
 
 class _CardPreview extends StatefulWidget {
@@ -858,7 +813,6 @@ class _CardPreview extends StatefulWidget {
 
 class _CardPreviewState extends State<_CardPreview> {
   late final PaymentController _c;
-  late final Worker _flipWorker;
 
   @override
   void initState() {
@@ -866,8 +820,6 @@ class _CardPreviewState extends State<_CardPreview> {
     _c = Get.find<PaymentController>();
     _c.cardNumberController.addListener(_rebuild);
     _c.cardHolderController.addListener(_rebuild);
-    _c.expiryController.addListener(_rebuild);
-    _flipWorker = ever(_c.isCardFlipped, (_) => _rebuild());
   }
 
   void _rebuild() => setState(() {});
@@ -876,86 +828,36 @@ class _CardPreviewState extends State<_CardPreview> {
   void dispose() {
     _c.cardNumberController.removeListener(_rebuild);
     _c.cardHolderController.removeListener(_rebuild);
-    _c.expiryController.removeListener(_rebuild);
-    _flipWorker.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final num = _c.cardNumberController.text;
+    final digits = _c.cardNumberController.text.replaceAll(RegExp(r'\D'), '');
+    final last = digits.length >= 4 ? digits.substring(digits.length - 4) : '••••';
     final holder = _c.cardHolderController.text;
-    final expiry = _c.expiryController.text;
-    final flipped = _c.isCardFlipped.value;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      height: 180,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return ExcludeSemantics(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Vv2.pressedSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1D3C2)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'VetVem',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              Icon(
-                flipped ? Icons.credit_card : Icons.credit_card_outlined,
-                color: Colors.white70,
-                size: 32,
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            num.isEmpty ? '•••• •••• •••• ••••' : num.padRight(19, '•'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              letterSpacing: 2,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  holder.isEmpty ? 'NOME DO TITULAR' : holder.toUpperCase(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text(
-                expiry.isEmpty ? 'MM/AA' : expiry,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cartão de crédito', style: Vv2.t(18, 24, 700)),
+            const SizedBox(height: 14),
+            Text('••••  ••••  ••••  $last',
+                style: Vv2.t(20, 26, 600).copyWith(letterSpacing: 1)),
+            const SizedBox(height: 10),
+            Text(holder.isEmpty ? 'NOME DO TITULAR' : holder.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Vv2.t(13, 18, 600, color: Vv2.textSecondary)),
+          ],
+        ),
       ),
     );
   }
@@ -968,24 +870,33 @@ class _ProcessingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
-            SizedBox(height: 24),
-            Text(
-              'Processando pagamento...',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textMedium,
-              ),
+    return Scaffold(
+        backgroundColor: Vv2Pastel.cream,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  padding: const EdgeInsets.all(22),
+                  decoration: const BoxDecoration(
+                      color: Vv2.pressedSurface, shape: BoxShape.circle),
+                  child: const CircularProgressIndicator(
+                      color: Vv2.onPrimaryContainer, strokeWidth: 3.5),
+                ),
+                const SizedBox(height: 24),
+                Semantics(
+                  liveRegion: true,
+                  child: Text('Processando pagamento…',
+                      textAlign: TextAlign.center, style: Vv2.t(24, 30, 700)),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
     );
   }
 }
@@ -1181,49 +1092,49 @@ class _RejectedView extends GetView<PaymentController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Vv2Pastel.cream,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(Vv2.gutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 88,
+                    height: 88,
+                    decoration:
+                        const BoxDecoration(color: _kRedBg, shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded, size: 48, color: _kRedFg),
+                  ),
                 ),
-                child: const Icon(Icons.cancel_rounded,
-                    color: AppColors.error, size: 64),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Pagamento recusado',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                const SizedBox(height: 20),
+                Semantics(
+                  header: true,
+                  liveRegion: true,
+                  child: Text('Pagamento recusado',
+                      textAlign: TextAlign.center, style: Vv2.t(28, 34, 700)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Seu cartão foi recusado. Verifique os dados ou tente outro método de pagamento.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.textMedium, height: 1.5),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: controller.retryCard,
-                child: const Text('Tentar novamente'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => controller.status.value = PaymentStatus.selecting,
-                child: const Text('Escolher outro método'),
-              ),
-            ],
+                const SizedBox(height: 20),
+                _Box(
+                  color: const Color(0xFFFCEFEC),
+                  border: const Color(0xFFF3D9D4),
+                  child: Text(
+                    'Seu cartão foi recusado. Verifique os dados ou tente outro método de pagamento.',
+                    style: Vv2.t(16, 24, 500),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                VvPillButton(label: 'Tentar novamente', onTap: controller.retryCard),
+                const SizedBox(height: 12),
+                VvPillButton(
+                  label: 'Escolher outro método',
+                  kind: VvPillKind.outlined,
+                  onTap: () => controller.status.value = PaymentStatus.selecting,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1309,48 +1220,32 @@ class _InstallmentPicker extends GetView<PaymentController> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Parcelas',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: opts.any((o) => o.count == sel) ? sel : 1,
-                  isExpanded: true,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textDark,
-                      fontFamily: 'Poppins'),
-                  items: [
-                    for (final o in opts)
-                      DropdownMenuItem(
-                        value: o.count,
-                        child: Text(o.count == 1
-                            ? 'À vista · ${_brl(o.total)}'
+            DropdownButtonFormField<int>(
+              initialValue: opts.any((o) => o.count == sel) ? sel : 1,
+              isExpanded: true,
+              style: Vv2.t(17, 24, 500),
+              decoration: regDecoration('Parcelas'),
+              borderRadius: BorderRadius.circular(16),
+              items: [
+                for (final o in opts)
+                  DropdownMenuItem(
+                    value: o.count,
+                    child: Text(
+                        o.count == 1
+                            ? '1x de ${_brl(o.total)}'
                             : '${o.count}x de ${_brl(o.each)}'
-                                '${(o.total - controller.price) > 0.01 ? ' · total ${_brl(o.total)}' : ' sem juros'}'),
-                      ),
-                  ],
-                  onChanged: (v) =>
-                      controller.selectedInstallments.value = v ?? 1,
-                ),
-              ),
+                                '${(o.total - controller.price) > 0.01 ? ' · total ${_brl(o.total)}' : ' sem juros'}',
+                        overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: (v) => controller.selectedInstallments.value = v ?? 1,
             ),
-            const SizedBox(height: 4),
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'Os juros do parcelamento são cobrados pelo cartão e aparecem no total.',
-              style: TextStyle(fontSize: 11, color: AppColors.textMedium),
+              style: Vv2.t(14, 20, 400, color: Vv2.textSecondary),
             ),
           ],
         ),
