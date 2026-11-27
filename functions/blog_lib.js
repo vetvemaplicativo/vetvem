@@ -17,7 +17,7 @@ const CATEGORIAS = [
 // Tipos que SEMPRE ficam como rascunho para o Ronald aprovar (saúde, vacina,
 // alimentação e descobertas científicas). Os demais vão direto ao ar, a menos
 // que a IA marque "sensível" ou o texto tenha cara de dose/receita.
-const KINDS_SEMPRE_RASCUNHO = new Set(["guia", "ciencia"]);
+const KINDS_SEMPRE_RASCUNHO = new Set(["guia", "ciencia", "servico"]);
 
 // Datas fixas (MM-DD). A IA confirma a origem por busca antes de escrever.
 const DATAS_FIXAS = {
@@ -103,7 +103,12 @@ function planoDoDia(dateKey, salt = "") {
     if (c[1] - c[0] >= 2 && c[2] - c[1] >= 2) dias = c;
   }
   if (!dias) dias = [0, 2, 4];
-  const tipos = shuffle(["guia", "ciencia", "curiosidade"], rng);
+  // Desde 26/11/2026 (pedido do Ronald): 2 dos 3 posts da semana são do tema
+  // principal ("servico": vacinação, atendimento/vacina/exames a domicílio, app);
+  // o terceiro alterna, semana a semana, entre guia, ciência e curiosidade.
+  const nSemana = Math.floor(Date.parse(`${semana}T00:00:00Z`) / (7 * 86400000));
+  const outro = ["guia", "ciencia", "curiosidade"][nSemana % 3];
+  const tipos = shuffle(["servico", "servico", outro], rng);
 
   const hoje = diaDaSemana(dateKey);
   const idx = dias.indexOf(hoje);

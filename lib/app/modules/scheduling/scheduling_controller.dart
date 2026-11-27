@@ -422,8 +422,26 @@ class SchedulingController extends GetxController {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      final ref = FirebaseFirestore.instance.collection('appointments').doc();
-      await ref.set({
+      // Reaproveita o pedido ainda não pago do mesmo profissional/data/horário
+      // (tutor saiu da tela de pagamento e confirmou de novo): evita pedido duplicado.
+      final col = FirebaseFirestore.instance.collection('appointments');
+      DocumentReference<Map<String, dynamic>> ref = col.doc();
+      var reuse = false;
+      try {
+        final dup = await col
+            .where('tutorId', isEqualTo: uid)
+            .where('vetId', isEqualTo: vet?.id ?? '')
+            .where('date', isEqualTo: formattedDate)
+            .where('time', isEqualTo: selectedTime.value ?? '')
+            .where('paymentStatus', isEqualTo: 'pending_payment')
+            .limit(1)
+            .get();
+        if (dup.docs.isNotEmpty) {
+          ref = dup.docs.first.reference;
+          reuse = true;
+        }
+      } catch (_) {}
+      final data = <String, dynamic>{
         'tutorId': uid,
         'vetId': vet?.id ?? '',
         'tutorName': profile.userName.value,
@@ -493,9 +511,20 @@ class SchedulingController extends GetxController {
         'paymentStatus': 'pending_payment',
         'status': 'pending_confirmation',
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (reuse) {
+        // Campos opcionais que o pedido novo não tem são apagados do antigo.
+        const optional = ['services', 'notes', 'travelFee', 'addrCep', 'travelQuoted',
+            'travelKm', 'serviceAnimals', 'petCount', 'pets'];
+        for (final k in optional) {
+          data.putIfAbsent(k, () => FieldValue.delete());
+        }
+        await ref.set(data, SetOptions(merge: true));
+      } else {
+        await ref.set(data);
+      }
 
-      Get.find<AnalyticsService>().logAppointmentCreated(
+      if (!reuse) Get.find<AnalyticsService>().logAppointmentCreated(
         vetId: vet?.id ?? '',
         serviceName: label,
       );
