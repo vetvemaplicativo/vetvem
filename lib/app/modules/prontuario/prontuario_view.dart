@@ -65,15 +65,15 @@ class ProntuarioView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.06),
+                    color: Vv2.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.2)),
+                        color: Vv2.primary.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.verified_rounded,
-                          color: AppColors.primary, size: 18),
+                          color: Vv2.primary, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -81,7 +81,7 @@ class ProntuarioView extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.primary),
+                              color: Vv2.primary),
                         ),
                       ),
                       if (editedAt != null)
@@ -228,7 +228,7 @@ class ProntuarioView extends StatelessWidget {
                 if ((p['anexos'] as List?)?.isNotEmpty == true) ...[
                   _Section(
                     icon: Icons.attach_file_rounded,
-                    color: AppColors.primary,
+                    color: Vv2.primary,
                     title: 'Anexos',
                     child: AnexosLinks(items: p['anexos'] as List),
                   ),
@@ -284,7 +284,7 @@ class ProntuarioView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.05),
+                    color: Vv2.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Row(
@@ -313,11 +313,7 @@ class ProntuarioView extends StatelessWidget {
                   icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                   label: const Text('Ver / Baixar PDF'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
+                    foregroundColor: Vv2.onPrimaryContainer,
                   ),
                 ),
                 const SizedBox(height: 24),

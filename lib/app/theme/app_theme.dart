@@ -51,10 +51,8 @@ class AppTheme {
             fontWeight: FontWeight.w500,
             color: AppColors.textDark,
           ),
-          bodyLarge: GoogleFonts.poppins(
-            fontSize: 16,
-            color: AppColors.textMedium,
-          ),
+          // Também é o texto digitado nos campos: escuro e na fonte do DS.
+          bodyLarge: Vv2.t(16, 24, 400),
           bodyMedium: GoogleFonts.poppins(
             fontSize: 14,
             color: AppColors.textMedium,

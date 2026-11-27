@@ -1011,6 +1011,7 @@ class _EditPetSheetState extends State<_EditPetSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               decoration: BoxDecoration(
+                color: Vv2Pastel.cream,
                 border: Border.all(color: Vv2.pressedSurface),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1371,6 +1372,7 @@ class _AddPetSheetState extends State<_AddPetSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 decoration: BoxDecoration(
+                  color: Vv2Pastel.cream,
                   border: Border.all(color: Vv2.pressedSurface),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2101,22 +2103,23 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 hint: 'Como está no cartão',
                 textCapitalization: TextCapitalization.characters),
             const SizedBox(height: 12),
-            Flex(
-              direction: MediaQuery.textScalerOf(context).scale(10) > 12.5
-                  ? Axis.vertical
-                  : Axis.horizontal,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(fit: FlexFit.loose, child: _Field(ctrl: _expiry, label: 'Validade',
-                    hint: 'MM/AA', keyboard: TextInputType.number,
-                    inputFormatters: [_ExpiryFmt()])),
-                const SizedBox(width: 12, height: 12),
-                Flexible(fit: FlexFit.loose, child: _Field(ctrl: _cvv, label: 'CVV',
-                    hint: '•••', keyboard: TextInputType.number,
-                    obscure: true)),
-              ],
-            ),
+            Builder(builder: (context) {
+              final expiry = _Field(ctrl: _expiry, label: 'Validade',
+                  hint: 'MM/AA', keyboard: TextInputType.number,
+                  inputFormatters: [_ExpiryFmt()]);
+              final cvv = _Field(ctrl: _cvv, label: 'CVV',
+                  hint: '•••', keyboard: TextInputType.number,
+                  obscure: true);
+              // Texto ampliado (130%): Validade e CVV um embaixo do outro.
+              if (MediaQuery.textScalerOf(context).scale(10) > 12.5) {
+                return Column(children: [expiry, const SizedBox(height: 12), cvv]);
+              }
+              return Row(children: [
+                Expanded(child: expiry),
+                const SizedBox(width: 12),
+                Expanded(child: cvv),
+              ]);
+            }),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
